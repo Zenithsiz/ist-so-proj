@@ -3,13 +3,12 @@
 #include <getopt.h>
 #include <string.h>
 #include <ctype.h>
-#include "fs/operations.h"
+#include "../fs/operations.h"
 
 #define MAX_INPUT_SIZE 100
 
 void applyCommands()
 {
-
 	char line[MAX_INPUT_SIZE];
 
 	while (fgets(line, sizeof(line), stdin))

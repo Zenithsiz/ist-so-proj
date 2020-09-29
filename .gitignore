@@ -1,6 +1,6 @@
 # Build
-*.exe
-*.o
+obj/
+build/
 
 # Vscode
 .vscode

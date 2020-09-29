@@ -6,27 +6,47 @@ LD   = gcc
 CFLAGS =-g -Wall -std=gnu99 -I../
 LDFLAGS=-lm
 
+# All source files from `src/`
+SRCS := $(shell find src/ -name '*.c')
+
+# All object files in `obj/`
+OBJS := $(patsubst src/%.c,obj/%.o,$(SRCS))
+
 # A phony target is one that is not really the name of a file
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: all clean run
 
-all: tecnicofs.exe
+all: build/tecnicofs
 
-tecnicofs.exe: fs/state.o fs/operations.o main.o
-	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs fs/state.o fs/operations.o main.o
+# Final binary
+build/tecnicofs: $(OBJS)
+	@echo $@: Building binary
+	@mkdir -p $(dir $@)
+	@$(LD) $(CFLAGS) $(LDFLAGS) $^ -o $@
+	@mv -f $@.exe $@
 
-fs/state.o: fs/state.c fs/state.h tecnicofs-api-constants.h
-	$(CC) $(CFLAGS) -o fs/state.o -c fs/state.c
+# Build all `obj/` files from `src/`
+$(OBJS): obj/%.o: src/%.c
+	@echo $<: Building
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -o $@ -c $<
 
-fs/operations.o: fs/operations.c fs/operations.h fs/state.h tecnicofs-api-constants.h
-	$(CC) $(CFLAGS) -o fs/operations.o -c fs/operations.c
-
-main.o: main.c fs/operations.h fs/state.h tecnicofs-api-constants.h
-	$(CC) $(CFLAGS) -o main.o -c main.c
-
+# Remove build artifacts
 clean:
 	@echo Cleaning...
-	rm -f fs/*.o *.o tecnicofs.exe
+	@rm -rf obj/
+	@rm -rf build/
 
-run: tecnicofs.exe
-	./tecnicofs.exe
+# Run binary
+run: build/tecnicofs
+	@./build/tecnicofs
+
+# Automatic prerequisites generation.
+# https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
+obj/%.d: src/%.c
+	@echo $<: Generating dependencies
+	@mkdir -p $(dir $@)
+	@$(CC) -M $(CFLAGS) $< | sed -e 's|$(patsubst %.d,%.o,$(notdir $@))|$(patsubst %.d,%.o,$@)|' > $@
+
+# Include all `.d` dependencies
+include $(patsubst src/%.c,obj/%.d,$(SRCS))
