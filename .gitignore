@@ -1,0 +1,6 @@
+# Build
+*.exe
+*.o
+
+# Vscode
+.Vscode
