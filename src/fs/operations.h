@@ -1,7 +1,7 @@
 #ifndef FS_H
 #define FS_H
 #include <dir.h>		 // TfsDir
-#include <inode_table.h> // TfsInodeTable
+#include <inode/table.h> // TfsInodeTable
 #include <stdio.h>		 // FILE
 
 void init_fs(TfsInodeTable table);

@@ -1,6 +1,6 @@
 //#include "operations.h"
 #include <fs/operations.h>
-#include <inode.h>
+#include <inode/inode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

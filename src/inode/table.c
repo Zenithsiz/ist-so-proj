@@ -1,4 +1,4 @@
-#include <inode_table.h>
+#include <inode/table.h>
 
 // Includes
 #include <string.h> // strlen, strncpy

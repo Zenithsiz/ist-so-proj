@@ -5,7 +5,7 @@
 #define TFS_DIR_H
 
 // Includes
-#include <inode_idx.h> // TfsInodeIdx
+#include <inode/idx.h> // TfsInodeIdx
 #include <stdlib.h>	   // size_t
 
 enum {

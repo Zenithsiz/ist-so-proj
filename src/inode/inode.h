@@ -5,9 +5,9 @@
 #define TFS_INODE_H
 
 // Includes
-#include <inode_data.h> // TfsInodeData
-#include <inode_idx.h>	// TfsInodeIdx
-#include <inode_type.h> // TfsInodeType
+#include <inode/data.h> // TfsInodeData
+#include <inode/idx.h>	// TfsInodeIdx
+#include <inode/type.h> // TfsInodeType
 #include <stdlib.h>		// size_t
 
 /// @brief An inode
