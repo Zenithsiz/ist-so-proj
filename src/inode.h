@@ -54,17 +54,8 @@ typedef struct TfsInode
 	TfsInodeData data;
 } TfsInode;
 
-/// @brief An inode index or error
-typedef struct TfsInodeIdxResult
-{
-	/// @brief Possible error
-	/// @details If `idx < 0`, an error exists.
-	TfsError error;
-
-	/// @brief Index
-	/// @details Guaranteed to be `> 0`.
-	int idx;
-} TfsInodeIdxResult;
+/// @brief An inode index
+typedef size_t TfsInodeIdx;
 
 /// @brief Initializes an inode table
 ///
@@ -82,13 +73,14 @@ void tfs_inode_table_drop(const TfsInode *table, size_t len);
 ///
 /// @arg table The table to create the inode in
 /// @arg type The type of inode to create
-TfsInodeIdxResult tfs_inode_create(TfsInode *table, TfsInodeType type);
+/// @arg idx Out parameter with the index
+TfsError tfs_inode_create(TfsInode *table, TfsInodeType type, TfsInodeIdx *idx);
 
 /// @brief Deletes an inode from the table
 ///
 /// @arg table The table to delete the inode from
 /// @arg idx The index of the inode to delete
-TfsError tfs_inode_delete(TfsInode *table, int idx);
+TfsError tfs_inode_delete(TfsInode *table, TfsInodeIdx idx);
 
 /// @brief Accesses an inode from the table
 ///
