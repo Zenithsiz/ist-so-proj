@@ -1,8 +1,8 @@
 /// @file
 /// Directory
 
-#ifndef TFS_FS_DIR_H
-#define TFS_FS_DIR_H
+#ifndef TFS_DIR_H
+#define TFS_DIR_H
 
 // Includes
 #include <stdlib.h> // size_t
@@ -14,10 +14,10 @@ enum
 };
 
 /// @brief Directory entry
-typedef struct DirEntry
+typedef struct TfsDirEntry
 {
 	char name[MAX_FILE_NAME_LEN];
 	int i_num;
-} DirEntry;
+} TfsDirEntry;
 
 #endif

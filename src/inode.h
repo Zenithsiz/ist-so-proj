@@ -1,12 +1,13 @@
 /// @file
 /// Inodes
 
-#ifndef TFS_FS_INODE_H
-#define TFS_FS_INODE_H
+#ifndef TFS_INODE_H
+#define TFS_INODE_H
 
 // Includes
 #include <stdlib.h> // size_t
-#include "dir.h"	// DirEntry
+#include <dir.h>	// TfsDirEntry
+#include <error.h>	// TfsError
 
 /// @brief Inode types
 typedef enum TfsInodeType
@@ -32,7 +33,7 @@ typedef struct TfsInodeDataFile
 typedef struct TfsInodeDataDir
 {
 	/// @brief Children
-	DirEntry *children;
+	TfsDirEntry *children;
 } TfsInodeDataDir;
 
 /// @brief Inode data
@@ -53,14 +54,17 @@ typedef struct TfsInode
 	TfsInodeData data;
 } TfsInode;
 
-/// @brief Generic inode error
-typedef enum TfsFsInodeError
+/// @brief An inode index or error
+typedef struct TfsInodeIdxResult
 {
-	/// Success, no error
-	InodeErrorSuccess,
+	/// @brief Possible error
+	/// @details If `idx < 0`, an error exists.
+	TfsError error;
 
-	///
-} TfsFsInodeError;
+	/// @brief Index
+	/// @details Guaranteed to be `> 0`.
+	int idx;
+} TfsInodeIdxResult;
 
 /// @brief Initializes an inode table
 ///
@@ -78,15 +82,13 @@ void tfs_inode_table_drop(const TfsInode *table, size_t len);
 ///
 /// @arg table The table to create the inode in
 /// @arg type The type of inode to create
-/// @return If positive, the inode index created.
-///         Else, an error of type `InodeError`
-int tfs_inode_create(TfsInode *table, TfsInodeType type);
+TfsInodeIdxResult tfs_inode_create(TfsInode *table, TfsInodeType type);
 
 /// @brief Deletes an inode from the table
 ///
 /// @arg table The table to delete the inode from
 /// @arg idx The index of the inode to delete
-TfsFsInodeError tfs_inode_delete(TfsInode *table, int idx);
+TfsError tfs_inode_delete(TfsInode *table, int idx);
 
 /// @brief Accesses an inode from the table
 ///
@@ -94,8 +96,7 @@ TfsFsInodeError tfs_inode_delete(TfsInode *table, int idx);
 /// @arg idx The index of the inode to access
 /// @arg data Out parameter with the data in the inode
 /// @arg type Out parameter with the type in the inode
-/// @return
-int tfs_inode_get(TfsInode *table, int idx, TfsInodeData *data, TfsInodeType *type);
+TfsError tfs_inode_get(TfsInode *table, int idx, TfsInodeData *data, TfsInodeType *type);
 
 /*
 int inode_set_file(int inumber, char *fileContents, int len);
