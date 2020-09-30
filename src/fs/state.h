@@ -43,8 +43,8 @@ typedef struct inode_t
 	/* more i-node attributes will be added in future exercises */
 } inode_t;
 
-void inode_table_init();
-void inode_table_destroy();
+void inode_table_init(void);
+void inode_table_destroy(void);
 int inode_create(type nType);
 int inode_delete(int inumber);
 int inode_get(int inumber, type *nType, union Data *data);

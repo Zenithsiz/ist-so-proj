@@ -5,9 +5,11 @@
 #define TFS_INODE_H
 
 // Includes
-#include <stdlib.h> // size_t
-#include <dir.h>	// TfsDirEntry
-#include <error.h>	// TfsError
+#include <stdlib.h>	   // size_t
+#include <dir.h>	   // TfsDirEntry
+#include <error.h>	   // TfsError
+#include <inode_idx.h> // TfsInodeIdx
+#include <stdio.h>	   // FILE
 
 /// @brief Inode types
 typedef enum TfsInodeType
@@ -33,7 +35,7 @@ typedef struct TfsInodeDataFile
 typedef struct TfsInodeDataDir
 {
 	/// @brief Children
-	TfsDirEntry *children;
+	TfsDirEntry *entries;
 } TfsInodeDataDir;
 
 /// @brief Inode data
@@ -53,9 +55,6 @@ typedef struct TfsInode
 	TfsInodeType type;
 	TfsInodeData data;
 } TfsInode;
-
-/// @brief An inode index
-typedef size_t TfsInodeIdx;
 
 /// @brief Initializes an inode table
 ///
@@ -88,13 +87,11 @@ TfsError tfs_inode_delete(TfsInode *table, TfsInodeIdx idx);
 /// @arg idx The index of the inode to access
 /// @arg data Out parameter with the data in the inode
 /// @arg type Out parameter with the type in the inode
-TfsError tfs_inode_get(TfsInode *table, int idx, TfsInodeData *data, TfsInodeType *type);
+TfsError tfs_inode_get(TfsInode *table, int idx, TfsInodeType *type, TfsInodeData *data);
 
-/*
-int inode_set_file(int inumber, char *fileContents, int len);
-int dir_reset_entry(int inumber, int sub_inumber);
-int dir_add_entry(int inumber, int sub_inumber, char *sub_name);
-void inode_print_tree(FILE *fp, int inumber, char *name);
-*/
+TfsError tfs_inode_set_file(TfsInode *table, int inumber, char *fileContents, int len);
+TfsError tfs_inode_dir_reset_entry(TfsInode *table, int inumber, int sub_inumber);
+TfsError tfs_inode_dir_add_entry(TfsInode *table, int inumber, int sub_inumber, char *sub_name);
+TfsError tfs_inode_print_tree(TfsInode *table, FILE *fp, int inumber, char *name);
 
 #endif

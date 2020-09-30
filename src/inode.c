@@ -25,7 +25,7 @@ void tfs_inode_table_drop(const TfsInode *table, size_t len)
 
 		// Deallocate a directory's children
 		case TfsInodeTypeDir:
-			free(table[n].data.dir.children);
+			free(table[n].data.dir.entries);
 			break;
 
 		case TfsInodeTypeNone:

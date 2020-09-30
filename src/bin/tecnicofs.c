@@ -7,7 +7,7 @@
 
 #define MAX_INPUT_SIZE 100
 
-void applyCommands()
+static void applyCommands(TfsInode *table)
 {
 	char line[MAX_INPUT_SIZE];
 
@@ -31,14 +31,14 @@ void applyCommands()
 			{
 			case 'f':
 				printf("Create file: %s\n", name);
-				if (create(name, T_FILE) == FAIL)
+				if (create(table, name, TfsInodeTypeFile) == -1)
 					printf("Create: could not create file %s\n", name);
 				else
 					printf("Create: %s successfully created\n", name);
 				break;
 			case 'd':
 				printf("Create directory: %s\n", name);
-				if (create(name, T_DIRECTORY) == FAIL)
+				if (create(table, name, TfsInodeTypeDir) == -1)
 					printf("Create: could not create directory %s\n", name);
 				else
 					printf("Create: %s successfully created\n", name);
@@ -49,15 +49,15 @@ void applyCommands()
 			}
 			break;
 		case 'l':
-			searchResult = lookup(name);
-			if (searchResult == FAIL)
+			searchResult = lookup(table, name);
+			if (searchResult == -1)
 				printf("Search: %s not found\n", name);
 			else
 				printf("Search: %s found\n", name);
 			break;
 		case 'd':
 			printf("Delete: %s\n", name);
-			if (delete (name) == FAIL)
+			if (delete (table, name) == -1)
 				printf("Delete: could not delete %s\n", name);
 			else
 				printf("Delete: %s successfully deleted\n", name);
@@ -74,15 +74,19 @@ void applyCommands()
 
 int main(int argc, char *argv[])
 {
+	(void)argc;
+	(void)argv;
+
+	TfsInode table[100];
 
 	/* init filesystem */
-	init_fs();
+	init_fs(table, 100);
 
 	/* process input and print tree */
-	applyCommands();
-	print_tecnicofs_tree(stdout);
+	applyCommands(table);
+	print_tecnicofs_tree(table, stdout);
 
 	/* release allocated memory */
-	destroy_fs();
+	destroy_fs(table, 100);
 	exit(EXIT_SUCCESS);
 }

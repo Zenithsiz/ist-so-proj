@@ -228,7 +228,7 @@ void inode_print_tree(FILE *fp, int inumber, char *name)
 			if (inode_table[inumber].data.dirEntries[i].inumber != FREE_INODE)
 			{
 				char path[MAX_FILE_NAME];
-				if (snprintf(path, sizeof(path), "%s/%s", name, inode_table[inumber].data.dirEntries[i].name) > sizeof(path))
+				if (snprintf(path, sizeof(path), "%s/%s", name, inode_table[inumber].data.dirEntries[i].name) > (int)sizeof(path))
 				{
 					fprintf(stderr, "truncation when building full path\n");
 				}
