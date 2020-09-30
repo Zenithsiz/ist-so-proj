@@ -1,14 +1,13 @@
-#include "../fs/operations.h"
-
 #include <ctype.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tfs.h>
 
 #define MAX_INPUT_SIZE 100
 
-static void applyCommands(TfsInodeTable table) {
+static void apply_commands(TfsFileSystem* fs) {
 	char line[MAX_INPUT_SIZE];
 
 	while (fgets(line, sizeof(line), stdin)) {
@@ -21,20 +20,20 @@ static void applyCommands(TfsInodeTable table) {
 			return;
 		}
 
-		int searchResult;
+		TfsInodeIdx searchResult;
 		switch (token) {
 			case 'c':
 				switch (type) {
 					case 'f':
 						printf("Create file: %s\n", name);
-						if (create(table, name, TfsInodeTypeFile) == -1)
+						if (tfs_create_inode(fs, TfsInodeTypeFile, name) != TfsFileSystemErrorSuccess)
 							printf("Create: could not create file %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);
 						break;
 					case 'd':
 						printf("Create directory: %s\n", name);
-						if (create(table, name, TfsInodeTypeDir) == -1)
+						if (tfs_create_inode(fs, TfsInodeTypeDir, name) != TfsFileSystemErrorSuccess)
 							printf("Create: could not create directory %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);
@@ -45,15 +44,14 @@ static void applyCommands(TfsInodeTable table) {
 				}
 				break;
 			case 'l':
-				searchResult = lookup(table, name);
-				if (searchResult == -1)
+				if (tfs_find(fs, name, &searchResult) != TfsFileSystemErrorSuccess)
 					printf("Search: %s not found\n", name);
 				else
 					printf("Search: %s found\n", name);
 				break;
 			case 'd':
 				printf("Delete: %s\n", name);
-				if (delete (table, name) == -1)
+				if (tfs_delete_inode(fs, name) != TfsFileSystemErrorSuccess)
 					printf("Delete: could not delete %s\n", name);
 				else
 					printf("Delete: %s successfully deleted\n", name);
@@ -71,21 +69,14 @@ int main(int argc, char* argv[]) {
 	(void)argc;
 	(void)argv;
 
-	TfsInode inodes[100];
-
-	TfsInodeTable table = {
-		.inodes = inodes,
-		.len	= 100,
-	};
-
 	/* init filesystem */
-	init_fs(table);
+	TfsFileSystem fs = tfs_new(100);
 
 	/* process input and print tree */
-	applyCommands(table);
-	print_tecnicofs_tree(table, stdout);
+	apply_commands(&fs);
+	tfs_print(&fs, stdout);
 
 	/* release allocated memory */
-	destroy_fs(table);
+	tfs_drop(&fs);
 	exit(EXIT_SUCCESS);
 }

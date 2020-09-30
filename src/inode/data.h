@@ -9,23 +9,38 @@
 #include <inode/type.h> // TfsInodeType
 
 /// @brief Data for `TfsInodeType::File`
-typedef struct TfsInodeDataFile {
+typedef struct TfsInodeFile {
 	/// @brief File contents
 	char* contents;
-} TfsInodeDataFile;
+} TfsInodeFile;
 
 /// @brief Data for `TfsInodeType::Dir`
-typedef struct TfsInodeDataDir {
+typedef struct TfsInodeDir {
 	/// @brief Children
 	TfsDirEntry* entries;
-} TfsInodeDataDir;
+} TfsInodeDir;
+
+/// @brief Error type for `TfsInodeDataDirError` operations
+typedef enum TfsInodeDataDirError {
+	/// @brief No error
+	TfsInodeDataDirErrorSuccess,
+
+	/// @brief Unable to find entry with name
+	TfsInodeDataDirErrorNoNameMatch,
+} TfsInodeDataDirError;
+
+/// @brief Checks if a directory is empty
+int tfs_inode_dir_is_empty(TfsInodeDir* dir);
+
+/// @brief Searches for a node
+TfsInodeDataDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, TfsInodeIdx* idx);
 
 /// @brief Inode data
 /// @details If the tag is `TfsInodeType::None`, then
 ///          all elements of this union are uninitialized.
 typedef union TfsInodeData {
-	TfsInodeDataFile file;
-	TfsInodeDataDir	 dir;
+	TfsInodeFile file;
+	TfsInodeDir	 dir;
 } TfsInodeData;
 
 #endif
