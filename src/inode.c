@@ -1,36 +1,50 @@
 #include <inode.h>
 
-void tfs_inode_table_init(TfsInodeTable table)
-{
-	// Empty inode, used to assign to each element in the table
-	const TfsInode empty_inode = {.type = TfsInodeTypeNone};
+/// @brief Initialize an inode
+void tfs_inode_init(TfsInode* inode, TfsInodeType type) {
+	// Set the inode's type
+	inode->type = type;
 
-	// Assign each table to an empty inode
-	for (size_t n = 0; n < table.len; n++)
-	{
-		table.inodes[n] = empty_inode;
+	switch (type) {
+		// Set initial data to `NULL`
+		case TfsInodeTypeFile: {
+			inode->data.file.contents = NULL;
+			break;
+		}
+
+		// Create children and set them all as empty
+		case TfsInodeTypeDir: {
+			/* Initializes entry table */
+			inode->data.dir.entries = malloc(sizeof(TfsDirEntry) * TFS_DIR_MAX_ENTRIES);
+
+			for (int i = 0; i < TFS_DIR_MAX_ENTRIES; i++) {
+				inode->data.dir.entries[i].inode_idx = TfsInodeIdxNone;
+			}
+			break;
+		}
+
+		case TfsInodeTypeNone:
+		default: {
+			break;
+		}
 	}
 }
 
-void tfs_inode_table_drop(TfsInodeTable table)
-{
-	for (size_t n = 0; n < table.len; n++)
-	{
-		switch (table.inodes[n].type)
-		{
+/// @brief Drops an inode
+void tfs_inode_drop(TfsInode* inode) {
+	switch (inode->type) {
 		// Deallocate a file's contents
 		case TfsInodeTypeFile:
-			free(table.inodes[n].data.file.contents);
+			free(inode->data.file.contents);
 			break;
 
 		// Deallocate a directory's children
 		case TfsInodeTypeDir:
-			free(table.inodes[n].data.dir.entries);
+			free(inode->data.dir.entries);
 			break;
 
 		case TfsInodeTypeNone:
 		default:
 			break;
-		}
 	}
 }

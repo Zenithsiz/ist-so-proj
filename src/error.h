@@ -5,8 +5,7 @@
 #define TFS_ERRORS_H
 
 /// @brief Generic error type.
-typedef enum TfsError
-{
+typedef enum TfsError {
 	/// Success, no error
 	TfsErrorSuccess = 0,
 

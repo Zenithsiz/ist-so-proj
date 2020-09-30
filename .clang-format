@@ -1,0 +1,35 @@
+---
+Language: Cpp
+BasedOnStyle: Microsoft
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveMacros: true
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignEscapedNewlines: Left
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortLoopsOnASingleLine: true
+BinPackArguments: false
+BinPackParameters: false
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterStruct: false
+BreakStringLiterals: true
+ColumnLimit: 0
+DeriveLineEnding: true
+IncludeBlocks: Regroup
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+KeepEmptyLinesAtTheStartOfBlocks: false
+PointerAlignment: Left
+ReflowComments: true
+SpacesInContainerLiterals: false
+Standard: Auto
+UseTab: Always
+---
+

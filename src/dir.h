@@ -5,19 +5,20 @@
 #define TFS_DIR_H
 
 // Includes
-#include <stdlib.h>	   // size_t
 #include <inode_idx.h> // TfsInodeIdx
+#include <stdlib.h>	   // size_t
 
-/// @brief Maximum file name length
-enum
-{
-	MAX_FILE_NAME_LEN = 100
+enum {
+	/// @brief Maximum file name length
+	TFS_DIR_MAX_FILE_NAME_LEN = 100,
+
+	/// @brief Maximum directory entries
+	TFS_DIR_MAX_ENTRIES = 20,
 };
 
 /// @brief Directory entry
-typedef struct TfsDirEntry
-{
-	char name[MAX_FILE_NAME_LEN];
+typedef struct TfsDirEntry {
+	char		name[TFS_DIR_MAX_FILE_NAME_LEN];
 	TfsInodeIdx inode_idx;
 } TfsDirEntry;
 

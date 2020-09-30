@@ -10,4 +10,9 @@
 /// @brief An inode index
 typedef size_t TfsInodeIdx;
 
+enum {
+	/// @brief A nonexistant index
+	TfsInodeIdxNone,
+};
+
 #endif

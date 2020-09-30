@@ -4,15 +4,13 @@
 
 #define MAX_FILE_NAME 100
 
-typedef enum permission
-{
+typedef enum permission {
 	NONE,
 	WRITE,
 	READ,
 	RW
 } permission;
-typedef enum type
-{
+typedef enum type {
 	T_FILE,
 	T_DIRECTORY,
 	T_NONE
