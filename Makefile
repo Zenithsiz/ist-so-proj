@@ -3,7 +3,28 @@
 
 CC   = gcc
 LD   = gcc
-CFLAGS =-g -Wall -std=gnu99 -I../
+CFLAGS =-g\
+	-Wall\
+	-Wextra\
+	-Werror\
+	-pedantic\
+	-Wnull-dereference\
+	-Wformat=2\
+	-Wstrict-prototypes\
+	-Wcast-qual\
+	-Wmissing-prototypes\
+	-Wformat-security\
+	-Winit-self\
+	-Wimplicit-fallthrough\
+	-Wswitch-default\
+	-Wswitch-enum\
+	-Wunused-parameter\
+	-Wduplicated-cond\
+	-Wduplicated-branches\
+	-Wlogical-op\
+	-Wunsafe-loop-optimizations\
+	-std=gnu99\
+	-Isrc/
 LDFLAGS=-lm
 
 # All source files from `src/`
@@ -31,16 +52,6 @@ $(OBJS): obj/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -o $@ -c $<
 
-# Remove build artifacts
-clean:
-	@echo Cleaning...
-	@rm -rf obj/
-	@rm -rf build/
-
-# Run binary
-run: build/tecnicofs
-	@./build/tecnicofs
-
 # Automatic prerequisites generation.
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
 obj/%.d: src/%.c
@@ -50,3 +61,13 @@ obj/%.d: src/%.c
 
 # Include all `.d` dependencies
 include $(patsubst src/%.c,obj/%.d,$(SRCS))
+
+# Remove build artifacts
+clean:
+	@echo Cleaning...
+	@rm -rf obj/
+	@rm -rf build/
+
+# Run binary
+run: build/tecnicofs
+	@./build/tecnicofs
