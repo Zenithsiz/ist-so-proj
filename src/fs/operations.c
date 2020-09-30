@@ -57,9 +57,9 @@ static void split_parent_child_from_path(char *path, char **parent, char **child
 /*
  * Initializes tecnicofs and creates root node.
  */
-void init_fs(TfsInode *table, size_t len)
+void init_fs(TfsInodeTable table)
 {
-	tfs_inode_table_init(table, len);
+	tfs_inode_table_init(table);
 
 	/* create root inode */
 	TfsInodeIdx root;
@@ -75,9 +75,9 @@ void init_fs(TfsInode *table, size_t len)
 /*
  * Destroy tecnicofs and inode table.
  */
-void destroy_fs(TfsInode *table, size_t len)
+void destroy_fs(TfsInodeTable table)
 {
-	tfs_inode_table_drop(table, len);
+	tfs_inode_table_drop(table);
 }
 
 /*
@@ -135,7 +135,7 @@ static int lookup_sub_node(char *name, TfsDirEntry *entries)
  *  - nodeType: type of node
  * Returns: SUCCESS or FAIL
  */
-int create(TfsInode *table, char *name, TfsInodeType nodeType)
+int create(TfsInodeTable table, char *name, TfsInodeType nodeType)
 {
 
 	TfsInodeIdx parent_inumber, child_inumber;
@@ -197,7 +197,7 @@ int create(TfsInode *table, char *name, TfsInodeType nodeType)
  *  - name: path of node
  * Returns: SUCCESS or FAIL
  */
-int delete (TfsInode *table, char *name)
+int delete (TfsInodeTable table, char *name)
 {
 
 	int parent_inumber, child_inumber;
@@ -271,7 +271,7 @@ int delete (TfsInode *table, char *name)
  *  inumber: identifier of the i-node, if found
  *     FAIL: otherwise
  */
-int lookup(TfsInode *table, char *name)
+int lookup(TfsInodeTable table, char *name)
 {
 	char full_path[MAX_FILE_NAME_LEN];
 	char delim[] = "/";
@@ -305,7 +305,7 @@ int lookup(TfsInode *table, char *name)
  * Input:
  *  - fp: pointer to output file
  */
-void print_tecnicofs_tree(TfsInode *table, FILE *fp)
+void print_tecnicofs_tree(TfsInodeTable table, FILE *fp)
 {
 	tfs_inode_print_tree(table, fp, FS_ROOT, "");
 }

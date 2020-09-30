@@ -56,30 +56,40 @@ typedef struct TfsInode
 	TfsInodeData data;
 } TfsInode;
 
+/// @brief An inode table
+typedef struct TfsInodeTable
+{
+	/// All of the inodes
+	TfsInode *inodes;
+
+	/// Number of inodes
+	size_t len;
+} TfsInodeTable;
+
 /// @brief Initializes an inode table
 ///
 /// @arg table The table to initialize
 /// @arg len The length of `table`
-void tfs_inode_table_init(TfsInode *table, size_t len);
+void tfs_inode_table_init(TfsInodeTable table);
 
 /// @brief Drops an inode table
 ///
 /// @arg table The table to drop
 /// @arg len The length of `table`
-void tfs_inode_table_drop(const TfsInode *table, size_t len);
+void tfs_inode_table_drop(TfsInodeTable table);
 
 /// @brief Creates a new inode in a table
 ///
 /// @arg table The table to create the inode in
 /// @arg type The type of inode to create
 /// @arg idx Out parameter with the index
-TfsError tfs_inode_create(TfsInode *table, TfsInodeType type, TfsInodeIdx *idx);
+TfsError tfs_inode_create(TfsInodeTable table, TfsInodeType type, TfsInodeIdx *idx);
 
 /// @brief Deletes an inode from the table
 ///
 /// @arg table The table to delete the inode from
 /// @arg idx The index of the inode to delete
-TfsError tfs_inode_delete(TfsInode *table, TfsInodeIdx idx);
+TfsError tfs_inode_delete(TfsInodeTable table, TfsInodeIdx idx);
 
 /// @brief Accesses an inode from the table
 ///
@@ -87,11 +97,11 @@ TfsError tfs_inode_delete(TfsInode *table, TfsInodeIdx idx);
 /// @arg idx The index of the inode to access
 /// @arg data Out parameter with the data in the inode
 /// @arg type Out parameter with the type in the inode
-TfsError tfs_inode_get(TfsInode *table, int idx, TfsInodeType *type, TfsInodeData *data);
+TfsError tfs_inode_get(TfsInodeTable table, int idx, TfsInodeType *type, TfsInodeData *data);
 
-TfsError tfs_inode_set_file(TfsInode *table, int inumber, char *fileContents, int len);
-TfsError tfs_inode_dir_reset_entry(TfsInode *table, int inumber, int sub_inumber);
-TfsError tfs_inode_dir_add_entry(TfsInode *table, int inumber, int sub_inumber, char *sub_name);
-TfsError tfs_inode_print_tree(TfsInode *table, FILE *fp, int inumber, char *name);
+TfsError tfs_inode_set_file(TfsInodeTable table, int inumber, char *fileContents, int len);
+TfsError tfs_inode_dir_reset_entry(TfsInodeTable table, int inumber, int sub_inumber);
+TfsError tfs_inode_dir_add_entry(TfsInodeTable table, int inumber, int sub_inumber, char *sub_name);
+TfsError tfs_inode_print_tree(TfsInodeTable table, FILE *fp, int inumber, char *name);
 
 #endif

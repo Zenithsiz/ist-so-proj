@@ -7,7 +7,7 @@
 
 #define MAX_INPUT_SIZE 100
 
-static void applyCommands(TfsInode *table)
+static void applyCommands(TfsInodeTable table)
 {
 	char line[MAX_INPUT_SIZE];
 
@@ -77,16 +77,21 @@ int main(int argc, char *argv[])
 	(void)argc;
 	(void)argv;
 
-	TfsInode table[100];
+	TfsInode inodes[100];
+
+	TfsInodeTable table = {
+		.inodes = inodes,
+		.len = 100,
+	};
 
 	/* init filesystem */
-	init_fs(table, 100);
+	init_fs(table);
 
 	/* process input and print tree */
 	applyCommands(table);
 	print_tecnicofs_tree(table, stdout);
 
 	/* release allocated memory */
-	destroy_fs(table, 100);
+	destroy_fs(table);
 	exit(EXIT_SUCCESS);
 }
