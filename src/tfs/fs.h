@@ -87,23 +87,17 @@ typedef struct TfsFsCreateResult {
 		/// a directory.
 		TfsFsCreateResultErrorParentNotDir = -2,
 
-		/// @brief Cannot add a file with the same name
-		/// @details
-		/// Given a path 'a/b/c', an entry with the name
-		/// 'c' already existed in 'a/b'.
-		TfsFsCreateResultErrorDuplicateName = -3,
-
 		/// @brief Unable to create new inode
 		/// @details
 		/// This is an inode table specific error,
 		/// see the underlying `create_inode` data.
-		TfsFsCreateResultErrorCreateInode = -4,
+		TfsFsCreateResultErrorCreateInode = -3,
 
 		/// @brief Unable to add entry to directory
 		/// @details
 		/// This is an inode directory specific error,
 		/// see the underlying `add_entry` data.
-		TfsFsCreateResultErrorAddEntry = -5,
+		TfsFsCreateResultErrorAddEntry = -4,
 	} kind;
 
 	/// @brief Result data
@@ -132,7 +126,7 @@ typedef struct TfsFsCreateResult {
 		/// @brief Data for `ErrorAddEntry`.
 		struct {
 			/// @brief Underlying error.
-			TfsInodeDirError err;
+			TfsInodeDirAddEntryResult err;
 		} add_entry;
 	} data;
 } TfsFsCreateResult;

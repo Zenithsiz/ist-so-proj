@@ -12,6 +12,7 @@
 
 // Includes
 #include <stdbool.h>	   // Bool
+#include <stdio.h>		   // FILE
 #include <stdlib.h>		   // size_t
 #include <tfs/inode/idx.h> // TfsInodeIdx
 
@@ -44,29 +45,46 @@ typedef struct TfsInodeDir {
 	TfsDirEntry* entries;
 } TfsInodeDir;
 
-/// @brief Error type for all methods of @ref TfsInodeDir.
-typedef enum TfsInodeDirError {
-	/// @brief No error.
-	TfsInodeDirErrorSuccess = 0,
+/// @brief Result type for @ref tfs_inode_dir_add_entry
+typedef struct TfsInodeDirAddEntryResult {
+	/// @brief Result data
+	enum {
+		/// @brief Success
+		TfsInodeDirAddEntryResultSuccess = 0,
 
-	/// @brief Tried to add a duplicate entry.
-	TfsInodeDirErrorDuplicateEntry = -1,
+		/// @brief Entry name was empty
+		TfsInodeDirAddEntryResultErrorEmptyName = -1,
 
-	/// @brief Unable to find entry with name.
-	TfsInodeDirErrorNoNameMatch = -2,
+		/// @brief An entry with the same index already exists.
+		TfsInodeDirAddEntryResultErrorDuplicateIdx = -2,
 
-	/// @brief Index was out of bounds.
-	TfsInodeDirErrorIdxOutOfBounds = -3,
+		/// @brief An entry with the same name already exists.
+		TfsInodeDirAddEntryResultErrorDuplicateName = -3,
 
-	/// @brief Index was not found in entries.
-	TfsInodeDirErrorIdxNotFound = -4,
+		/// @brief Directory was full
+		TfsInodeDirAddEntryResultErrorFull = -4,
+	} kind;
 
-	/// @brief Name cannot be empty.
-	TfsInodeDirErrorNameEmpty = -5,
+	/// @brief Result data
+	union {
+		/// @brief Data for `ErrorDuplicateIdx`
+		struct {
+			/// @brief Name of the entry with the same index
+			char* name;
+		} duplicate_idx;
 
-	/// @brief Directory was full.
-	TfsInodeDirErrorFull = -6,
-} TfsInodeDirError;
+		/// @brief Data for `ErrorDuplicateName`
+		struct {
+			/// @brief Index of the entry with the same name
+			TfsInodeIdx idx;
+		} duplicate_name;
+	} data;
+} TfsInodeDirAddEntryResult;
+
+/// @brief Prints a textual representation of an result
+/// @param result The result to print
+/// @param out File descriptor to output to
+void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* result, FILE* out);
 
 /// @brief Checks if a directory is empty.
 /// @param dir The directory inode to check.
@@ -77,18 +95,20 @@ bool tfs_inode_dir_is_empty(TfsInodeDir* dir);
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
 /// @param[out] idx Index of the entry, if found.
-TfsInodeDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx);
+/// @return If the entry was found.
+bool tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx);
 
 /// @brief Removes an entry given it's index.
 /// @param dir The directory inode to remove the entry in.
 /// @param idx The index of the entry to remove.
-TfsInodeDirError tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx);
+/// @return If successfully removed. If `false`, `idx` was not an entry within this directory.
+bool tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx);
 
 /// @brief Adds an entry given it's index and name.
 /// @param dir The directory inode to add the entry in.
 /// @param idx The index of the inode to add.
 /// @param name The name of the entry to add. Is not required to be null terminated.
 /// @param name_len Length of @p name.
-TfsInodeDirError tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, const char* name, size_t name_len);
+TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, const char* name, size_t name_len);
 
 #endif
