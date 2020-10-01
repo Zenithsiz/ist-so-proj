@@ -68,7 +68,7 @@ typedef enum TfsFileSystemFindError {
 } TfsFileSystemFindError;
 
 /// @brief Creates a new file system
-/// @arg max_inodes The max number of inodes in this file system
+/// @param max_inodes The max number of inodes in this file system
 TfsFileSystem tfs_new(size_t max_inodes);
 
 /// @brief Drops a file system
@@ -84,7 +84,7 @@ TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path);
 TfsFileSystemFindError tfs_find(TfsFileSystem* fs, TfsPath path, TfsInodeIdx* idx, TfsInodeType* type, TfsInodeData** data);
 
 /// @brief Prints the contents of this file system
-/// @arg `out` File descriptor to output to.
+/// @param `out` File descriptor to output to.
 void tfs_print(TfsFileSystem* fs, FILE* out);
 
 #endif

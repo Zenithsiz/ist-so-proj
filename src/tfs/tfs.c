@@ -1,6 +1,7 @@
 #include "tfs.h"
 
 // Includes
+#include <assert.h> // assert
 #include <stdio.h>	// stderr, fprintf
 #include <string.h> // strcpy
 
@@ -129,7 +130,7 @@ TfsFileSystemFindError tfs_find(TfsFileSystem* fs, TfsPath path, TfsInodeIdx* id
 		}
 
 		// Get the current inode's type and data
-		assert(tfs_inode_table_get(&fs->inode_table, cur_idx, &cur_type, &cur_data) == TfsInodeTableErrorSuccess);
+		assert(tfs_inode_table_get(&fs->inode_table, cur_idx, &cur_type, &cur_data) == TfsInodeTableGetErrorSuccess);
 
 		// Else, if this isn't a directory, return Err
 		if (cur_type != TfsInodeTypeDir) {
