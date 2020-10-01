@@ -22,46 +22,65 @@ static void apply_commands(TfsFs* fs) {
 
 		TfsPath path = tfs_path_from_cstr(name);
 
-		TfsInodeIdx searchResult;
 		switch (token) {
 			case 'c':
 				switch (type) {
-					case 'f':
-						printf("Create file: %s\n", name);
-						if (tfs_fs_create(fs, TfsInodeTypeFile, path).kind != TfsFsCreateErrorSuccess)
-							printf("Create: could not create file %s\n", name);
-						else
-							printf("Create: %s successfully created\n", name);
+					case 'f': {
+						printf("Creating file %s\n", name);
+						TfsFsCreateResult res = tfs_fs_create(fs, TfsInodeTypeFile, path);
+						if (res.kind != TfsFsCreateResultSuccess) {
+							printf("Unable to create file '%s'\n", name);
+							tfs_fs_create_result_print(&res, stdout);
+						}
+						else {
+							printf("Successfully created '%s'\n", name);
+						}
 						break;
-					case 'd':
-						printf("Create directory: %s\n", name);
-						if (tfs_fs_create(fs, TfsInodeTypeDir, path).kind != TfsFsCreateErrorSuccess)
-							printf("Create: could not create directory %s\n", name);
-						else
-							printf("Create: %s successfully created\n", name);
+					}
+					case 'd': {
+						printf("Creating directory '%s'\n", name);
+						TfsFsCreateResult res = tfs_fs_create(fs, TfsInodeTypeDir, path);
+						if (res.kind != TfsFsCreateResultSuccess) {
+							printf("Unable to create directory '%s'\n", name);
+							tfs_fs_create_result_print(&res, stdout);
+						}
+						else {
+							printf("Successfully created '%s'\n", name);
+						}
 						break;
-					default:
-						fprintf(stderr, "Error: invalid node type\n");
+					}
+					default: {
+						fprintf(stderr, "Error: invalid inode type: '%c'\n", type);
 						continue;
+					}
 				}
 				break;
-			case 'l':
-				if (tfs_fs_find(fs, path, &searchResult, NULL, NULL) != TfsFsFindErrorSuccess)
-					printf("Search: %s not found\n", name);
-				else
-					printf("Search: %s found\n", name);
+			case 'l': {
+				TfsFsFindResult res = tfs_fs_find(fs, path);
+				if (res.kind != TfsFsFindResultSuccess) {
+					printf("Unable to find %s\n", name);
+					tfs_fs_find_result_print(&res, stdout);
+				}
+				else {
+					printf("Found %s\n", name);
+				}
 				break;
-			case 'd':
+			}
+			case 'd': {
 				printf("Delete: %s\n", name);
-				if (tfs_fs_remove(fs, path) != TfsFsRemoveErrorSuccess)
-					printf("Delete: could not delete %s\n", name);
-				else
-					printf("Delete: %s successfully deleted\n", name);
+				TfsFsRemoveResult res = tfs_fs_remove(fs, path);
+				if (res.kind != TfsFsRemoveResultSuccess) {
+					printf("Unable to delete %s\n", name);
+					tfs_fs_remove_result_print(&res, stdout);
+				}
+				else {
+					printf("Successfully deleted %s\n", name);
+				}
 				break;
+			}
 			default: {
-				/* error */
-				fprintf(stderr, "Error: command to apply\n");
-				continue;
+				fprintf(stderr, "Unknown command: '%c'\n", token);
+				break;
 			}
 		}
 	}
