@@ -5,8 +5,8 @@
 #define TFS_INODE_DATA_H
 
 // Imports
-#include <inode/dir.h>	// TfsInodeDir
-#include <inode/type.h> // TfsInodeType
+#include <tfs/inode/dir.h>	// TfsInodeDir
+#include <tfs/inode/type.h> // TfsInodeType
 
 /// @brief Data for `TfsInodeType::File`
 typedef struct TfsInodeFile {

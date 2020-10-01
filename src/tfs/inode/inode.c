@@ -1,4 +1,4 @@
-#include <inode/inode.h>
+#include "inode.h"
 
 /// @brief Initialize an inode
 void tfs_inode_init(TfsInode* inode, TfsInodeType type) {

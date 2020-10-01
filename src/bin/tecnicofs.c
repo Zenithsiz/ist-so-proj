@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tfs.h>
+#include <tfs/tfs.h>
 
 #define MAX_INPUT_SIZE 100
 

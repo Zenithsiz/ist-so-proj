@@ -1,8 +1,8 @@
 #include "dir.h"
 
 // Includes
-#include <inode/type.h> // TfsInodeType
-#include <string.h>		// strcmp
+#include <string.h>			// strcmp
+#include <tfs/inode/type.h> // TfsInodeType
 
 int tfs_inode_dir_is_empty(TfsInodeDir* dir) {
 	// For each entry, if we find a non-empty entry, return false

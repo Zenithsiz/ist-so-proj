@@ -2,8 +2,8 @@
 /// Directory inodes
 
 // Includes
-#include <inode/idx.h> // TfsInodeIdx
-#include <stdlib.h>	   // size_t
+#include <stdlib.h>		   // size_t
+#include <tfs/inode/idx.h> // TfsInodeIdx
 
 enum {
 	/// @brief Maximum file name length

@@ -5,8 +5,8 @@
 #define TFS_INODE_TABLE_H
 
 // Includes
-#include <inode/inode.h> // TfsInode
-#include <stdio.h>		 // FILE
+#include <stdio.h>			 // FILE
+#include <tfs/inode/inode.h> // TfsInode
 
 /// @brief An inode table
 typedef struct TfsInodeTable {

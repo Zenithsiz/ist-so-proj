@@ -2,8 +2,8 @@
 /// Tecnico file system
 
 // Imports
-#include <inode/table.h> // TfsInodeTable
-#include <path.h>		 // TfsPath
+#include <tfs/inode/table.h> // TfsInodeTable
+#include <tfs/path.h>		 // TfsPath
 
 /// @brief The file system
 /// @invariant `inode_table` will always have a directory,

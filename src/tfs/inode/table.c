@@ -1,4 +1,4 @@
-#include <inode/table.h>
+#include "table.h"
 
 // Includes
 #include <stdio.h>	// stderr, fprintf

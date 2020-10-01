@@ -5,10 +5,10 @@
 #define TFS_INODE_H
 
 // Includes
-#include <inode/data.h> // TfsInodeData
-#include <inode/idx.h>	// TfsInodeIdx
-#include <inode/type.h> // TfsInodeType
-#include <stdlib.h>		// size_t
+#include <stdlib.h>			// size_t
+#include <tfs/inode/data.h> // TfsInodeData
+#include <tfs/inode/idx.h>	// TfsInodeIdx
+#include <tfs/inode/type.h> // TfsInodeType
 
 /// @brief An inode
 /// @details The building block of the filesystem.
