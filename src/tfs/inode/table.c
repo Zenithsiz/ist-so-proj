@@ -86,17 +86,17 @@ TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx,
 	return TfsInodeTableGetErrorSuccess;
 }
 
-void tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx idx, const char* name) {
+void tfs_inode_table_print_tree(TfsInodeTable* table, FILE* out, TfsInodeIdx idx, const char* name) {
 	switch (table->inodes[idx].type) {
 		// For files, just print it's name and return
 		case TfsInodeTypeFile: {
-			fprintf(fp, "%s\n", name);
+			fprintf(out, "%s\n", name);
 			break;
 		}
 
 		// For directories, print their name and then print the tree of their children
 		case TfsInodeTypeDir: {
-			fprintf(fp, "%s\n", name);
+			fprintf(out, "%s\n", name);
 			for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
 				// If this entry is empty, skip
 				if (table->inodes[idx].data.dir.entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
@@ -104,13 +104,13 @@ void tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx idx,
 				}
 
 				// Else build the path
-				char path[TFS_DIR_MAX_FILE_NAME_LEN];
-				if (snprintf(path, sizeof(path), "%s/%s", name, table->inodes[idx].data.dir.entries[n].name) > (int)sizeof(path)) {
+				char name[TFS_DIR_MAX_FILE_NAME_LEN];
+				if (snprintf(name, sizeof(name), "%s/%s", name, table->inodes[idx].data.dir.entries[n].name) > (int)sizeof(name)) {
 					fprintf(stderr, "truncation when building full path\n");
 				}
 
 				// And recurse for this entry.
-				tfs_inode_table_print_tree(table, fp, table->inodes[idx].data.dir.entries[n].inode_idx, path);
+				tfs_inode_table_print_tree(table, out, table->inodes[idx].data.dir.entries[n].inode_idx, name);
 			}
 			break;
 		}
