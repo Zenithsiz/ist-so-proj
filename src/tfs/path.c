@@ -17,24 +17,31 @@ void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child) {
 		path.len--;
 	}
 
-	// Register the total number of separators, and the position of the last
-	size_t total_sep = 0, last_sep_pos = 0;
+	// Find the position of the last separator
+	size_t sep_pos = (size_t)-1;
 	for (size_t n = 0; n < path.len; ++n) {
 		if (path.chars[n] == '/') {
-			last_sep_pos = n;
-			total_sep++;
+			sep_pos = n;
 		}
 	}
 
 	// Set both paths
 	if (parent != NULL) {
 		parent->chars = path.chars;
-		parent->len	  = last_sep_pos;
+		// Note: If we didn't find any separator, parent should have length 0
+		parent->len = (sep_pos == (size_t)-1 ? 0 : sep_pos);
 	}
 
 	if (child != NULL) {
-		child->chars = path.chars + last_sep_pos + 1;
-		child->len	 = path.len - last_sep_pos - 1;
+		// If we didn't find any separator, set the child to the whole path
+		if (sep_pos == (size_t)-1) {
+			*child = path;
+		}
+		// Else just skip the separator and set the child as the rest
+		else {
+			child->chars = path.chars + sep_pos + 1;
+			child->len	 = path.len - sep_pos - 1;
+		}
 	}
 }
 
@@ -46,7 +53,7 @@ void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child) {
 	}
 
 	// Find the first separator
-	size_t sep_pos = path.len;
+	size_t sep_pos = (size_t)-1;
 	for (size_t n = 0; n < path.len; ++n) {
 		if (path.chars[n] == '/') {
 			sep_pos = n;
@@ -56,16 +63,29 @@ void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child) {
 
 	// Set both paths
 	if (parent != NULL) {
-		parent->chars = path.chars;
-		parent->len	  = sep_pos;
+		// If we didn't find any separator, set the parent as the whole path
+		if (sep_pos == (size_t)-1) {
+			*parent = path;
+		}
+
+		// Else set it until the separator, not including it
+		else {
+			parent->chars = path.chars;
+			parent->len	  = sep_pos;
+		}
 	}
 
 	if (child != NULL) {
-		// Offset to skip the separator if it existed
-		// Note: This is required so we don't end up with `-1` length, when `sep_pos == path.len`.
-		size_t sep_offset = (sep_pos == path.len ? 0 : 1);
+		// If we didn't find any separator, set the child as empty
+		if (sep_pos == (size_t)-1) {
+			parent->chars = path.chars + path.len;
+			parent->len	  = 0;
+		}
 
-		child->chars = path.chars + sep_pos + sep_offset;
-		child->len	 = path.len - sep_pos - sep_offset;
+		// Else skip the separator
+		else {
+			parent->chars = path.chars + sep_pos + 1;
+			parent->len	  = path.len - sep_pos - 1;
+		}
 	}
 }

@@ -1,11 +1,18 @@
-/// @brief
-/// File system paths
+/// @file
+/// @brief File system paths
+/// @details
+/// This file contains the @ref TfsPath type, which
+/// is used to refer to all paths within the file system.
 
 // Imports
 #include <stdlib.h> // size_t
 
 /// @brief A file system path
-/// @details A non-null terminated string
+/// @details
+/// This path stores it's own length, instead of
+/// being null terminated, so splitting operations,
+/// such as getting the file name, or the base name
+/// do not need to modify the initial path.
 typedef struct TfsPath {
 	/// @brief All characters
 	const char* chars;
@@ -17,16 +24,43 @@ typedef struct TfsPath {
 /// @brief Creates a new path from a null-terminated string
 TfsPath tfs_path_from_cstr(const char* cstr);
 
-/// @brief Splits this path at it's last component
-/// @details If the path only has 1 component, then the parent
-///          path will be empty.
-///          Trailing slashes are ignored and discarded.
-///          The last separator will not appear in either `parent` or `child`.
+/// @brief Splits this path at it's final component
+/// @details
+/// Trailing slashes are ignored, and the final slash
+/// is not included in either the parent or child.
+/// If a path only contains 1 component, the parent's
+/// path is empty.
+///
+/// The following table shows the return values
+/// for some common paths:
+/// | `path`    | `parent` | `child` |
+/// |-----------|----------|---------|
+/// | 'a/b/c'   | 'a/b'    | 'c'     |
+/// | 'a/b/c/'  | ^        | ^       |
+/// | '/a/b/c'  | '/a/b'   | ^       |
+/// | '/a/b/c/' | ^        | ^       |
+/// | '/c'      | ''       | 'c'     |
+/// | '/c/'     | ^        | ^       |
+/// | '/'       | ^        | ''      |
+/// | ''        | ^        | ^       |
 void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child);
 
-/// @brief Splits this path at it's first component
-/// @details If the path only has 1 component, then the child
-///          path will be empty
-///          Leading slashes are ignored and discarded.
-///          The first separator will not appear in either `parent` or `child`.
+/// @brief Splits this path at it's final component
+/// @details
+/// First slash is not included in either the parnet or child.
+/// If a path only contains 1 component, the child's
+/// path is empty.
+///
+/// The following table shows the return values
+/// for some common paths:
+/// | `path`    | `parent` | `child` |
+/// |-----------|----------|---------|
+/// | 'a/b/c'   | 'a'      | 'b/c'   |
+/// | 'a/b/c/'  | ^        | 'b/c/'  |
+/// | '/a/b/c'  | ''       | 'a/b/c' |
+/// | '/a/b/c/' | ^        | 'a/b/c/'|
+/// | '/c'      | ^        | 'c'     |
+/// | '/c/'     | ^        | 'c/'    |
+/// | '/'       | ^        | ''      |
+/// | ''        | ^        | ^       |
 void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child);
