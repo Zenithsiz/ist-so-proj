@@ -31,37 +31,38 @@ TfsFileSystemCreateError tfs_create(TfsFileSystem* fs, TfsInodeType type, TfsPat
 	tfs_path_split_last(path, &parent_path, &name);
 
 	// If we can't find the parent directory, return Err
-	TfsInodeIdx	  parent_idx;
-	TfsInodeType  parent_type;
+	TfsInodeIdx parent_idx;
+	TfsInodeType parent_type;
 	TfsInodeData* parent_data;
 	if (tfs_find(fs, parent_path, &parent_idx, &parent_type, &parent_data) != TfsFileSystemFindErrorSuccess) {
-		return TfsFileSystemCreateErrorInexistentParentDirectory;
+		return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorInexistentParentDirectory};
 	}
 
 	// If the parent isn't a directory, return Err
 	if (parent_type != TfsInodeTypeDir) {
-		return TfsFileSystemCreateErrorParentNotDir;
+		return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorParentNotDir};
 	}
 
 	// If there's an entry with the same name, return Err
 	if (tfs_inode_dir_search_by_name(&parent_data->dir, name.chars, name.len, NULL) == TfsInodeDirErrorSuccess) {
-		return TfsFileSystemCreateErrorDuplicateName;
+		return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorDuplicateName};
 	}
 
 	// Else create the inode
 	TfsInodeIdx idx;
-	if (tfs_inode_table_create(&fs->inode_table, type, &idx, NULL) != TfsInodeTableCreateErrorSuccess) {
-		return TfsFileSystemCreateErrorCreateInode;
+	TfsInodeTableCreateError create_err = tfs_inode_table_create(&fs->inode_table, type, &idx, NULL);
+	if (create_err != TfsInodeTableCreateErrorSuccess) {
+		return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorCreateInode, .data = {.create_inode = create_err}};
 	}
 
 	// And add it to the directory
 	if (tfs_inode_dir_add_entry(&parent_data->dir, idx, name.chars, name.len) != TfsInodeDirErrorSuccess) {
 		// Note: If unable to, we delete the inode we just created.
 		assert(tfs_inode_table_remove(&fs->inode_table, idx) == TfsInodeTableRemoveErrorSuccess);
-		return TfsFileSystemInodeErrorAddEntry;
+		return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorAddEntry};
 	}
 
-	return TfsFileSystemCreateErrorSuccess;
+	return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorSuccess};
 }
 
 TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path) {
@@ -71,8 +72,8 @@ TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path) {
 	tfs_path_split_last(path, &parent_path, &name);
 
 	// If we can't find the parent directory, return Err
-	TfsInodeIdx	  parent_idx;
-	TfsInodeType  parent_type;
+	TfsInodeIdx parent_idx;
+	TfsInodeType parent_type;
 	TfsInodeData* parent_data;
 	if (tfs_find(fs, parent_path, &parent_idx, &parent_type, &parent_data) != TfsFileSystemFindErrorSuccess) {
 		return TfsFileSystemRemoveErrorInexistentParentDirectory;
@@ -90,7 +91,7 @@ TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path) {
 	}
 
 	// Get the type and data of the node to delete
-	TfsInodeType  type;
+	TfsInodeType type;
 	TfsInodeData* data;
 	assert(tfs_inode_table_get(&fs->inode_table, idx, &type, &data) == TfsInodeTableGetErrorSuccess);
 
@@ -110,9 +111,9 @@ TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path) {
 
 TfsFileSystemFindError tfs_find(TfsFileSystem* fs, TfsPath path, TfsInodeIdx* idx, TfsInodeType* type, TfsInodeData** data) {
 	// Current inode index and data
-	TfsInodeIdx	  cur_idx = 0;
+	TfsInodeIdx cur_idx = 0;
 	TfsInodeData* cur_data;
-	TfsInodeType  cur_type;
+	TfsInodeType cur_type;
 
 	do {
 		// If there's no more path to split, return the current inode

@@ -4,7 +4,7 @@ BasedOnStyle: Microsoft
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveMacros: true
 AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
+AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
 AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true

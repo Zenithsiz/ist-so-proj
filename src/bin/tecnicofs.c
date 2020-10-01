@@ -28,14 +28,14 @@ static void apply_commands(TfsFileSystem* fs) {
 				switch (type) {
 					case 'f':
 						printf("Create file: %s\n", name);
-						if (tfs_create(fs, TfsInodeTypeFile, path) != TfsFileSystemCreateErrorSuccess)
+						if (tfs_create(fs, TfsInodeTypeFile, path).kind != TfsFileSystemCreateErrorSuccess)
 							printf("Create: could not create file %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);
 						break;
 					case 'd':
 						printf("Create directory: %s\n", name);
-						if (tfs_create(fs, TfsInodeTypeDir, path) != TfsFileSystemCreateErrorSuccess)
+						if (tfs_create(fs, TfsInodeTypeDir, path).kind != TfsFileSystemCreateErrorSuccess)
 							printf("Create: could not create directory %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);

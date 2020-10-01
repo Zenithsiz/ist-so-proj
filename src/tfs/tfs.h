@@ -1,5 +1,9 @@
 /// @file
-/// Tecnico file system
+/// @brief Tecnico file system
+/// @details
+/// This file contains the type @ref TfsFileSystem, which is responsible
+/// for managing the whole file system, as well as enforcing certain invariants
+/// on the inode table.
 
 #ifndef TFS_H
 #define TFS_H
@@ -9,32 +13,57 @@
 #include <tfs/path.h>		 // TfsPath
 
 /// @brief The file system
-/// @invariant `inode_table` will always have a directory,
-///            the 'root node', at the fist inode.
+/// @details
+/// This type is a small wrapper over the inode table that
+/// allows using paths ( @ref TfsPath ) to modify the inodes,
+/// as opposed to having to keep track of inode numbers.
 typedef struct TfsFileSystem {
-	/// Inode table
+	/// @brief The inode table
+	/// @invariant
+	/// The first inode, called 'root node' will always
+	/// be a directory.
 	TfsInodeTable inode_table;
 } TfsFileSystem;
 
 /// @brief Error type for @ref tfs_create
-typedef enum TfsFileSystemCreateError {
-	/// @brief Success
-	TfsFileSystemCreateErrorSuccess = 0,
+typedef struct TfsFileSystemCreateError {
+	/// @brief Error kind
+	enum {
+		/// @brief Success
+		TfsFileSystemCreateErrorSuccess = 0,
 
-	/// @brief No directory found for the given path's parent.
-	TfsFileSystemCreateErrorInexistentParentDirectory = -1,
+		/// @brief No directory found for the given path's parent.
+		/// @details
+		/// Given a path 'a/b/c', the inode 'a/b' was not found.
+		TfsFileSystemCreateErrorInexistentParentDirectory = -1,
 
-	/// @brief Parent was not a directory
-	TfsFileSystemCreateErrorParentNotDir = -2,
+		/// @brief Parent was not a directory
+		/// @details
+		/// Given a path 'a/b/c', although 'a' was a directory,
+		/// 'b', the parent of the entry to create, was not
+		/// a directory.
+		TfsFileSystemCreateErrorParentNotDir = -2,
 
-	/// @brief Cannot add a file with the same name
-	TfsFileSystemCreateErrorDuplicateName = -3,
+		/// @brief Cannot add a file with the same name
+		/// @details
+		/// Given a path 'a/b/c', an entry with the name
+		/// 'c' already existed in 'a/b'.
+		TfsFileSystemCreateErrorDuplicateName = -3,
 
-	/// @brief Unable to create new inode
-	TfsFileSystemCreateErrorCreateInode = -4,
+		/// @brief Unable to create new inode
+		/// @details
+		/// This is an enum table specific error
+		TfsFileSystemCreateErrorCreateInode = -4,
 
-	/// @brief Unable to add entry to directory
-	TfsFileSystemInodeErrorAddEntry = -5,
+		/// @brief Unable to add entry to directory
+		TfsFileSystemCreateErrorAddEntry = -5,
+	} kind;
+
+	/// @brief Error data
+	union {
+		/// @brief Underlying error for `CreateInode` error.
+		TfsInodeTableCreateError create_inode;
+	} data;
 } TfsFileSystemCreateError;
 
 /// @brief Error type for @ref tfs_remove
@@ -68,6 +97,9 @@ typedef enum TfsFileSystemFindError {
 } TfsFileSystemFindError;
 
 /// @brief Creates a new file system
+/// @details
+/// This will allocate an inode table and use it
+/// for the file system.
 /// @param max_inodes The max number of inodes in this file system
 TfsFileSystem tfs_new(size_t max_inodes);
 
@@ -77,11 +109,11 @@ void tfs_drop(TfsFileSystem* fs);
 
 /// @brief Creates a new inode
 /// @param fs Filesystem to create in.
-/// @param type Type of inode to create
+/// @param type Type of inode to create.
 /// @param path Path of inode to to create.
 TfsFileSystemCreateError tfs_create(TfsFileSystem* fs, TfsInodeType type, TfsPath path);
 
-/// @brief Deletes an inode
+/// @brief Deletes an inode.
 /// @param fs Filesystem to remove from.
 /// @param path Path of inode to remove.
 TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path);
