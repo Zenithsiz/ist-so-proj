@@ -17,7 +17,7 @@ typedef size_t TfsInodeIdx;
 
 enum {
 	/// @brief A nonexistant index
-	TfsInodeIdxNone = (TfsInodeIdx)-1,
+	TfsInodeIdxNone = -1,
 };
 
 #endif

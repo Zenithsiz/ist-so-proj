@@ -105,7 +105,7 @@ TfsInodeTableError tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, Tf
 		case TfsInodeTypeDir: {
 			fprintf(fp, "%s\n", name);
 			for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
-				if (table->inodes[idx].data.dir.entries[n].inode_idx != TfsInodeIdxNone) {
+				if (table->inodes[idx].data.dir.entries[n].inode_idx != (TfsInodeIdx)TfsInodeIdxNone) {
 					char path[TFS_DIR_MAX_FILE_NAME_LEN];
 					if (snprintf(path, sizeof(path), "%s/%s", name, table->inodes[idx].data.dir.entries[n].name) > (int)sizeof(path)) {
 						fprintf(stderr, "truncation when building full path\n");

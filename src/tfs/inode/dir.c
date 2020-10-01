@@ -7,7 +7,7 @@
 bool tfs_inode_dir_is_empty(TfsInodeDir* dir) {
 	// Check every entry, if we find a non-empty one, we're not empty
 	for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
-		if (dir->entries[n].inode_idx != TfsInodeIdxNone) {
+		if (dir->entries[n].inode_idx != (TfsInodeIdx)TfsInodeIdxNone) {
 			return false;
 		}
 	}
@@ -20,7 +20,7 @@ TfsInodeDataDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* 
 	// If the name matches on any entry and it's not empty, return it
 	for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
 		// If we're empty, skip
-		if (dir->entries[n].inode_idx == TfsInodeIdxNone) {
+		if (dir->entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
 			continue;
 		}
 
@@ -65,7 +65,7 @@ TfsInodeDataDirError tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, 
 	size_t empty_idx = (size_t)-1;
 	for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
 		// If we're empty, set the empty index
-		if (dir->entries[n].inode_idx == TfsInodeIdxNone) {
+		if (dir->entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
 			empty_idx = n;
 		}
 
