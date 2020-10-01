@@ -57,7 +57,7 @@ void tfs_inode_table_drop(TfsInodeTable* table);
 /// @arg type The type of inode to create
 /// @arg idx Out parameter with the index
 TfsInodeTableError
-tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx);
+tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data);
 
 /// @brief Deletes an inode from the table
 ///
@@ -72,16 +72,11 @@ tfs_inode_table_delete(TfsInodeTable* table, TfsInodeIdx idx);
 /// @arg idx The index of the inode to access
 /// @arg data Out parameter with the data in the inode
 /// @arg type Out parameter with the type in the inode
-TfsInodeTableError
-tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData* data);
+TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData* data);
 
-TfsInodeTableError
-tfs_inode_table_set_file(TfsInodeTable* table, TfsInodeIdx inumber, char* fileContents, size_t len);
-TfsInodeTableError
-tfs_inode_table_dir_reset_entry(TfsInodeTable* table, TfsInodeIdx inumber, TfsInodeIdx sub_inumber);
-TfsInodeTableError
-tfs_inode_table_dir_add_entry(TfsInodeTable* table, TfsInodeIdx inumber, TfsInodeIdx sub_inumber, const char* sub_name, size_t sub_name_len);
-TfsInodeTableError
-tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx inumber, const char* name);
+//TfsInodeTableError tfs_inode_table_set_file(TfsInodeTable* table, TfsInodeIdx inumber, char* fileContents, size_t len);
+
+/// @brief Removes the directory entry with index `sub_inumber`
+TfsInodeTableError tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx inumber, const char* name);
 
 #endif

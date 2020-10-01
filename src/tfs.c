@@ -10,7 +10,7 @@ TfsFileSystem tfs_new(size_t max_inodes) {
 
 	// Create root node
 	TfsInodeIdx root;
-	if (tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir, &root) != TfsInodeTableErrorSuccess || root != 0) {
+	if (tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir, &root, NULL) != TfsInodeTableErrorSuccess || root != 0) {
 		fprintf(stderr, "Failed to create root");
 		exit(EXIT_FAILURE);
 	}
@@ -42,16 +42,16 @@ TfsFileSystemError tfs_create_inode(TfsFileSystem* fs, TfsInodeType type, TfsPat
 		return TfsFileSystemErrorOther;
 	}
 
-	if (tfs_inode_dir_search_by_name(&p_data.dir, child_name.chars, child_name.len, NULL) == TfsInodeDataDirErrorSuccess) {
+	if (tfs_inode_dir_search_by_name(&p_data.dir, child_name.chars, child_name.len, NULL) == TfsInodeDirErrorSuccess) {
 		return TfsFileSystemErrorOther;
 	}
 
 	/* create node and add entry to folder that contains new node */
-	if (tfs_inode_table_create(&fs->inode_table, type, &child_inumber) != TfsInodeTableErrorSuccess) {
+	if (tfs_inode_table_create(&fs->inode_table, type, &child_inumber, NULL) != TfsInodeTableErrorSuccess) {
 		return TfsFileSystemErrorOther;
 	}
 
-	if (tfs_inode_table_dir_add_entry(&fs->inode_table, parent_inumber, child_inumber, child_name.chars, child_name.len) != TfsInodeTableErrorSuccess) {
+	if (tfs_inode_dir_add_entry(&p_data.dir, child_inumber, child_name.chars, child_name.len) != TfsInodeDirErrorSuccess) {
 		return TfsFileSystemErrorOther;
 	}
 
@@ -77,7 +77,7 @@ TfsFileSystemError tfs_delete_inode(TfsFileSystem* fs, TfsPath path) {
 		return TfsFileSystemErrorOther;
 	}
 
-	if (tfs_inode_dir_search_by_name(&p_data.dir, child_name.chars, child_name.len, &child_inumber) != TfsInodeDataDirErrorSuccess) {
+	if (tfs_inode_dir_search_by_name(&p_data.dir, child_name.chars, child_name.len, &child_inumber) != TfsInodeDirErrorSuccess) {
 		return TfsFileSystemErrorOther;
 	}
 
@@ -88,7 +88,7 @@ TfsFileSystemError tfs_delete_inode(TfsFileSystem* fs, TfsPath path) {
 	}
 
 	/* remove entry from folder that contained deleted node */
-	if (tfs_inode_table_dir_reset_entry(&fs->inode_table, parent_inumber, child_inumber) != TfsInodeTableErrorSuccess) {
+	if (tfs_inode_dir_remove_entry(&p_data.dir, child_inumber) != TfsInodeDirErrorSuccess) {
 		return TfsFileSystemErrorOther;
 	}
 
@@ -130,7 +130,7 @@ TfsFileSystemError tfs_find(TfsFileSystem* fs, TfsPath path, TfsInodeIdx* idx) {
 		tfs_path_split_first(path, &cur_path, &path);
 
 		// Try to get the node
-		if (tfs_inode_dir_search_by_name(&cur_inode_data.dir, cur_path.chars, cur_path.len, &cur_idx) != TfsInodeDataDirErrorSuccess) {
+		if (tfs_inode_dir_search_by_name(&cur_inode_data.dir, cur_path.chars, cur_path.len, &cur_idx) != TfsInodeDirErrorSuccess) {
 			return TfsFileSystemErrorOther;
 		}
 	} while (1);

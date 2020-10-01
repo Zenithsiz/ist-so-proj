@@ -5,7 +5,7 @@
 #define TFS_INODE_DATA_H
 
 // Imports
-#include <dir.h>		// TfsDirEntry
+#include <inode/dir.h>	// TfsInodeDir
 #include <inode/type.h> // TfsInodeType
 
 /// @brief Data for `TfsInodeType::File`
@@ -13,27 +13,6 @@ typedef struct TfsInodeFile {
 	/// @brief File contents
 	char* contents;
 } TfsInodeFile;
-
-/// @brief Data for `TfsInodeType::Dir`
-typedef struct TfsInodeDir {
-	/// @brief Children
-	TfsDirEntry* entries;
-} TfsInodeDir;
-
-/// @brief Error type for `TfsInodeDataDirError` operations
-typedef enum TfsInodeDataDirError {
-	/// @brief No error
-	TfsInodeDataDirErrorSuccess,
-
-	/// @brief Unable to find entry with name
-	TfsInodeDataDirErrorNoNameMatch,
-} TfsInodeDataDirError;
-
-/// @brief Checks if a directory is empty
-int tfs_inode_dir_is_empty(TfsInodeDir* dir);
-
-/// @brief Searches for a node
-TfsInodeDataDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx);
 
 /// @brief Inode data
 /// @details If the tag is `TfsInodeType::None`, then

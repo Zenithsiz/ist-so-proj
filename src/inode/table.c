@@ -34,7 +34,7 @@ void tfs_inode_table_drop(TfsInodeTable* table) {
 	free(table->inodes);
 }
 
-TfsInodeTableError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx) {
+TfsInodeTableError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data) {
 	for (TfsInodeIdx n = 0; n < table->len; n++) {
 		// Skip all non empty inodes
 		if (table->inodes[n].type != TfsInodeTypeNone) {
@@ -44,9 +44,12 @@ TfsInodeTableError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType typ
 		// Initialize the node
 		tfs_inode_init(&table->inodes[n], type);
 
-		// Set the index and return
+		// Set the index and data and return
 		if (idx != NULL) {
 			*idx = n;
+		}
+		if (data != NULL) {
+			*data = &table->inodes[n].data;
 		}
 		return TfsInodeTableErrorSuccess;
 	}
@@ -89,67 +92,7 @@ TfsInodeTableError tfs_inode_table_set_file(TfsInodeTable* table, TfsInodeIdx id
 	()
 }
 */
-TfsInodeTableError tfs_inode_table_dir_reset_entry(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeIdx sub_idx) {
-	// If either indexes are out of bounds, or empty, return Err
-	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableErrorInodeIdxOutOfBounds;
-	}
 
-	if (sub_idx >= table->len || table->inodes[sub_idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableErrorInodeSubIdxOutOfBounds;
-	}
-
-	// If it's not a directory, return Err
-	if (table->inodes[idx].type != TfsInodeTypeDir) {
-		return TfsInodeTableErrorInodeIdxNotDir;
-	}
-
-	// Find the entry with index `sub_idx`
-	for (int n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
-		if (table->inodes[idx].data.dir.entries[n].inode_idx == sub_idx) {
-			// Then set it to none and remove it's name
-			table->inodes[idx].data.dir.entries[n].inode_idx = TfsInodeIdxNone;
-			table->inodes[idx].data.dir.entries[n].name[0]	 = '\0';
-			return TfsInodeTableErrorSuccess;
-		}
-	}
-
-	// If we got here, there was no entry with the sub index, so return Err
-	return TfsInodeTableErrorSubIdxNotFoundInDirEntries;
-}
-TfsInodeTableError tfs_inode_table_dir_add_entry(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeIdx sub_idx, const char* sub_name, size_t sub_name_len) {
-	// If either indexes are out of bounds, or empty, return Err
-	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableErrorInodeIdxOutOfBounds;
-	}
-
-	if (sub_idx >= table->len || table->inodes[sub_idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableErrorInodeSubIdxOutOfBounds;
-	}
-
-	// If it's not a directory, return Err
-	if (table->inodes[idx].type != TfsInodeTypeDir) {
-		return TfsInodeTableErrorInodeIdxNotDir;
-	}
-
-	// If the name is empty, return Err
-	if (sub_name_len == 0) {
-		return TfsInodeTableErrorDirEntryNameEmpty;
-	}
-
-	// Else search for an empty directory entry
-	for (int n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
-		if (table->inodes[idx].data.dir.entries[n].inode_idx == TfsInodeIdxNone) {
-			// Set it's index and copy the name
-			table->inodes[idx].data.dir.entries[n].inode_idx = sub_idx;
-			strncpy(table->inodes[idx].data.dir.entries[n].name, sub_name, sub_name_len > TFS_DIR_MAX_FILE_NAME_LEN ? TFS_DIR_MAX_FILE_NAME_LEN : sub_name_len);
-			return TfsInodeTableErrorSuccess;
-		}
-	}
-
-	// If we got here, there was no empty entry
-	return TfsInodeTableErrorDirFull;
-}
 TfsInodeTableError tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx idx, const char* name) {
 	switch (table->inodes[idx].type) {
 		// For files, just print it's name and return
