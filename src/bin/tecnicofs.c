@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tfs/tfs.h>
+#include <tfs/fs.h>
 
 #define MAX_INPUT_SIZE 100
 
-static void apply_commands(TfsFileSystem* fs) {
+static void apply_commands(TfsFs* fs) {
 	char line[MAX_INPUT_SIZE];
 
 	while (fgets(line, sizeof(line), stdin)) {
@@ -28,14 +28,14 @@ static void apply_commands(TfsFileSystem* fs) {
 				switch (type) {
 					case 'f':
 						printf("Create file: %s\n", name);
-						if (tfs_create(fs, TfsInodeTypeFile, path).kind != TfsFileSystemCreateErrorSuccess)
+						if (tfs_fs_create(fs, TfsInodeTypeFile, path).kind != TfsFsCreateErrorSuccess)
 							printf("Create: could not create file %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);
 						break;
 					case 'd':
 						printf("Create directory: %s\n", name);
-						if (tfs_create(fs, TfsInodeTypeDir, path).kind != TfsFileSystemCreateErrorSuccess)
+						if (tfs_fs_create(fs, TfsInodeTypeDir, path).kind != TfsFsCreateErrorSuccess)
 							printf("Create: could not create directory %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);
@@ -46,14 +46,14 @@ static void apply_commands(TfsFileSystem* fs) {
 				}
 				break;
 			case 'l':
-				if (tfs_find(fs, path, &searchResult, NULL, NULL) != TfsFileSystemFindErrorSuccess)
+				if (tfs_fs_find(fs, path, &searchResult, NULL, NULL) != TfsFsFindErrorSuccess)
 					printf("Search: %s not found\n", name);
 				else
 					printf("Search: %s found\n", name);
 				break;
 			case 'd':
 				printf("Delete: %s\n", name);
-				if (tfs_remove(fs, path) != TfsFileSystemRemoveErrorSuccess)
+				if (tfs_fs_remove(fs, path) != TfsFsRemoveErrorSuccess)
 					printf("Delete: could not delete %s\n", name);
 				else
 					printf("Delete: %s successfully deleted\n", name);
@@ -72,13 +72,13 @@ int main(int argc, char* argv[]) {
 	(void)argv;
 
 	/* init filesystem */
-	TfsFileSystem fs = tfs_new(100);
+	TfsFs fs = tfs_fs_new(100);
 
 	/* process input and print tree */
 	apply_commands(&fs);
-	tfs_print(&fs, stdout);
+	tfs_fs_print(&fs, stdout);
 
 	/* release allocated memory */
-	tfs_drop(&fs);
+	tfs_fs_drop(&fs);
 	exit(EXIT_SUCCESS);
 }
