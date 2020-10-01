@@ -45,7 +45,7 @@ typedef enum TfsInodeTableGetError {
 } TfsInodeTableGetError;
 
 /// @brief Creates a new inode table
-/// @param `max_inodes` Max number of inodes in this table.
+/// @param max_inodes Max number of inodes in this table.
 TfsInodeTable tfs_inode_table_new(size_t max_inodes);
 
 /// @brief Drops an inode table

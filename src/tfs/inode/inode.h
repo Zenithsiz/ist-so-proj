@@ -14,7 +14,10 @@
 /// @details The building block of the filesystem.
 ///          A tagged union, with tag `type`.
 typedef struct TfsInode {
+	/// @brief The type of this inode
 	TfsInodeType type;
+
+	/// @brief Data this inode holds.
 	TfsInodeData data;
 } TfsInode;
 

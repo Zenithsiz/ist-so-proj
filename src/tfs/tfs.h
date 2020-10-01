@@ -72,19 +72,31 @@ typedef enum TfsFileSystemFindError {
 TfsFileSystem tfs_new(size_t max_inodes);
 
 /// @brief Drops a file system
+/// @param fs Filesystem to drop
 void tfs_drop(TfsFileSystem* fs);
 
 /// @brief Creates a new inode
+/// @param fs Filesystem to create in.
+/// @param type Type of inode to create
+/// @param path Path of inode to to create.
 TfsFileSystemCreateError tfs_create(TfsFileSystem* fs, TfsInodeType type, TfsPath path);
 
 /// @brief Deletes an inode
+/// @param fs Filesystem to remove from.
+/// @param path Path of inode to remove.
 TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path);
 
-/// @brief Returns the inode index of a path, if it exists
+/// @brief Returns the inode index of a path, if it exists.
+/// @param fs Filesystem to create in.
+/// @param path Path of inode to to find.
+/// @param[out] idx Index of the inode.
+/// @param[out] type Type of the inode.
+/// @param[out] data Data of the inode.
 TfsFileSystemFindError tfs_find(TfsFileSystem* fs, TfsPath path, TfsInodeIdx* idx, TfsInodeType* type, TfsInodeData** data);
 
 /// @brief Prints the contents of this file system
-/// @param `out` File descriptor to output to.
+/// @param fs File system to print.
+/// @param out File descriptor to output to.
 void tfs_print(TfsFileSystem* fs, FILE* out);
 
 #endif

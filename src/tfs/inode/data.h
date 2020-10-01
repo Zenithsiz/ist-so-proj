@@ -18,8 +18,11 @@ typedef struct TfsInodeFile {
 /// @details If the tag is `TfsInodeType::None`, then
 ///          all elements of this union are uninitialized.
 typedef union TfsInodeData {
+	/// @brief Data for `IfsNodeTypeFile`
 	TfsInodeFile file;
-	TfsInodeDir	 dir;
+
+	/// @brief Data for `IfsNodeTypeDir`
+	TfsInodeDir dir;
 } TfsInodeData;
 
 #endif
