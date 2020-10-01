@@ -52,10 +52,14 @@ typedef struct TfsFileSystemCreateError {
 
 		/// @brief Unable to create new inode
 		/// @details
-		/// This is an enum table specific error
+		/// This is an inode table specific error,
+		/// see the underlying `create_inode` data.
 		TfsFileSystemCreateErrorCreateInode = -4,
 
 		/// @brief Unable to add entry to directory
+		/// @details
+		/// This is an inode directory specific error,
+		/// see the underlying `add_entry` data.
 		TfsFileSystemCreateErrorAddEntry = -5,
 	} kind;
 
@@ -63,6 +67,9 @@ typedef struct TfsFileSystemCreateError {
 	union {
 		/// @brief Underlying error for `CreateInode` error.
 		TfsInodeTableCreateError create_inode;
+
+		/// @brief Underlying error for `AddEntry` error.
+		TfsInodeDirError add_entry;
 	} data;
 } TfsFileSystemCreateError;
 

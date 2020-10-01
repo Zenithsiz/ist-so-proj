@@ -15,7 +15,7 @@ bool tfs_inode_dir_is_empty(TfsInodeDir* dir) {
 	return true;
 }
 
-TfsInodeDataDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx) {
+TfsInodeDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx) {
 	// If the name matches on any entry and it's not empty, return it
 	for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
 		// If we're empty, skip
@@ -37,10 +37,10 @@ TfsInodeDataDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* 
 	}
 
 	// If we got here, none of them had the same name
-	return TfsInodeDataDirErrorNoNameMatch;
+	return TfsInodeDirErrorNoNameMatch;
 }
 
-TfsInodeDataDirError tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx) {
+TfsInodeDirError tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx) {
 	// Check each entry until we find the one with index `idx`
 	for (int n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
 		if (dir->entries[n].inode_idx == idx) {
@@ -52,12 +52,12 @@ TfsInodeDataDirError tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx id
 	}
 
 	// If we got here, there was no entry with the index, so return Err
-	return TfsInodeDataDirErrorIdxNotFound;
+	return TfsInodeDirErrorIdxNotFound;
 }
-TfsInodeDataDirError tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, const char* name, size_t name_len) {
+TfsInodeDirError tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, const char* name, size_t name_len) {
 	// If the name is empty, return Err
 	if (name_len == 0) {
-		return TfsInodeDataDirErrorNameEmpty;
+		return TfsInodeDirErrorNameEmpty;
 	}
 
 	// Search for both an empty entry and any duplicates
@@ -71,14 +71,14 @@ TfsInodeDataDirError tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, 
 		// Else check if this is a duplicate
 		else {
 			if (dir->entries[n].inode_idx == idx) {
-				return TfsInodeDataDirErrorDuplicateEntry;
+				return TfsInodeDirErrorDuplicateEntry;
 			}
 		}
 	}
 
 	// If we didn't find any empty entries, return Err
 	if (empty_idx == (size_t)-1) {
-		return TfsInodeDataDirErrorFull;
+		return TfsInodeDirErrorFull;
 	}
 
 	// Else set it's node and copy the name

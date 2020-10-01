@@ -56,10 +56,11 @@ TfsFileSystemCreateError tfs_create(TfsFileSystem* fs, TfsInodeType type, TfsPat
 	}
 
 	// And add it to the directory
-	if (tfs_inode_dir_add_entry(&parent_data->dir, idx, name.chars, name.len) != TfsInodeDirErrorSuccess) {
+	TfsInodeDirError add_entry_err = tfs_inode_dir_add_entry(&parent_data->dir, idx, name.chars, name.len);
+	if (add_entry_err != TfsInodeDirErrorSuccess) {
 		// Note: If unable to, we delete the inode we just created.
 		assert(tfs_inode_table_remove(&fs->inode_table, idx) == TfsInodeTableRemoveErrorSuccess);
-		return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorAddEntry};
+		return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorAddEntry, .data = {.add_entry = add_entry_err}};
 	}
 
 	return (TfsFileSystemCreateError){.kind = TfsFileSystemCreateErrorSuccess};
