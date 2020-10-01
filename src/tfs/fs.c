@@ -213,16 +213,16 @@ TfsFsFindResult tfs_fs_find(TfsFs* fs, TfsPath path) {
 
 	// Current path and index
 	TfsInodeIdx cur_idx = 0;
-	TfsInodeData* cur_data;
-	TfsInodeType cur_type;
-	TfsPath cur_path = path;
+	TfsPath cur_path	= path;
 
 	do {
 		// Get the current inode's type and data
+		TfsInodeData* cur_data;
+		TfsInodeType cur_type;
 		assert(tfs_inode_table_get(&fs->inode_table, cur_idx, &cur_type, &cur_data) == TfsInodeTableGetErrorSuccess);
 
 		// If there's no more path to split, return the current inode
-		if (path.len == 0) {
+		if (cur_path.len == 0) {
 			return (TfsFsFindResult){.kind = TfsFsFindResultSuccess, .data = {.success = {.idx = cur_idx, .type = cur_type, .data = cur_data}}};
 		}
 

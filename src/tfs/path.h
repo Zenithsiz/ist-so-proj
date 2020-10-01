@@ -47,7 +47,7 @@ void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child);
 
 /// @brief Splits this path at it's final component
 /// @details
-/// First slash is not included in either the parnet or child.
+/// First slash is not included in either the parent or child.
 /// If a path only contains 1 component, the child's
 /// path is empty.
 ///
@@ -57,6 +57,8 @@ void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child);
 /// |-----------|----------|---------|
 /// | 'a/b/c'   | 'a'      | 'b/c'   |
 /// | 'a/b/c/'  | ^        | 'b/c/'  |
+/// | 'a'       | ^        | ''      |
+/// | 'a/'      | ^        | ^       |
 /// | '/a/b/c'  | ''       | 'a/b/c' |
 /// | '/a/b/c/' | ^        | 'a/b/c/'|
 /// | '/c'      | ^        | 'c'     |

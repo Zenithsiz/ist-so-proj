@@ -46,12 +46,6 @@ void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child) {
 }
 
 void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child) {
-	// Remove any leading slashes from `path`.
-	if (path.len > 0 && path.chars[0] == '/') {
-		path.chars++;
-		path.len--;
-	}
-
 	// Find the first separator
 	size_t sep_pos = (size_t)-1;
 	for (size_t n = 0; n < path.len; ++n) {
@@ -78,14 +72,14 @@ void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child) {
 	if (child != NULL) {
 		// If we didn't find any separator, set the child as empty
 		if (sep_pos == (size_t)-1) {
-			parent->chars = path.chars + path.len;
-			parent->len	  = 0;
+			child->chars = path.chars + path.len;
+			child->len	 = 0;
 		}
 
 		// Else skip the separator
 		else {
-			parent->chars = path.chars + sep_pos + 1;
-			parent->len	  = path.len - sep_pos - 1;
+			child->chars = path.chars + sep_pos + 1;
+			child->len	 = path.len - sep_pos - 1;
 		}
 	}
 }
