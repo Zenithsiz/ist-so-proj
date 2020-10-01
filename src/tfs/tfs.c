@@ -105,19 +105,18 @@ TfsFileSystemError tfs_find(TfsFileSystem* fs, TfsPath path, TfsInodeIdx* idx) {
 	TfsInodeData cur_inode_data;
 
 	do {
-		// Try to get the current inode data
-		TfsInodeType type;
-		if (tfs_inode_table_get(&fs->inode_table, cur_idx, &type, &cur_inode_data) != TfsInodeTableErrorSuccess) {
-			return TfsFileSystemErrorOther;
-		}
-
-		// If there's no more path to split, return this inode
-		// TODO: Switch order with above
+		// If there's no more path to split, return the current inode
 		if (path.len == 0) {
 			if (idx != NULL) {
 				*idx = cur_idx;
 			}
 			return TfsFileSystemErrorSuccess;
+		}
+
+		// Try to get the current inode data
+		TfsInodeType type;
+		if (tfs_inode_table_get(&fs->inode_table, cur_idx, &type, &cur_inode_data) != TfsInodeTableErrorSuccess) {
+			return TfsFileSystemErrorOther;
 		}
 
 		// Else, if this isn't a directory, return Err
