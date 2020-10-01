@@ -117,7 +117,7 @@ TfsInodeTableError tfs_inode_table_dir_reset_entry(TfsInodeTable* table, TfsInod
 	// If we got here, there was no entry with the sub index, so return Err
 	return TfsInodeTableErrorSubIdxNotFoundInDirEntries;
 }
-TfsInodeTableError tfs_inode_table_dir_add_entry(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeIdx sub_idx, const char* sub_name) {
+TfsInodeTableError tfs_inode_table_dir_add_entry(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeIdx sub_idx, const char* sub_name, size_t sub_name_len) {
 	// If either indexes are out of bounds, or empty, return Err
 	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
 		return TfsInodeTableErrorInodeIdxOutOfBounds;
@@ -133,7 +133,6 @@ TfsInodeTableError tfs_inode_table_dir_add_entry(TfsInodeTable* table, TfsInodeI
 	}
 
 	// If the name is empty, return Err
-	size_t sub_name_len = strlen(sub_name);
 	if (sub_name_len == 0) {
 		return TfsInodeTableErrorDirEntryNameEmpty;
 	}

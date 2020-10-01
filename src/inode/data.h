@@ -33,7 +33,7 @@ typedef enum TfsInodeDataDirError {
 int tfs_inode_dir_is_empty(TfsInodeDir* dir);
 
 /// @brief Searches for a node
-TfsInodeDataDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, TfsInodeIdx* idx);
+TfsInodeDataDirError tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx);
 
 /// @brief Inode data
 /// @details If the tag is `TfsInodeType::None`, then

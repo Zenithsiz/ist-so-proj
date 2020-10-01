@@ -80,7 +80,7 @@ tfs_inode_table_set_file(TfsInodeTable* table, TfsInodeIdx inumber, char* fileCo
 TfsInodeTableError
 tfs_inode_table_dir_reset_entry(TfsInodeTable* table, TfsInodeIdx inumber, TfsInodeIdx sub_inumber);
 TfsInodeTableError
-tfs_inode_table_dir_add_entry(TfsInodeTable* table, TfsInodeIdx inumber, TfsInodeIdx sub_inumber, const char* sub_name);
+tfs_inode_table_dir_add_entry(TfsInodeTable* table, TfsInodeIdx inumber, TfsInodeIdx sub_inumber, const char* sub_name, size_t sub_name_len);
 TfsInodeTableError
 tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx inumber, const char* name);
 

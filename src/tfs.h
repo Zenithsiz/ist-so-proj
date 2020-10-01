@@ -3,8 +3,11 @@
 
 // Imports
 #include <inode/table.h> // TfsInodeTable
+#include <path.h>		 // TfsPath
 
 /// @brief The file system
+/// @invariant `inode_table` will always have a directory,
+///            the 'root node', at the fist inode.
 typedef struct TfsFileSystem {
 	/// Inode table
 	TfsInodeTable inode_table;
@@ -32,25 +35,14 @@ TfsFileSystem tfs_new(size_t max_inodes);
 void tfs_drop(TfsFileSystem* fs);
 
 /// @brief Creates a new inode
-TfsFileSystemError tfs_create_inode(TfsFileSystem* fs, TfsInodeType type, const char* path);
+TfsFileSystemError tfs_create_inode(TfsFileSystem* fs, TfsInodeType type, TfsPath path);
 
 /// @brief Deletes an inode
-TfsFileSystemError tfs_delete_inode(TfsFileSystem* fs, const char* path);
+TfsFileSystemError tfs_delete_inode(TfsFileSystem* fs, TfsPath path);
 
 /// @brief Returns the inode index of a path, if it exists
-TfsFileSystemError tfs_find(TfsFileSystem* fs, const char* path, TfsInodeIdx* idx);
+TfsFileSystemError tfs_find(TfsFileSystem* fs, TfsPath path, TfsInodeIdx* idx);
 
 /// @brief Prints the contents of this file system
 /// @arg `out` File descriptor to output to.
 void tfs_print(TfsFileSystem* fs, FILE* out);
-
-/*
-void init_fs(TfsInodeTable table);
-void destroy_fs(TfsInodeTable table);
-int	 is_dir_empty(TfsDirEntry* dirEntries);
-int	 create(TfsInodeTable table, char* name, TfsInodeType nodeType);
-int delete (TfsInodeTable table, char* name);
-
-int	 lookup(TfsInodeTable table, char* name);
-void print_tecnicofs_tree(TfsInodeTable table, FILE* fp);
-*/
