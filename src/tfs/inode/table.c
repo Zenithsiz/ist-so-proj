@@ -34,7 +34,7 @@ void tfs_inode_table_drop(TfsInodeTable* table) {
 	free(table->inodes);
 }
 
-TfsInodeTableError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data) {
+TfsInodeTableCreateError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data) {
 	for (TfsInodeIdx n = 0; n < table->len; n++) {
 		// Skip all non empty inodes
 		if (table->inodes[n].type != TfsInodeTypeNone) {
@@ -51,30 +51,30 @@ TfsInodeTableError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType typ
 		if (data != NULL) {
 			*data = &table->inodes[n].data;
 		}
-		return TfsInodeTableErrorSuccess;
+		return TfsInodeTableCreateErrorSuccess;
 	}
 
 	// If we got here, the inode table was full
-	return TfsInodeTableErrorInodeTableFull;
+	return TfsInodeTableCreateErrorFull;
 }
 
-TfsInodeTableError tfs_inode_table_delete(TfsInodeTable* table, TfsInodeIdx idx) {
+TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* table, TfsInodeIdx idx) {
 	// If it's out of bounds, or empty, return Err
 	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableErrorInodeIdxOutOfBounds;
+		return TfsInodeTableRemoveErrorInvalidIdx;
 	}
 
 	// Drop the node and replace it with an empty node
 	tfs_inode_drop(&table->inodes[idx]);
 	tfs_inode_init(&table->inodes[idx], TfsInodeTypeNone);
 
-	return TfsInodeTableErrorSuccess;
+	return TfsInodeTableRemoveErrorSuccess;
 }
 
-TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data) {
+TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data) {
 	// If it's out of bounds, or empty, return Err
 	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableErrorInodeIdxOutOfBounds;
+		return TfsInodeTableGetErrorInvalidIdx;
 	}
 
 	if (type != NULL)
@@ -83,17 +83,10 @@ TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, Tf
 	if (data != NULL)
 		*data = &table->inodes[idx].data;
 
-	return TfsInodeTableErrorSuccess;
+	return TfsInodeTableGetErrorSuccess;
 }
 
-/*
-TfsInodeTableError tfs_inode_table_set_file(TfsInodeTable* table, TfsInodeIdx idx, char *fileContents, size_t len)
-{
-	()
-}
-*/
-
-TfsInodeTableError tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx idx, const char* name) {
+void tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, TfsInodeIdx idx, const char* name) {
 	switch (table->inodes[idx].type) {
 		// For files, just print it's name and return
 		case TfsInodeTypeFile: {
@@ -121,6 +114,4 @@ TfsInodeTableError tfs_inode_table_print_tree(TfsInodeTable* table, FILE* fp, Tf
 			break;
 		}
 	}
-
-	return TfsInodeTableErrorSuccess;
 }

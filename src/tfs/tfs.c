@@ -10,7 +10,7 @@ TfsFileSystem tfs_new(size_t max_inodes) {
 
 	// Create the root node at index `0`.
 	TfsInodeIdx root;
-	if (tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir, &root, NULL) != TfsInodeTableErrorSuccess || root != 0) {
+	if (tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir, &root, NULL) != TfsInodeTableCreateErrorSuccess || root != 0) {
 		fprintf(stderr, "Failed to create root");
 		exit(EXIT_FAILURE);
 	}
@@ -49,14 +49,14 @@ TfsFileSystemCreateError tfs_create(TfsFileSystem* fs, TfsInodeType type, TfsPat
 
 	// Else create the inode
 	TfsInodeIdx idx;
-	if (tfs_inode_table_create(&fs->inode_table, type, &idx, NULL) != TfsInodeTableErrorSuccess) {
+	if (tfs_inode_table_create(&fs->inode_table, type, &idx, NULL) != TfsInodeTableCreateErrorSuccess) {
 		return TfsFileSystemCreateErrorCreateInode;
 	}
 
 	// And add it to the directory
 	if (tfs_inode_dir_add_entry(&parent_data->dir, idx, name.chars, name.len) != TfsInodeDirErrorSuccess) {
 		// Note: If unable to, we delete the inode we just created.
-		assert(tfs_inode_table_delete(&fs->inode_table, idx) == TfsInodeTableErrorSuccess);
+		assert(tfs_inode_table_remove(&fs->inode_table, idx) == TfsInodeTableRemoveErrorSuccess);
 		return TfsFileSystemInodeErrorAddEntry;
 	}
 
@@ -91,7 +91,7 @@ TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path) {
 	// Get the type and data of the node to delete
 	TfsInodeType  type;
 	TfsInodeData* data;
-	assert(tfs_inode_table_get(&fs->inode_table, idx, &type, &data) == TfsInodeTableErrorSuccess);
+	assert(tfs_inode_table_get(&fs->inode_table, idx, &type, &data) == TfsInodeTableGetErrorSuccess);
 
 	// If it's a directory but it's not empty, return Err
 	if (type == TfsInodeTypeDir && !tfs_inode_dir_is_empty(&data->dir)) {
@@ -102,7 +102,7 @@ TfsFileSystemRemoveError tfs_remove(TfsFileSystem* fs, TfsPath path) {
 	assert(tfs_inode_dir_remove_entry(&parent_data->dir, idx) == TfsInodeDirErrorSuccess);
 
 	// And delete it from the inode table
-	assert(tfs_inode_table_delete(&fs->inode_table, idx) == TfsInodeTableErrorSuccess);
+	assert(tfs_inode_table_remove(&fs->inode_table, idx) == TfsInodeTableRemoveErrorSuccess);
 
 	return TfsFileSystemRemoveErrorSuccess;
 }
