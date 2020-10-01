@@ -28,14 +28,14 @@ static void apply_commands(TfsFileSystem* fs) {
 				switch (type) {
 					case 'f':
 						printf("Create file: %s\n", name);
-						if (tfs_create_inode(fs, TfsInodeTypeFile, path) != TfsFileSystemErrorSuccess)
+						if (tfs_create(fs, TfsInodeTypeFile, path) != TfsFileSystemCreateErrorSuccess)
 							printf("Create: could not create file %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);
 						break;
 					case 'd':
 						printf("Create directory: %s\n", name);
-						if (tfs_create_inode(fs, TfsInodeTypeDir, path) != TfsFileSystemErrorSuccess)
+						if (tfs_create(fs, TfsInodeTypeDir, path) != TfsFileSystemCreateErrorSuccess)
 							printf("Create: could not create directory %s\n", name);
 						else
 							printf("Create: %s successfully created\n", name);
@@ -46,14 +46,14 @@ static void apply_commands(TfsFileSystem* fs) {
 				}
 				break;
 			case 'l':
-				if (tfs_find(fs, path, &searchResult) != TfsFileSystemErrorSuccess)
+				if (tfs_find(fs, path, &searchResult, NULL, NULL) != TfsFileSystemFindErrorSuccess)
 					printf("Search: %s not found\n", name);
 				else
 					printf("Search: %s found\n", name);
 				break;
 			case 'd':
 				printf("Delete: %s\n", name);
-				if (tfs_delete_inode(fs, path) != TfsFileSystemErrorSuccess)
+				if (tfs_remove(fs, path) != TfsFileSystemRemoveErrorSuccess)
 					printf("Delete: could not delete %s\n", name);
 				else
 					printf("Delete: %s successfully deleted\n", name);

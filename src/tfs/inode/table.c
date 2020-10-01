@@ -71,7 +71,7 @@ TfsInodeTableError tfs_inode_table_delete(TfsInodeTable* table, TfsInodeIdx idx)
 	return TfsInodeTableErrorSuccess;
 }
 
-TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData* data) {
+TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data) {
 	// If it's out of bounds, or empty, return Err
 	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
 		return TfsInodeTableErrorInodeIdxOutOfBounds;
@@ -81,7 +81,7 @@ TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, Tf
 		*type = table->inodes[idx].type;
 
 	if (data != NULL)
-		*data = table->inodes[idx].data;
+		*data = &table->inodes[idx].data;
 
 	return TfsInodeTableErrorSuccess;
 }

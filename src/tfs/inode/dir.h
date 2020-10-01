@@ -7,6 +7,9 @@
 /// Of special importance @ref TfsInodeDir is the data that is stored
 /// in the inode itself.
 
+#ifndef TFS_INODE_DIR_H
+#define TFS_INODE_DIR_H
+
 // Includes
 #include <stdbool.h>	   // Bool
 #include <stdlib.h>		   // size_t
@@ -87,3 +90,5 @@ TfsInodeDataDirError tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx id
 /// @param name The name of the entry to add. Is not required to be null terminated.
 /// @param name_len Length of @p name.
 TfsInodeDataDirError tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, const char* name, size_t name_len);
+
+#endif

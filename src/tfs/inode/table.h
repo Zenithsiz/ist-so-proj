@@ -72,7 +72,7 @@ tfs_inode_table_delete(TfsInodeTable* table, TfsInodeIdx idx);
 /// @arg idx The index of the inode to access
 /// @arg data Out parameter with the data in the inode
 /// @arg type Out parameter with the type in the inode
-TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData* data);
+TfsInodeTableError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
 
 //TfsInodeTableError tfs_inode_table_set_file(TfsInodeTable* table, TfsInodeIdx inumber, char* fileContents, size_t len);
 
