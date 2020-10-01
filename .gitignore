@@ -4,3 +4,6 @@ build/
 
 # Vscode
 .vscode
+
+# Docs
+docs/
