@@ -1,6 +1,11 @@
 /// @file
-/// Inode indexes
-
+/// @brief Inode indexes
+/// @details
+/// This file contains the @ref TfsInodeIdx type, which is a typedef
+/// used to work with indices of inodes.
+///
+/// It also provides the @ref TfsInodeIdxNone value, which should be
+/// used when an index does not exist.
 #ifndef TFS_INODE_IDX_H
 #define TFS_INODE_IDX_H
 
@@ -12,7 +17,7 @@ typedef size_t TfsInodeIdx;
 
 enum {
 	/// @brief A nonexistant index
-	TfsInodeIdxNone,
+	TfsInodeIdxNone = (TfsInodeIdx)-1,
 };
 
 #endif
