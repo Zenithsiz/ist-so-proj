@@ -64,21 +64,12 @@ typedef struct TfsInodeDirAddEntryResult {
 		/// @brief Entry name was empty
 		TfsInodeDirAddEntryResultErrorEmptyName = -1,
 
-		/// @brief An entry with the same index already exists.
-		TfsInodeDirAddEntryResultErrorDuplicateIdx = -2,
-
 		/// @brief An entry with the same name already exists.
 		TfsInodeDirAddEntryResultErrorDuplicateName = -3,
 	} kind;
 
 	/// @brief Result data
 	union {
-		/// @brief Data for `ErrorDuplicateIdx`
-		struct {
-			/// @brief Name of the entry with the same index
-			char* name;
-		} duplicate_idx;
-
 		/// @brief Data for `ErrorDuplicateName`
 		struct {
 			/// @brief Index of the entry with the same name

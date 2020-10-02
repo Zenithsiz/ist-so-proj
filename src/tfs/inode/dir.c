@@ -10,11 +10,6 @@ void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* resul
 			break;
 		}
 
-		case TfsInodeDirAddEntryResultErrorDuplicateIdx: {
-			fprintf(out, "A path with the same inode index, '%s', already exists\n", result->data.duplicate_idx.name);
-			break;
-		}
-
 		case TfsInodeDirAddEntryResultErrorDuplicateName:
 			fprintf(out, "A path with the same name, with inode index '%u', already exists\n", result->data.duplicate_name.idx);
 			break;
@@ -106,13 +101,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 		}
 
 		// Else check if we're adding a duplicate
-		else if (dir->entries[n].inode_idx == idx) {
-			return (TfsInodeDirAddEntryResult){
-				.kind = TfsInodeDirAddEntryResultErrorDuplicateIdx,
-				.data = {.duplicate_idx = {.name = dir->entries[n].name}}};
-		}
 		else {
-			// Or check if the names are the same.
 			size_t entry_len = strlen(dir->entries[n].name);
 			if (entry_len == name_len && strncmp(dir->entries[n].name, name, entry_len > name_len ? name_len : entry_len) == 0) {
 				return (TfsInodeDirAddEntryResult){
