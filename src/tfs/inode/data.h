@@ -6,13 +6,8 @@
 
 // Imports
 #include <tfs/inode/dir.h>	// TfsInodeDir
+#include <tfs/inode/file.h> // TfsInodeFile
 #include <tfs/inode/type.h> // TfsInodeType
-
-/// @brief Data for `TfsInodeType::File`
-typedef struct TfsInodeFile {
-	/// @brief File contents
-	char* contents;
-} TfsInodeFile;
 
 /// @brief Inode data
 /// @details If the tag is `TfsInodeType::None`, then
