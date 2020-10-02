@@ -115,32 +115,30 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 	if (empty_idx == (size_t)-1) {
 		// Double the current capacity so we don't allocate often
 		// Note: We start by allocating 4 to skip having to
-		//       the smaller 1 an 2 allocations, as most directories
-		//       will likely have at least 4 entries.
-		size_t capacity = dir->capacity == 0 ? 4 : 2 * dir->capacity;
+		//       the smaller 1 and 2 allocations.
+		size_t new_capacity = dir->capacity == 0 ? 4 : 2 * dir->capacity;
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`
-		TfsDirEntry* entries = realloc(dir->entries, capacity * sizeof(TfsDirEntry));
-		if (entries == NULL) {
-			fprintf(stderr, "Unable to expand directory capacity to %u", capacity);
+		TfsDirEntry* new_entries = realloc(dir->entries, new_capacity * sizeof(TfsDirEntry));
+		if (new_entries == NULL) {
+			fprintf(stderr, "Unable to expand directory capacity to %u", new_capacity);
 			exit(EXIT_FAILURE);
 		}
 
 		// Set all new entries as empty
 		// Note: We skip the first, as we'll initialize it after this.
-		for (size_t n = dir->capacity + 1; n < capacity; n++) {
-			entries[n].name[0]	 = '\0';
-			entries[n].inode_idx = TFS_INODE_IDX_NONE;
+		for (size_t n = dir->capacity + 1; n < new_capacity; n++) {
+			new_entries[n].name[0]	 = '\0';
+			new_entries[n].inode_idx = TFS_INODE_IDX_NONE;
 		}
 
 		// Set the index as the first new index and continue
-		// Note: This new index is guaranteed to be empty.
 		empty_idx = dir->capacity;
 
 		// Move everything into `dir`
-		dir->entries  = entries;
-		dir->capacity = capacity;
+		dir->entries  = new_entries;
+		dir->capacity = new_capacity;
 	}
 
 	// Else set it's node and copy the name

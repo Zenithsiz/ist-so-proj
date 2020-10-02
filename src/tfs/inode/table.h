@@ -1,5 +1,8 @@
 /// @file
-/// Inode tables
+/// @brief Inode tables
+/// @details
+/// This file contains the type @ref TfsInodeTable, responsible for managing
+/// a table of nodes.
 
 #ifndef TFS_INODE_TABLE_H
 #define TFS_INODE_TABLE_H
@@ -9,22 +12,25 @@
 #include <tfs/inode/inode.h> // TfsInode
 
 /// @brief An inode table
+/// @details
+/// Stores all the inodes on the heap and can
+/// expand when necessary.
 typedef struct TfsInodeTable {
-	/// All of the inodes
+	/// @brief All the inodes
 	TfsInode* inodes;
 
-	/// Number of inodes
-	size_t len;
+	/// @brief Allocated inodes
+	size_t capacity;
 } TfsInodeTable;
 
-/// @brief Error type for @ref tfs_inode_table_create
-typedef enum TfsInodeTableCreateError {
-	/// @brief Success
-	TfsInodeTableCreateErrorSuccess,
+/// @brief Return type for @ref tfs_inode_table_create
+typedef struct TfsInodeTableCreateReturn {
+	/// @brief The index of the created inode
+	TfsInodeIdx idx;
 
-	/// @brief Inode table was full
-	TfsInodeTableCreateErrorFull,
-} TfsInodeTableCreateError;
+	/// @brief Data of the created inode
+	TfsInodeData* data;
+} TfsInodeTableCreateReturn;
 
 /// @brief Error type for @ref tfs_inode_table_remove
 typedef enum TfsInodeTableRemoveError {
@@ -45,8 +51,9 @@ typedef enum TfsInodeTableGetError {
 } TfsInodeTableGetError;
 
 /// @brief Creates a new inode table
-/// @param max_inodes Max number of inodes in this table.
-TfsInodeTable tfs_inode_table_new(size_t max_inodes);
+/// @details
+/// The returned table has no inodes.
+TfsInodeTable tfs_inode_table_new(void);
 
 /// @brief Drops an inode table
 void tfs_inode_table_drop(TfsInodeTable* table);
@@ -55,9 +62,7 @@ void tfs_inode_table_drop(TfsInodeTable* table);
 ///
 /// @param table The table to create the inode in
 /// @param type The type of inode to create
-/// @param[out] idx Index of the created node
-/// @param[out] data Data of the created node
-TfsInodeTableCreateError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data);
+TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type);
 
 /// @brief Removes an inode from the table
 ///

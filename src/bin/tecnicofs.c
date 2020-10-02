@@ -45,7 +45,7 @@ static void apply_commands(TfsFs* fs) {
 							tfs_fs_create_result_print(&res, stdout);
 						}
 						else {
-							printf("Successfully created '%s'\n", name);
+							printf("Successfully created '%s' (with index %u)\n", name, res.data.success.idx);
 						}
 						break;
 					}
@@ -74,7 +74,7 @@ static void apply_commands(TfsFs* fs) {
 					tfs_fs_remove_result_print(&res, stdout);
 				}
 				else {
-					printf("Successfully deleted %s\n", name);
+					printf("Successfully deleted %s (with index %u)\n", name, res.data.success.idx);
 				}
 				break;
 			}
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
 	(void)argv;
 
 	/* init filesystem */
-	TfsFs fs = tfs_fs_new(100);
+	TfsFs fs = tfs_fs_new();
 
 	/* process input and print tree */
 	apply_commands(&fs);
@@ -99,5 +99,6 @@ int main(int argc, char* argv[]) {
 
 	/* release allocated memory */
 	tfs_fs_drop(&fs);
-	exit(EXIT_SUCCESS);
+
+	return EXIT_SUCCESS;
 }

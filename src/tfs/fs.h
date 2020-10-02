@@ -62,8 +62,8 @@ typedef struct TfsFsFindResult {
 
 		/// @brief Data for `ErrorNameNotFound`
 		struct {
-			/// @brief File name of the entry not found
-			TfsPath entry_name;
+			/// @brief Path of the entry not found
+			TfsPath path;
 		} name_not_found;
 	} data;
 } TfsFsFindResult;
@@ -87,12 +87,6 @@ typedef struct TfsFsCreateResult {
 		/// a directory.
 		TfsFsCreateResultErrorParentNotDir = -2,
 
-		/// @brief Unable to create new inode
-		/// @details
-		/// This is an inode table specific error,
-		/// see the underlying `create_inode` data.
-		TfsFsCreateResultErrorCreateInode = -3,
-
 		/// @brief Unable to add entry to directory
 		/// @details
 		/// This is an inode directory specific error,
@@ -102,6 +96,12 @@ typedef struct TfsFsCreateResult {
 
 	/// @brief Result data
 	union {
+		/// @brief Data for `Success`
+		struct {
+			/// @brief Inode index of the created inode
+			TfsInodeIdx idx;
+		} success;
+
 		/// @brief Data for `ErrorInexistentParentDir`
 		struct {
 			/// @brief Underlying error
@@ -116,12 +116,6 @@ typedef struct TfsFsCreateResult {
 			/// @brief Path of the parent
 			TfsPath parent;
 		} parent_not_dir;
-
-		/// @brief Data for `ErrorCreateInode`.
-		struct {
-			/// @brief Underlying error.
-			TfsInodeTableCreateError err;
-		} create_inode;
 
 		/// @brief Data for `ErrorAddEntry`.
 		struct {
@@ -153,6 +147,12 @@ typedef struct TfsFsRemoveResult {
 
 	/// @brief Result data
 	union {
+		/// @brief Data for `Success`
+		struct {
+			/// @brief Inode index of the removed inode
+			TfsInodeIdx idx;
+		} success;
+
 		/// @brief Data for `ErrorInexistentParentDir`
 		struct {
 			/// @brief Underlying error
@@ -201,8 +201,7 @@ void tfs_fs_remove_result_print(const TfsFsRemoveResult* result, FILE* out);
 /// @details
 /// This will allocate an inode table and use it
 /// for the file system.
-/// @param max_inodes The max number of inodes in this file system
-TfsFs tfs_fs_new(size_t max_inodes);
+TfsFs tfs_fs_new(void);
 
 /// @brief Drops a file system
 /// @param fs Filesystem to drop

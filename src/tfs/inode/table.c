@@ -5,62 +5,77 @@
 #include <stdlib.h> // exit, EXIT_FAILURE
 #include <string.h> // strlen, strncpy
 
-TfsInodeTable tfs_inode_table_new(size_t max_inodes) {
-	// Allocate the inode table
-	TfsInode* inodes = malloc(sizeof(TfsInode) * max_inodes);
-
-	// If an error occurred, exit
-	if (inodes == NULL) {
-		fprintf(stderr, "Unable to allocate inode table");
-		exit(EXIT_FAILURE);
-	}
-
-	// Else assign each table to an empty inode
-	TfsInodeTable table = {.inodes = inodes, .len = max_inodes};
-	for (size_t n = 0; n < table.len; n++) {
-		table.inodes[n] = tfs_inode_new(TfsInodeTypeNone);
-	}
-
-	return table;
+TfsInodeTable tfs_inode_table_new(void) {
+	return (TfsInodeTable){
+		// Note: `NULL` can be safely passed to both `free` and `realloc`.
+		.inodes	  = NULL,
+		.capacity = 0,
+	};
 }
 
 void tfs_inode_table_drop(TfsInodeTable* table) {
 	// Drop each inode
-	for (size_t n = 0; n < table->len; n++) {
+	for (size_t n = 0; n < table->capacity; n++) {
 		tfs_inode_drop(&table->inodes[n]);
 	}
 
 	// And free the inode table
+	// Note: It's fine if `inodes` is `NULL`.
 	free(table->inodes);
 }
 
-TfsInodeTableCreateError tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data) {
-	for (TfsInodeIdx n = 0; n < table->len; n++) {
-		// Skip all non empty inodes
-		if (table->inodes[n].type != TfsInodeTypeNone) {
-			continue;
+TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type) {
+	// Find the first non-empty node
+	TfsInodeIdx empty_idx = TFS_INODE_IDX_NONE;
+	for (TfsInodeIdx n = 0; n < table->capacity; n++) {
+		if (table->inodes[n].type == TfsInodeTypeNone) {
+			empty_idx = n;
+			break;
 		}
-
-		// Initialize the node
-		table->inodes[n] = tfs_inode_new(type);
-
-		// Set the index and data and return
-		if (idx != NULL) {
-			*idx = n;
-		}
-		if (data != NULL) {
-			*data = &table->inodes[n].data;
-		}
-		return TfsInodeTableCreateErrorSuccess;
 	}
 
-	// If we got here, the inode table was full
-	return TfsInodeTableCreateErrorFull;
+	// If we didn't find it, reallocate
+	if (empty_idx == TFS_INODE_IDX_NONE) {
+		// Double the current capacity so we don't allocate often
+		// Note: We start by allocating 4 to skip having to
+		//       the smaller 1 and 2 allocations.
+		size_t new_capacity = table->capacity == 0 ? 4 : 2 * table->capacity;
+
+		// Try to allocate
+		// Note: It's fine even if `table->inodes` is `NULL`
+		TfsInode* new_inodes = realloc(table->inodes, new_capacity * sizeof(TfsInode));
+		if (new_inodes == NULL) {
+			fprintf(stderr, "Unable to expand inode table capacity to %u", new_capacity);
+			exit(EXIT_FAILURE);
+		}
+
+		// Set all new inodes as empty
+		// Note: We skip the first, as we'll initialize it after this.
+		for (size_t n = table->capacity + 1; n < new_capacity; n++) {
+			new_inodes[n] = tfs_inode_new(TfsInodeTypeNone);
+		}
+
+		// Set the index as the first new index and continue
+		empty_idx = table->capacity;
+
+		// Move everything into `dir`
+		table->inodes	= new_inodes;
+		table->capacity = new_capacity;
+	}
+
+	// Then initialize the node
+	table->inodes[empty_idx] = tfs_inode_new(type);
+
+	// And return it
+	return (TfsInodeTableCreateReturn){
+		.idx  = empty_idx,
+		.data = &table->inodes[empty_idx].data,
+	};
 }
 
 TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* table, TfsInodeIdx idx) {
 	// If it's out of bounds, or empty, return Err
-	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
+	if (idx >= table->capacity || table->inodes[idx].type == TfsInodeTypeNone) {
 		return TfsInodeTableRemoveErrorInvalidIdx;
 	}
 
@@ -73,7 +88,7 @@ TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* table, TfsInodeId
 
 TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data) {
 	// If it's out of bounds, or empty, return Err
-	if (idx >= table->len || table->inodes[idx].type == TfsInodeTypeNone) {
+	if (idx >= table->capacity || table->inodes[idx].type == TfsInodeTypeNone) {
 		return TfsInodeTableGetErrorInvalidIdx;
 	}
 

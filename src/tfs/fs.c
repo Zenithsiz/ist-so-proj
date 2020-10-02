@@ -13,8 +13,8 @@ void tfs_fs_find_result_print(const TfsFsFindResult* result, FILE* out) {
 		}
 
 		case TfsFsFindResultErrorNameNotFound: {
-			const TfsPath* entry_name = &result->data.name_not_found.entry_name;
-			fprintf(out, "Entry '%.*s' does not exist\n", entry_name->len, entry_name->chars);
+			const TfsPath* path = &result->data.name_not_found.path;
+			fprintf(out, "Entry '%.*s' does not exist\n", path->len, path->chars);
 			break;
 		}
 
@@ -39,11 +39,6 @@ void tfs_fs_create_result_print(const TfsFsCreateResult* result, FILE* out) {
 			fprintf(out, "Parent directory '%.*s' was not a directory\n", parent_path->len, parent_path->chars);
 			break;
 		}
-
-		case TfsFsCreateResultErrorCreateInode:
-			fprintf(out, "Unable to create inode\n");
-			// TODO: Print underlying error
-			break;
 
 		case TfsFsCreateResultErrorAddEntry:
 			fprintf(out, "Unable to add directory entry\n");
@@ -91,13 +86,12 @@ void tfs_fs_remove_result_print(const TfsFsRemoveResult* result, FILE* out) {
 	}
 }
 
-TfsFs tfs_fs_new(size_t max_inodes) {
+TfsFs tfs_fs_new() {
 	// Create the inode table
-	TfsFs fs = {.inode_table = tfs_inode_table_new(max_inodes)};
+	TfsFs fs = {.inode_table = tfs_inode_table_new()};
 
 	// Create the root node at index `0`.
-	TfsInodeIdx root;
-	if (tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir, &root, NULL) != TfsInodeTableCreateErrorSuccess || root != 0) {
+	if (tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir).idx != 0) {
 		fprintf(stderr, "Failed to create root");
 		exit(EXIT_FAILURE);
 	}
@@ -132,11 +126,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* fs, TfsInodeType type, TfsPath path) {
 	}
 
 	// Else create the inode
-	TfsInodeIdx idx;
-	TfsInodeTableCreateError create_err = tfs_inode_table_create(&fs->inode_table, type, &idx, NULL);
-	if (create_err != TfsInodeTableCreateErrorSuccess) {
-		return (TfsFsCreateResult){.kind = TfsFsCreateResultErrorCreateInode, .data = {.create_inode = {.err = create_err}}};
-	}
+	TfsInodeIdx idx = tfs_inode_table_create(&fs->inode_table, type).idx;
 
 	// And add it to the directory
 	TfsInodeDirAddEntryResult add_entry_res = tfs_inode_dir_add_entry(&parent_data->dir, idx, entry_name.chars, entry_name.len);
@@ -146,7 +136,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* fs, TfsInodeType type, TfsPath path) {
 		return (TfsFsCreateResult){.kind = TfsFsCreateResultErrorAddEntry, .data = {.add_entry = {.err = add_entry_res}}};
 	}
 
-	return (TfsFsCreateResult){.kind = TfsFsCreateResultSuccess};
+	return (TfsFsCreateResult){.kind = TfsFsCreateResultSuccess, .data = {.success = {.idx = idx}}};
 }
 
 TfsFsRemoveResult tfs_fs_remove(TfsFs* fs, TfsPath path) {
@@ -192,7 +182,7 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* fs, TfsPath path) {
 	// And delete it from the inode table
 	assert(tfs_inode_table_remove(&fs->inode_table, idx) == TfsInodeTableRemoveErrorSuccess);
 
-	return (TfsFsRemoveResult){.kind = TfsFsRemoveResultSuccess};
+	return (TfsFsRemoveResult){.kind = TfsFsRemoveResultSuccess, .data = {.success = {.idx = idx}}};
 }
 
 TfsFsFindResult tfs_fs_find(TfsFs* fs, TfsPath path) {
@@ -231,7 +221,9 @@ TfsFsFindResult tfs_fs_find(TfsFs* fs, TfsPath path) {
 		// Try to get the node
 		cur_idx = tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len);
 		if (cur_idx == TFS_INODE_IDX_NONE) {
-			return (TfsFsFindResult){.kind = TfsFsFindResultErrorNameNotFound};
+			TfsPath bad_dir_path = path;
+			bad_dir_path.len	 = cur_dir.chars - path.chars;
+			return (TfsFsFindResult){.kind = TfsFsFindResultErrorNameNotFound, .data = {.name_not_found = {.path = bad_dir_path}}};
 		}
 	} while (1);
 }
