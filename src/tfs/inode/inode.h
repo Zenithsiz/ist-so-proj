@@ -1,5 +1,8 @@
 /// @file
-/// Inodes
+/// @brief Inodes
+/// @details
+/// This file contains the @ref TfsInode type, the building block
+/// for the file system.
 
 #ifndef TFS_INODE_H
 #define TFS_INODE_H
@@ -11,8 +14,10 @@
 #include <tfs/inode/type.h> // TfsInodeType
 
 /// @brief An inode
-/// @details The building block of the filesystem.
-///          A tagged union, with tag `type`.
+/// @details
+/// Each inode is a tagged union, containing a
+/// variant of @ref TfsInodeType, where `type`
+/// is the tag and `data` is the data associated.
 // TODO: Support multiple hard links by keeping a counter.
 typedef struct TfsInode {
 	/// @brief The type of this inode
@@ -22,10 +27,12 @@ typedef struct TfsInode {
 	TfsInodeData data;
 } TfsInode;
 
-/// @brief Initialize an inode
-void tfs_inode_init(TfsInode* inode, TfsInodeType type);
+/// @brief Creates a new inode
+/// @param type The type of inode to create
+TfsInode tfs_inode_new(TfsInodeType type);
 
 /// @brief Drops an inode
+/// @param inode The inode to drop.
 void tfs_inode_drop(TfsInode* inode);
 
 #endif

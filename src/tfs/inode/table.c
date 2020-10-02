@@ -18,7 +18,7 @@ TfsInodeTable tfs_inode_table_new(size_t max_inodes) {
 	// Else assign each table to an empty inode
 	TfsInodeTable table = {.inodes = inodes, .len = max_inodes};
 	for (size_t n = 0; n < table.len; n++) {
-		tfs_inode_init(&table.inodes[n], TfsInodeTypeNone);
+		table.inodes[n] = tfs_inode_new(TfsInodeTypeNone);
 	}
 
 	return table;
@@ -42,7 +42,7 @@ TfsInodeTableCreateError tfs_inode_table_create(TfsInodeTable* table, TfsInodeTy
 		}
 
 		// Initialize the node
-		tfs_inode_init(&table->inodes[n], type);
+		table->inodes[n] = tfs_inode_new(type);
 
 		// Set the index and data and return
 		if (idx != NULL) {
@@ -66,7 +66,7 @@ TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* table, TfsInodeId
 
 	// Drop the node and replace it with an empty node
 	tfs_inode_drop(&table->inodes[idx]);
-	tfs_inode_init(&table->inodes[idx], TfsInodeTypeNone);
+	table->inodes[idx] = tfs_inode_new(TfsInodeTypeNone);
 
 	return TfsInodeTableRemoveErrorSuccess;
 }

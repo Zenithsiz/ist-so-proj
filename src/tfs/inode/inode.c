@@ -1,31 +1,28 @@
 #include "inode.h"
 
-/// @brief Initialize an inode
-void tfs_inode_init(TfsInode* inode, TfsInodeType type) {
-	// Set the inode's type
-	inode->type = type;
-
+TfsInode tfs_inode_new(TfsInodeType type) {
 	switch (type) {
 		// Set initial data to `NULL`
-		case TfsInodeTypeFile: {
-			inode->data.file.contents = NULL;
-			break;
-		}
+		case TfsInodeTypeFile:
+			return (TfsInode){
+				.type = type,
+				.data = {.file = {.contents = NULL}},
+			};
 
-		// Create children and set them all as empty
-		case TfsInodeTypeDir: {
-			inode->data.dir = tfs_inode_dir_new();
-			break;
-		}
+		case TfsInodeTypeDir:
+			return (TfsInode){
+				.type = type,
+				.data = {.dir = tfs_inode_dir_new()},
+			};
 
 		case TfsInodeTypeNone:
-		default: {
-			break;
-		}
+		default:
+			return (TfsInode){
+				.type = type,
+			};
 	}
 }
 
-/// @brief Drops an inode
 void tfs_inode_drop(TfsInode* inode) {
 	switch (inode->type) {
 		// Deallocate a file's contents
