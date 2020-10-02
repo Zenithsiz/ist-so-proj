@@ -99,7 +99,7 @@ bool tfs_inode_dir_is_empty(const TfsInodeDir* dir);
 /// @param dir The directory inode to search in.
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
-/// @return The inode index if found or `TfsInodeIdxNone` otherwise.
+/// @return The inode index if found or `TFS_INODE_IDX_NONE` otherwise.
 TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* dir, const char* name, size_t name_len);
 
 /// @brief Removes an entry given it's index.

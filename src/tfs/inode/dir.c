@@ -38,7 +38,7 @@ void tfs_inode_dir_drop(TfsInodeDir* dir) {
 bool tfs_inode_dir_is_empty(const TfsInodeDir* dir) {
 	// Check every entry, if we find a non-empty one, we're not empty
 	for (size_t n = 0; n < dir->capacity; n++) {
-		if (dir->entries[n].inode_idx != (TfsInodeIdx)TfsInodeIdxNone) {
+		if (dir->entries[n].inode_idx != TFS_INODE_IDX_NONE) {
 			return false;
 		}
 	}
@@ -51,7 +51,7 @@ TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* dir, const char* nam
 	// If the name matches on any entry and it's not empty, return it
 	for (size_t n = 0; n < dir->capacity; n++) {
 		// If we're empty, skip
-		if (dir->entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
+		if (dir->entries[n].inode_idx == TFS_INODE_IDX_NONE) {
 			continue;
 		}
 
@@ -66,7 +66,7 @@ TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* dir, const char* nam
 	}
 
 	// If we got here, none of them had the same name
-	return (TfsInodeIdx)TfsInodeIdxNone;
+	return TFS_INODE_IDX_NONE;
 }
 
 bool tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx) {
@@ -74,7 +74,7 @@ bool tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx) {
 	for (size_t n = 0; n < dir->capacity; n++) {
 		if (dir->entries[n].inode_idx == idx) {
 			// Then wipe it's index and name.
-			dir->entries[n].inode_idx = TfsInodeIdxNone;
+			dir->entries[n].inode_idx = TFS_INODE_IDX_NONE;
 			dir->entries[n].name[0]	  = '\0';
 			return true;
 		}
@@ -94,7 +94,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 	size_t empty_idx = (size_t)-1;
 	for (size_t n = 0; n < dir->capacity; n++) {
 		// If we're empty, if we haven't found an empty index yet, set it
-		if (dir->entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
+		if (dir->entries[n].inode_idx == TFS_INODE_IDX_NONE) {
 			if (empty_idx == (size_t)-1) {
 				empty_idx = n;
 			}
@@ -131,7 +131,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 		// Note: We skip the first, as we'll initialize it after this.
 		for (size_t n = dir->capacity + 1; n < capacity; n++) {
 			entries[n].name[0]	 = '\0';
-			entries[n].inode_idx = (TfsInodeIdx)TfsInodeIdxNone;
+			entries[n].inode_idx = TFS_INODE_IDX_NONE;
 		}
 
 		// Set the index as the first new index and continue

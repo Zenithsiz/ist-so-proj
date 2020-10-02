@@ -99,7 +99,7 @@ void tfs_inode_table_print_tree(TfsInodeTable* table, FILE* out, TfsInodeIdx idx
 			fprintf(out, "%s\n", cur_path);
 			for (size_t n = 0; n < table->inodes[idx].data.dir.capacity; n++) {
 				// If this entry is empty, skip
-				if (table->inodes[idx].data.dir.entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
+				if (table->inodes[idx].data.dir.entries[n].inode_idx == TFS_INODE_IDX_NONE) {
 					continue;
 				}
 

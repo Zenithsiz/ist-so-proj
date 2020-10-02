@@ -222,9 +222,6 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* fs, TfsPath path);
 /// @brief Returns the inode index of a path, if it exists.
 /// @param fs Filesystem to create in.
 /// @param path Path of inode to to find.
-/// @param[out] idx Index of the inode.
-/// @param[out] type Type of the inode.
-/// @param[out] data Data of the inode.
 TfsFsFindResult tfs_fs_find(TfsFs* fs, TfsPath path);
 
 /// @brief Prints the contents of this file system
