@@ -114,7 +114,10 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 	// If we didn't find any empty entries, reallocate and retry
 	if (empty_idx == (size_t)-1) {
 		// Double the current capacity so we don't allocate often
-		size_t capacity = 2 * dir->capacity + 1;
+		// Note: We start by allocating 4 to skip having to
+		//       the smaller 1 an 2 allocations, as most directories
+		//       will likely have at least 4 entries.
+		size_t capacity = dir->capacity == 0 ? 4 : 2 * dir->capacity;
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`
@@ -125,7 +128,8 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 		}
 
 		// Set all new entries as empty
-		for (size_t n = dir->capacity; n < capacity; n++) {
+		// Note: We skip the first, as we'll initialize it after this.
+		for (size_t n = dir->capacity + 1; n < capacity; n++) {
 			entries[n].name[0]	 = '\0';
 			entries[n].inode_idx = (TfsInodeIdx)TfsInodeIdxNone;
 		}
