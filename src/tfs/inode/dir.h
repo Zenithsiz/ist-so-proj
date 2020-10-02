@@ -1,11 +1,13 @@
 /// @file
 /// @brief Inode directories.
 /// @details
-/// This file contains several types that define how directories
-/// are defined and used within an inode.
+/// This file contains 2 types that define how directories are defined
+/// and used with inodes.
 ///
-/// Of special importance @ref TfsInodeDir is the data that is stored
-/// in the inode itself.
+/// The @ref TfsDirEntry type is responsible for representing how each
+/// entry in a directory is represented, while @ref TfsInodeDir is
+/// responsible for holding the data that is stored into the inode itself
+/// to manage the directory.
 
 #ifndef TFS_INODE_DIR_H
 #define TFS_INODE_DIR_H
@@ -17,32 +19,39 @@
 #include <tfs/inode/idx.h> // TfsInodeIdx
 
 enum {
-	/// @brief Maximum file name length for each directory entry.
+	/// @brief Maximum file name length
+	/// @details
+	/// This does not include the null terminator.
 	TFS_DIR_MAX_FILE_NAME_LEN = 100,
-
-	/// @brief Maximum number of entries for each directory entry.
-	TFS_DIR_MAX_ENTRIES = 20,
 };
 
 /// @brief A directory entry.
 /// @details
-/// Each directory entry is specified by it's name and it's index in
-/// the inode table.
+/// Each entry only stores it's name, and the inode it
+/// represents. It is nothing more than a named 'link'
+/// to the original inode.
 typedef struct TfsDirEntry {
-	/// @brief Name of the entry
+	/// @brief Name of the entry.
 	char name[TFS_DIR_MAX_FILE_NAME_LEN + 1];
 
-	/// @brief Index of the entry on the inode table
+	/// @brief Underlying inode index.
 	TfsInodeIdx inode_idx;
 } TfsDirEntry;
 
-/// @brief An inode directory.
+/// @brief An inode directory
 /// @details
-/// This inode is able to store several directory entries
-/// to other inodes within the same table as it.
+/// Each directory is made up of multiple entries, each
+/// with an unique name.
 typedef struct TfsInodeDir {
-	/// @brief All entries of this directory.
+	/// @brief All entries
+	/// @details
+	/// Heap pointer to all of the entries
 	TfsDirEntry* entries;
+
+	/// @brief Allocated entries
+	/// @details
+	/// The number of entries currently allocated.
+	size_t capacity;
 } TfsInodeDir;
 
 /// @brief Result type for @ref tfs_inode_dir_add_entry
@@ -60,9 +69,6 @@ typedef struct TfsInodeDirAddEntryResult {
 
 		/// @brief An entry with the same name already exists.
 		TfsInodeDirAddEntryResultErrorDuplicateName = -3,
-
-		/// @brief Directory was full
-		TfsInodeDirAddEntryResultErrorFull = -4,
 	} kind;
 
 	/// @brief Result data
@@ -86,17 +92,24 @@ typedef struct TfsInodeDirAddEntryResult {
 /// @param out File descriptor to output to
 void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* result, FILE* out);
 
+/// @brief Creates a new inode directory
+/// @details
+/// The returned directory has no entries.
+TfsInodeDir tfs_inode_dir_new(void);
+
+/// @brief Drops an inode directory
+void tfs_inode_dir_drop(TfsInodeDir* dir);
+
 /// @brief Checks if a directory is empty.
 /// @param dir The directory inode to check.
-bool tfs_inode_dir_is_empty(TfsInodeDir* dir);
+bool tfs_inode_dir_is_empty(const TfsInodeDir* dir);
 
 /// @brief Searches for an entry with a given name.
 /// @param dir The directory inode to search in.
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
-/// @param[out] idx Index of the entry, if found.
-/// @return If the entry was found.
-bool tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx);
+/// @return The inode index if found or `TfsInodeIdxNone` otherwise.
+TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* dir, const char* name, size_t name_len);
 
 /// @brief Removes an entry given it's index.
 /// @param dir The directory inode to remove the entry in.

@@ -19,10 +19,6 @@ void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* resul
 			fprintf(out, "A path with the same name, with inode index '%u', already exists\n", result->data.duplicate_name.idx);
 			break;
 
-		case TfsInodeDirAddEntryResultErrorFull:
-			fprintf(out, "Directory is full\n");
-			break;
-
 		case TfsInodeDirAddEntryResultSuccess:
 		default:
 			fprintf(out, "Success\n");
@@ -30,9 +26,23 @@ void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* resul
 	}
 }
 
-bool tfs_inode_dir_is_empty(TfsInodeDir* dir) {
+TfsInodeDir tfs_inode_dir_new(void) {
+	return (TfsInodeDir){
+		// Note: `NULL` can be safely passed to both `free` and `realloc`.
+		.entries  = NULL,
+		.capacity = 0,
+	};
+}
+
+void tfs_inode_dir_drop(TfsInodeDir* dir) {
+	// Free our entries
+	// Note: This is fine even if it's `NULL`.
+	free(dir->entries);
+}
+
+bool tfs_inode_dir_is_empty(const TfsInodeDir* dir) {
 	// Check every entry, if we find a non-empty one, we're not empty
-	for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
+	for (size_t n = 0; n < dir->capacity; n++) {
 		if (dir->entries[n].inode_idx != (TfsInodeIdx)TfsInodeIdxNone) {
 			return false;
 		}
@@ -42,9 +52,9 @@ bool tfs_inode_dir_is_empty(TfsInodeDir* dir) {
 	return true;
 }
 
-bool tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t name_len, TfsInodeIdx* idx) {
+TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* dir, const char* name, size_t name_len) {
 	// If the name matches on any entry and it's not empty, return it
-	for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
+	for (size_t n = 0; n < dir->capacity; n++) {
 		// If we're empty, skip
 		if (dir->entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
 			continue;
@@ -56,20 +66,17 @@ bool tfs_inode_dir_search_by_name(TfsInodeDir* dir, const char* name, size_t nam
 			continue;
 		}
 
-		// Else write the index if it isn't null
-		if (idx != NULL) {
-			*idx = dir->entries[n].inode_idx;
-		}
-		return true;
+		// Else return the index
+		return dir->entries[n].inode_idx;
 	}
 
 	// If we got here, none of them had the same name
-	return false;
+	return (TfsInodeIdx)TfsInodeIdxNone;
 }
 
 bool tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx) {
 	// Check each entry until we find the one with index `idx`
-	for (int n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
+	for (size_t n = 0; n < dir->capacity; n++) {
 		if (dir->entries[n].inode_idx == idx) {
 			// Then wipe it's index and name.
 			dir->entries[n].inode_idx = TfsInodeIdxNone;
@@ -90,7 +97,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 
 	// Search for both an empty entry and any duplicates
 	size_t empty_idx = (size_t)-1;
-	for (size_t n = 0; n < TFS_DIR_MAX_ENTRIES; n++) {
+	for (size_t n = 0; n < dir->capacity; n++) {
 		// If we're empty, if we haven't found an empty index yet, set it
 		if (dir->entries[n].inode_idx == (TfsInodeIdx)TfsInodeIdxNone) {
 			if (empty_idx == (size_t)-1) {
@@ -115,9 +122,32 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 		}
 	}
 
-	// If we didn't find any empty entries, return Err
+	// If we didn't find any empty entries, reallocate and retry
 	if (empty_idx == (size_t)-1) {
-		return (TfsInodeDirAddEntryResult){.kind = TfsInodeDirAddEntryResultErrorFull};
+		// Double the current capacity so we don't allocate often
+		size_t capacity = 2 * dir->capacity + 1;
+
+		// Try to allocate
+		// Note: It's fine even if `dir->entries` is `NULL`
+		TfsDirEntry* entries = realloc(dir->entries, capacity * sizeof(TfsDirEntry));
+		if (entries == NULL) {
+			fprintf(stderr, "Unable to expand directory capacity to %u", capacity);
+			exit(EXIT_FAILURE);
+		}
+
+		// Set all new entries as empty
+		for (size_t n = dir->capacity; n < capacity; n++) {
+			entries[n].name[0]	 = '\0';
+			entries[n].inode_idx = (TfsInodeIdx)TfsInodeIdxNone;
+		}
+
+		// Set the index as the first new index and continue
+		// Note: This new index is guaranteed to be empty.
+		empty_idx = dir->capacity;
+
+		// Move everything into `dir`
+		dir->entries  = entries;
+		dir->capacity = capacity;
 	}
 
 	// Else set it's node and copy the name

@@ -14,12 +14,7 @@ void tfs_inode_init(TfsInode* inode, TfsInodeType type) {
 
 		// Create children and set them all as empty
 		case TfsInodeTypeDir: {
-			/* Initializes entry table */
-			inode->data.dir.entries = malloc(sizeof(TfsDirEntry) * TFS_DIR_MAX_ENTRIES);
-
-			for (int i = 0; i < TFS_DIR_MAX_ENTRIES; i++) {
-				inode->data.dir.entries[i].inode_idx = TfsInodeIdxNone;
-			}
+			inode->data.dir = tfs_inode_dir_new();
 			break;
 		}
 
@@ -40,7 +35,7 @@ void tfs_inode_drop(TfsInode* inode) {
 
 		// Deallocate a directory's children
 		case TfsInodeTypeDir:
-			free(inode->data.dir.entries);
+			tfs_inode_dir_drop(&inode->data.dir);
 			break;
 
 		case TfsInodeTypeNone:

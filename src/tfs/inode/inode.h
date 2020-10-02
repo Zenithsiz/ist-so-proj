@@ -13,6 +13,7 @@
 /// @brief An inode
 /// @details The building block of the filesystem.
 ///          A tagged union, with tag `type`.
+// TODO: Support multiple hard links by keeping a counter.
 typedef struct TfsInode {
 	/// @brief The type of this inode
 	TfsInodeType type;

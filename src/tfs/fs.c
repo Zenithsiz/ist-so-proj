@@ -171,8 +171,8 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* fs, TfsPath path) {
 	}
 
 	// If there isn't an entry with the name, return Err
-	TfsInodeIdx idx;
-	if (!tfs_inode_dir_search_by_name(&parent_data->dir, entry_name.chars, entry_name.len, &idx)) {
+	TfsInodeIdx idx = tfs_inode_dir_search_by_name(&parent_data->dir, entry_name.chars, entry_name.len);
+	if (idx == (TfsInodeIdx)TfsInodeIdxNone) {
 		return (TfsFsRemoveResult){.kind = TfsFsRemoveResultErrorNameNotFound, .data = {.name_not_found = {.entry_name = entry_name}}};
 	}
 
@@ -229,7 +229,8 @@ TfsFsFindResult tfs_fs_find(TfsFs* fs, TfsPath path) {
 		}
 
 		// Try to get the node
-		if (!tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len, &cur_idx)) {
+		cur_idx = tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len);
+		if (cur_idx == (TfsInodeIdx)TfsInodeIdxNone) {
 			return (TfsFsFindResult){.kind = TfsFsFindResultErrorNameNotFound};
 		}
 	} while (1);
