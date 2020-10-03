@@ -1,10 +1,11 @@
 #include "table.h"
 
 // Includes
-#include <stdio.h>	 // stderr, fprintf
-#include <stdlib.h>	 // exit, EXIT_FAILURE
-#include <string.h>	 // strlen, strncpy
-#include <tfs/log.h> // DEBUG_LOG
+#include <stdio.h>	  // stderr, fprintf
+#include <stdlib.h>	  // exit, EXIT_FAILURE
+#include <string.h>	  // strlen, strncpy
+#include <tfs/log.h>  // DEBUG_LOG
+#include <tfs/util.h> // TFS_MIN, TFS_MAX
 
 TfsInodeTable tfs_inode_table_new(void) {
 	return (TfsInodeTable){
@@ -40,9 +41,8 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeT
 	// If we didn't find it, reallocate
 	if (empty_idx == TFS_INODE_IDX_NONE) {
 		// Double the current capacity so we don't allocate often
-		// Note: We start by allocating 4 to skip having to
-		//       the smaller 1 and 2 allocations.
-		size_t new_capacity = table->capacity == 0 ? 4 : 2 * table->capacity;
+		// Note: We allocate at least 4 because `2 + 0 == 0`.
+		size_t new_capacity = TFS_MAX(4, 2 * table->capacity);
 
 		// Try to allocate
 		// Note: It's fine even if `table->inodes` is `NULL`

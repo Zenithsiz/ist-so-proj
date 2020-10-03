@@ -1,8 +1,9 @@
 #include "dir.h"
 
 // Includes
-#include <string.h>	 // strcmp
-#include <tfs/log.h> // DEBUG_LOG
+#include <string.h>	  // strcmp
+#include <tfs/log.h>  // DEBUG_LOG
+#include <tfs/util.h> // TFS_MIN, TFS_MAX
 
 void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* result, FILE* out) {
 	switch (result->kind) {
@@ -57,8 +58,7 @@ TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* dir, const char* nam
 		}
 
 		// If the names are different, continue
-		size_t min_len = name_len > TFS_DIR_MAX_FILE_NAME_LEN ? TFS_DIR_MAX_FILE_NAME_LEN : name_len;
-		if (strncmp(dir->entries[n].name, name, min_len) != 0) {
+		if (strncmp(dir->entries[n].name, name, TFS_MIN(name_len, TFS_DIR_MAX_FILE_NAME_LEN)) != 0) {
 			continue;
 		}
 
@@ -106,7 +106,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 		// Else check if we're adding a duplicate
 		else {
 			size_t entry_len = strlen(dir->entries[n].name);
-			if (entry_len == name_len && strncmp(dir->entries[n].name, name, entry_len > name_len ? name_len : entry_len) == 0) {
+			if (entry_len == name_len && strncmp(dir->entries[n].name, name, TFS_MIN(entry_len, name_len)) == 0) {
 				return (TfsInodeDirAddEntryResult){
 					.kind = TfsInodeDirAddEntryResultErrorDuplicateName,
 					.data = {.duplicate_name = {.idx = dir->entries[n].inode_idx}}};
@@ -117,9 +117,8 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 	// If we didn't find any empty entries, reallocate and retry
 	if (empty_idx == (size_t)-1) {
 		// Double the current capacity so we don't allocate often
-		// Note: We start by allocating 4 to skip having to
-		//       the smaller 1 and 2 allocations.
-		size_t new_capacity = dir->capacity == 0 ? 4 : 2 * dir->capacity;
+		// Note: We allocate at least 4 because `2 + 0 == 0`.
+		size_t new_capacity = TFS_MAX(4, 2 * dir->capacity);
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`
@@ -148,7 +147,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 	// Else set it's node and copy the name
 	dir->entries[empty_idx].inode_idx = idx;
 
-	size_t min_len = name_len > TFS_DIR_MAX_FILE_NAME_LEN ? TFS_DIR_MAX_FILE_NAME_LEN : name_len;
+	size_t min_len = TFS_MIN(name_len, TFS_DIR_MAX_FILE_NAME_LEN);
 	strncpy(dir->entries[empty_idx].name, name, min_len);
 	dir->entries[empty_idx].name[min_len] = '\0';
 
