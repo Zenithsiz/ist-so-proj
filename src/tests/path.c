@@ -5,7 +5,6 @@
 #include <stdio.h>			 // printf
 #include <stdlib.h>			 // size_t, TfsTestResultSuccess
 #include <string.h>			 // strncmp
-#include <tfs/log.h>		 // TFS_DEBUG_LOG
 #include <tfs/path.h>		 // TfsPath
 #include <tfs/test/assert.h> // TFS_ASSERT_OR_RETURN
 #include <tfs/test/test.h>	 // TfsTest, TfsTestFn, TfsTestResult
@@ -52,7 +51,6 @@ static TfsTestResult eq(void) {
 		TfsPath lhs = tfs_path_from_cstr(eq_paths[n][0]);
 		TfsPath rhs = tfs_path_from_cstr(eq_paths[n][1]);
 
-		TFS_DEBUG_LOG("'%.*s' == '%.*s'", (int)lhs.len, lhs.chars, (int)rhs.len, rhs.chars);
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(lhs, rhs));
 	}
 
@@ -74,7 +72,6 @@ static TfsTestResult diff(void) {
 		TfsPath lhs = tfs_path_from_cstr(diff_paths[n][0]);
 		TfsPath rhs = tfs_path_from_cstr(diff_paths[n][1]);
 
-		TFS_DEBUG_LOG("'%.*s' != '%.*s'", (int)lhs.len, lhs.chars, (int)rhs.len, rhs.chars);
 		TFS_ASSERT_OR_RETURN(!tfs_path_eq(lhs, rhs));
 	}
 
@@ -107,12 +104,6 @@ static TfsTestResult split_last(void) {
 		TfsPath parent;
 		TfsPath child;
 		tfs_path_split_last(path, &parent, &child);
-
-		TFS_DEBUG_LOG("Path        : '%.*s'", (int)path.len, path.chars);
-		TFS_DEBUG_LOG("Expected parent: '%.*s'", (int)expected_parent.len, expected_parent.chars);
-		TFS_DEBUG_LOG("Parent         : '%.*s'", (int)parent.len, parent.chars);
-		TFS_DEBUG_LOG("Expected child: '%.*s'", (int)expected_child.len, expected_child.chars);
-		TFS_DEBUG_LOG("Child         : '%.*s'", (int)child.len, child.chars);
 
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(parent, expected_parent));
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(child, expected_child));
@@ -149,12 +140,6 @@ static TfsTestResult split_first(void) {
 		TfsPath parent;
 		TfsPath child;
 		tfs_path_split_first(path, &parent, &child);
-
-		TFS_DEBUG_LOG("Path: '%.*s'", (int)path.len, path.chars);
-		TFS_DEBUG_LOG("Expected parent: '%.*s'", (int)expected_parent.len, expected_parent.chars);
-		TFS_DEBUG_LOG("Parent         : '%.*s'", (int)parent.len, parent.chars);
-		TFS_DEBUG_LOG("Expected child: '%.*s'", (int)expected_child.len, expected_child.chars);
-		TFS_DEBUG_LOG("Child         : '%.*s'", (int)child.len, child.chars);
 
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(parent, expected_parent));
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(child, expected_child));

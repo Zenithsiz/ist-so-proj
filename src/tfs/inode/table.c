@@ -4,7 +4,6 @@
 #include <stdio.h>	  // stderr, fprintf
 #include <stdlib.h>	  // exit, EXIT_FAILURE
 #include <string.h>	  // strlen, strncpy
-#include <tfs/log.h>  // DEBUG_LOG
 #include <tfs/util.h> // TFS_MIN, TFS_MAX
 
 TfsInodeTable tfs_inode_table_new(void) {
@@ -27,8 +26,6 @@ void tfs_inode_table_drop(TfsInodeTable* self) {
 }
 
 TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeType type) {
-	TFS_DEBUG_LOG("'%p': Creating new inode (Type %s)", (void*)self, tfs_inode_type_str(type));
-
 	// Find the first non-empty node
 	TfsInodeIdx empty_idx = TFS_INODE_IDX_NONE;
 	for (TfsInodeIdx n = 0; n < self->capacity; n++) {
@@ -46,7 +43,6 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeTy
 
 		// Try to allocate
 		// Note: It's fine even if `table->inodes` is `NULL`
-		TFS_DEBUG_LOG("'%p': Expanding entries from %zu to %zu", (void*)self, self->capacity, new_capacity);
 		TfsInode* new_inodes = realloc(self->inodes, new_capacity * sizeof(TfsInode));
 		if (new_inodes == NULL) {
 			fprintf(stderr, "Unable to expand inode table capacity to %zu\n", new_capacity);
@@ -55,7 +51,6 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeTy
 
 		// Set all new inodes as empty
 		// Note: We skip the first, as we'll initialize it after this.
-		TFS_DEBUG_LOG("'%p': Setting entries %zu..%zu as empty", (void*)self, self->capacity + 1, new_capacity);
 		for (size_t n = self->capacity + 1; n < new_capacity; n++) {
 			new_inodes[n] = tfs_inode_new(TfsInodeTypeNone);
 		}
@@ -69,7 +64,6 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeTy
 	}
 
 	// Then initialize the node
-	TFS_DEBUG_LOG("'%p': Initializing new entry %zu", (void*)self, empty_idx);
 	self->inodes[empty_idx] = tfs_inode_new(type);
 
 	// And return it
@@ -80,8 +74,6 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeTy
 }
 
 TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx) {
-	TFS_DEBUG_LOG("'%p': Removing inode %zu", (void*)self, idx);
-
 	// If it's out of bounds, or empty, return Err
 	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
 		return TfsInodeTableRemoveErrorInvalidIdx;

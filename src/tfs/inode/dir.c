@@ -2,7 +2,6 @@
 
 // Includes
 #include <string.h>	  // strcmp
-#include <tfs/log.h>  // DEBUG_LOG
 #include <tfs/util.h> // TFS_MIN, TFS_MAX
 
 void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* self, FILE* out) {
@@ -86,8 +85,6 @@ bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx) {
 }
 
 TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* name, size_t name_len) {
-	TFS_DEBUG_LOG("'%p': Adding new entry '%.*s' with index %zu", (void*)self, (int)name_len, name, idx);
-
 	// If the name is empty, return Err
 	if (name_len == 0) {
 		return (TfsInodeDirAddEntryResult){.kind = TfsInodeDirAddEntryResultErrorEmptyName};
@@ -122,7 +119,6 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`
-		TFS_DEBUG_LOG("'%p': Expanding entries from %zu to %zu", (void*)self, self->capacity, new_capacity);
 		TfsDirEntry* new_entries = realloc(self->entries, new_capacity * sizeof(TfsDirEntry));
 		if (new_entries == NULL) {
 			fprintf(stderr, "Unable to expand directory capacity to %zu\n", new_capacity);

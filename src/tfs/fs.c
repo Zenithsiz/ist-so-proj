@@ -1,9 +1,8 @@
 #include "fs.h"
 
 // Includes
-#include <assert.h>	 // assert
-#include <string.h>	 // strcpy
-#include <tfs/log.h> // TFS_DEBUG_LOG
+#include <assert.h> // assert
+#include <string.h> // strcpy
 
 void tfs_fs_find_result_print(const TfsFsFindResult* self, FILE* out) {
 	switch (self->kind) {
@@ -106,8 +105,6 @@ void tfs_fs_drop(TfsFs* self) {
 }
 
 TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path) {
-	TFS_DEBUG_LOG("'%p': Creating new inode '%.*s'", (void*)self, (int)path.len, path.chars);
-
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
 	TfsPath entry_name;
@@ -120,12 +117,9 @@ TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path) {
 			.kind = TfsFsCreateResultErrorInexistentParentDir,
 			.data = {.inexistent_parent_dir = {.err = find_result, .parent = parent_path}}};
 	}
-	TfsInodeIdx parent_idx	 = find_result.data.success.idx;
-	TfsInodeType parent_type = find_result.data.success.type;
-	TFS_DEBUG_LOG("'%p': Found parent '%.*s' with index %zu", (void*)self, (int)parent_path.len, parent_path.chars, parent_idx);
 
 	// If the parent isn't a directory, return Err
-	if (parent_type != TfsInodeTypeDir) {
+	if (find_result.data.success.type != TfsInodeTypeDir) {
 		return (TfsFsCreateResult){.kind = TfsFsCreateResultErrorParentNotDir, .data = {.parent_not_dir = {.parent = parent_path}}};
 	}
 
