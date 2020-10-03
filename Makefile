@@ -90,4 +90,4 @@ clean:
 
 # Run all tests
 test: $(TEST_BINS)
-	@for test in build/tests/*; do ./$$test; done
+	@$(foreach test,$(TEST_BINS),./$(test) &&) true

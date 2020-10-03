@@ -1,12 +1,16 @@
 /// @file
-/// @brief Testing utilities
+/// @brief Testing asserts
 /// @details
-/// This file provides utilities for
-/// test programs to use.
+/// This file provides assertions to use
+/// in tests.
+
+#ifndef TFS_TEST_ASSERT_H
+#define TFS_TEST_ASSERT_H
 
 // Imports
-#include <stdio.h>	// fprintf, stderr
-#include <stdlib.h> // EXIT_FAILURE
+#include <stdio.h>		   // fprintf, stderr
+#include <stdlib.h>		   // EXIT_FAILURE
+#include <tfs/test/test.h> // TfsTestResult
 
 /// @brief Asserts a condition is true, else returns `EXIT_FAILURE`
 /// @details
@@ -15,7 +19,7 @@
 	do {                                                         \
 		if (!(cond)) {                                           \
 			fprintf(stderr, "Condition failed:\n\t" #cond "\n"); \
-			return EXIT_FAILURE;                                 \
+			return TfsTestResultFailure;                         \
 		}                                                        \
 	} while (0)
 
@@ -26,3 +30,5 @@
 	do {                                  \
 		TFS_ASSERT_OR_RETURN(lhs == rhs); \
 	} while (0)
+
+#endif

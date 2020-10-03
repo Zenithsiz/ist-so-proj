@@ -2,18 +2,19 @@
 /// @brief `TfsPath` tests
 
 // Imports
-#include <stdio.h>		// printf
-#include <stdlib.h>		// size_t, EXIT_SUCCESS
-#include <string.h>		// strncmp
-#include <tests/util.h> // TFS_ASSERT_OR_RETURN
-#include <tfs/log.h>	// TFS_DEBUG_LOG
-#include <tfs/path.h>	// TfsPath
+#include <stdio.h>			 // printf
+#include <stdlib.h>			 // size_t, TfsTestResultSuccess
+#include <string.h>			 // strncmp
+#include <tfs/log.h>		 // TFS_DEBUG_LOG
+#include <tfs/path.h>		 // TfsPath
+#include <tfs/test/assert.h> // TFS_ASSERT_OR_RETURN
+#include <tfs/test/test.h>	 // TfsTest, TfsTestFn, TfsTestResult
 
 // Helper typedefs to define arrays of arrays of strings
 typedef const char* String;
 typedef String* StringArr;
 
-static int from_c_str(void) {
+static TfsTestResult from_c_str(void) {
 	const char* path_cstr = "/my/path/";
 	size_t path_cstr_len  = strlen(path_cstr);
 	TfsPath path		  = tfs_path_from_cstr(path_cstr);
@@ -21,10 +22,10 @@ static int from_c_str(void) {
 	TFS_ASSERT_EQ_OR_RETURN(strncmp(path.chars, path_cstr, path_cstr_len), 0);
 	TFS_ASSERT_EQ_OR_RETURN(path.len, path_cstr_len);
 
-	return EXIT_SUCCESS;
+	return TfsTestResultSuccess;
 }
 
-static int eq(void) {
+static TfsTestResult eq(void) {
 	/// All paths that are supposed to be equal
 	StringArr* eq_paths = (StringArr[]){
 		(String[]){"a", "a"},
@@ -55,10 +56,10 @@ static int eq(void) {
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(lhs, rhs));
 	}
 
-	return EXIT_SUCCESS;
+	return TfsTestResultSuccess;
 }
 
-static int diff(void) {
+static TfsTestResult diff(void) {
 	/// All paths that are suppoed to be different
 	StringArr* diff_paths = (StringArr[]){
 		(String[]){"a", "b"},
@@ -77,10 +78,10 @@ static int diff(void) {
 		TFS_ASSERT_OR_RETURN(!tfs_path_eq(lhs, rhs));
 	}
 
-	return EXIT_SUCCESS;
+	return TfsTestResultSuccess;
 }
 
-static int split_last(void) {
+static TfsTestResult split_last(void) {
 	// All paths to test
 	// Order: Path, parent, child
 	StringArr* paths = (StringArr[]){
@@ -117,10 +118,10 @@ static int split_last(void) {
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(child, expected_child));
 	}
 
-	return EXIT_SUCCESS;
+	return TfsTestResultSuccess;
 }
 
-static int split_first(void) {
+static TfsTestResult split_first(void) {
 	// All paths to test
 	// Order: Path, parent, child
 	StringArr* paths = (StringArr[]){
@@ -159,44 +160,23 @@ static int split_first(void) {
 		TFS_ASSERT_OR_RETURN(tfs_path_eq(child, expected_child));
 	}
 
-	return EXIT_SUCCESS;
+	return TfsTestResultSuccess;
 }
-
-typedef int (*TestFn)(void);
-
-/// @brief A test function + name
-typedef struct Test {
-	/// @brief The function
-	TestFn fn;
-
-	/// @brief The name
-	const char* name;
-} Test;
 
 int main(void) {
 	// All tests
-	Test* tests = (Test[]){
-		(Test){.fn = from_c_str, .name = "from_c_str"},
-		(Test){.fn = eq, .name = "eq"},
-		(Test){.fn = diff, .name = "diff"},
-		(Test){.fn = split_last, .name = "split_last"},
-		(Test){.fn = split_first, .name = "split_first"},
-		(Test){.fn = NULL}};
+	TfsTest* tests = (TfsTest[]){
+		(TfsTest){.fn = from_c_str, .name = "from_c_str"},
+		(TfsTest){.fn = eq, .name = "eq"},
+		(TfsTest){.fn = diff, .name = "diff"},
+		(TfsTest){.fn = split_last, .name = "split_last"},
+		(TfsTest){.fn = split_first, .name = "split_first"},
+		(TfsTest){.fn = NULL}};
 
-	// Run all tests
-	for (size_t n = 0;; n++) {
-		if (tests[n].fn == NULL) {
-			break;
-		}
-
-		printf("path/%s: ..", tests[n].name);
-		if (tests[n].fn() == EXIT_SUCCESS) {
-			printf("Passed\n");
-		}
-		else {
-			printf("Failed\n");
-		}
+	if (tfs_test_all(tests, "path") == TfsTestResultSuccess) {
+		return EXIT_SUCCESS;
 	}
-
-	return EXIT_SUCCESS;
+	else {
+		return EXIT_FAILURE;
+	}
 }
