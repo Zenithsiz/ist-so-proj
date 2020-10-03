@@ -120,6 +120,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* fs, TfsInodeType type, TfsPath path) {
 			.kind = TfsFsCreateResultErrorInexistentParentDir,
 			.data = {.inexistent_parent_dir = {.err = find_result, .parent = parent_path}}};
 	}
+	TFS_DEBUG_LOG("'%p': Found parent '%.*s' with index %zu", (void*)fs, (int)parent_path.len, parent_path.chars, find_result.data.success.idx);
 	TfsInodeType parent_type  = find_result.data.success.type;
 	TfsInodeData* parent_data = find_result.data.success.data;
 
