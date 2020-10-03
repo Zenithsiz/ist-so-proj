@@ -120,9 +120,9 @@ TfsFsCreateResult tfs_fs_create(TfsFs* fs, TfsInodeType type, TfsPath path) {
 			.kind = TfsFsCreateResultErrorInexistentParentDir,
 			.data = {.inexistent_parent_dir = {.err = find_result, .parent = parent_path}}};
 	}
-	TFS_DEBUG_LOG("'%p': Found parent '%.*s' with index %zu", (void*)fs, (int)parent_path.len, parent_path.chars, find_result.data.success.idx);
-	TfsInodeType parent_type  = find_result.data.success.type;
-	TfsInodeData* parent_data = find_result.data.success.data;
+	TfsInodeIdx parent_idx	 = find_result.data.success.idx;
+	TfsInodeType parent_type = find_result.data.success.type;
+	TFS_DEBUG_LOG("'%p': Found parent '%.*s' with index %zu", (void*)fs, (int)parent_path.len, parent_path.chars, parent_idx);
 
 	// If the parent isn't a directory, return Err
 	if (parent_type != TfsInodeTypeDir) {
@@ -131,6 +131,12 @@ TfsFsCreateResult tfs_fs_create(TfsFs* fs, TfsInodeType type, TfsPath path) {
 
 	// Else create the inode
 	TfsInodeIdx idx = tfs_inode_table_create(&fs->inode_table, type).idx;
+
+	// Get the parent's data
+	// Note: We only do this here, instead of at the previous `find` because
+	//       it's possible that `tfs_inode_table_create` invalidates references
+	//       when it expands.
+	TfsInodeData* parent_data = tfs_fs_find(fs, parent_path).data.success.data;
 
 	// And add it to the directory
 	TfsInodeDirAddEntryResult add_entry_res = tfs_inode_dir_add_entry(&parent_data->dir, idx, entry_name.chars, entry_name.len);
