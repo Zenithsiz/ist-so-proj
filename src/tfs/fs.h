@@ -183,19 +183,19 @@ typedef struct TfsFsRemoveResult {
 } TfsFsRemoveResult;
 
 /// @brief Prints a textual representation of an result
-/// @param result The result to print
+/// @param self
 /// @param out File descriptor to output to
-void tfs_fs_find_result_print(const TfsFsFindResult* result, FILE* out);
+void tfs_fs_find_result_print(const TfsFsFindResult* self, FILE* out);
 
 /// @brief Prints a textual representation of a result
-/// @param result The result to print
+/// @param self
 /// @param out File descriptor to output to
-void tfs_fs_create_result_print(const TfsFsCreateResult* result, FILE* out);
+void tfs_fs_create_result_print(const TfsFsCreateResult* self, FILE* out);
 
 /// @brief Prints a textual representation of a result
-/// @param result The result to print
+/// @param self
 /// @param out File descriptor to output to
-void tfs_fs_remove_result_print(const TfsFsRemoveResult* result, FILE* out);
+void tfs_fs_remove_result_print(const TfsFsRemoveResult* self, FILE* out);
 
 /// @brief Creates a new file system
 /// @details
@@ -204,28 +204,28 @@ void tfs_fs_remove_result_print(const TfsFsRemoveResult* result, FILE* out);
 TfsFs tfs_fs_new(void);
 
 /// @brief Drops a file system
-/// @param fs Filesystem to drop
-void tfs_fs_drop(TfsFs* fs);
+/// @param self
+void tfs_fs_drop(TfsFs* self);
 
 /// @brief Creates a new inode
-/// @param fs Filesystem to create in.
+/// @param self
 /// @param type Type of inode to create.
 /// @param path Path of inode to to create.
-TfsFsCreateResult tfs_fs_create(TfsFs* fs, TfsInodeType type, TfsPath path);
+TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path);
 
 /// @brief Deletes an inode.
-/// @param fs Filesystem to remove from.
+/// @param self
 /// @param path Path of inode to remove.
-TfsFsRemoveResult tfs_fs_remove(TfsFs* fs, TfsPath path);
+TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path);
 
 /// @brief Returns the inode index of a path, if it exists.
-/// @param fs Filesystem to create in.
+/// @param self
 /// @param path Path of inode to to find.
-TfsFsFindResult tfs_fs_find(TfsFs* fs, TfsPath path);
+TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path);
 
 /// @brief Prints the contents of this file system
-/// @param fs File system to print.
+/// @param self
 /// @param out File descriptor to output to.
-void tfs_fs_print(TfsFs* fs, FILE* out);
+void tfs_fs_print(TfsFs* self, FILE* out);
 
 #endif

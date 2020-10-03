@@ -50,7 +50,10 @@ bool tfs_path_eq(TfsPath lhs, TfsPath rhs);
 /// | "/c/"     | ^        | ^       |
 /// | "/"       | ^        | ""      |
 /// | ""        | ^        | ^       |
-void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child);
+/// @param self
+/// @param parent Pointer to place the parent at. May be null
+/// @param child Pointer to place the child at. May be null
+void tfs_path_split_last(TfsPath self, TfsPath* parent, TfsPath* child);
 
 /// @brief Splits this path at it's final component
 /// @details
@@ -72,4 +75,7 @@ void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child);
 /// | "/c/"     | ^        | "c/"     |
 /// | "/"       | ^        | ""       |
 /// | ""        | ^        | ^        |
-void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child);
+/// @param self
+/// @param parent Pointer to place the parent at. May be null
+/// @param child Pointer to place the child at. May be null
+void tfs_path_split_first(TfsPath self, TfsPath* parent, TfsPath* child);

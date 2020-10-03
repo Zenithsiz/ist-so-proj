@@ -56,34 +56,34 @@ typedef enum TfsInodeTableGetError {
 TfsInodeTable tfs_inode_table_new(void);
 
 /// @brief Drops an inode table
-void tfs_inode_table_drop(TfsInodeTable* table);
+void tfs_inode_table_drop(TfsInodeTable* self);
 
 /// @brief Creates a new inode in a table
 ///
-/// @param table The table to create the inode in
+/// @param self
 /// @param type The type of inode to create
-TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type);
+TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeType type);
 
 /// @brief Removes an inode from the table
 ///
-/// @param table The table to remove the inode from.
+/// @param self
 /// @param idx The index of the inode to delete.
-TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* table, TfsInodeIdx idx);
+TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx);
 
 /// @brief Accesses an inode from the table
 ///
-/// @param table The table to access the inode in
+/// @param self
 /// @param idx The index of the inode to access
 /// @param[out] data Data of the inode
 /// @param[out] type Type of the inode
-TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
+TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
 
 /// @brief Prints a tree of the whole inode table
 ///
-/// @param table The table to print
+/// @param self
 /// @param out Print output
 /// @param idx Inode to print (Used for recursing in directories).
 /// @param name Current path
-void tfs_inode_table_print_tree(TfsInodeTable* table, FILE* out, TfsInodeIdx idx, const char* name);
+void tfs_inode_table_print_tree(TfsInodeTable* self, FILE* out, TfsInodeIdx idx, const char* name);
 
 #endif

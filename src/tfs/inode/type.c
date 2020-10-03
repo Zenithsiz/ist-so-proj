@@ -1,7 +1,7 @@
 #include "type.h"
 
-const char* tfs_inode_type_str(TfsInodeType type) {
-	switch (type) {
+const char* tfs_inode_type_str(TfsInodeType self) {
+	switch (self) {
 		case TfsInodeTypeFile:
 			return "File";
 

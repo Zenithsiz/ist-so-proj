@@ -34,23 +34,23 @@ bool tfs_path_eq(TfsPath lhs, TfsPath rhs) {
 	return lhs.len == rhs.len && strncmp(lhs.chars, rhs.chars, lhs.len) == 0;
 }
 
-void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child) {
+void tfs_path_split_last(TfsPath self, TfsPath* parent, TfsPath* child) {
 	// Remove any trailing slashes from `path`.
-	if (path.len > 0 && path.chars[path.len - 1] == '/') {
-		path.len--;
+	if (self.len > 0 && self.chars[self.len - 1] == '/') {
+		self.len--;
 	}
 
 	// Find the position of the last separator
 	size_t sep_pos = (size_t)-1;
-	for (size_t n = 0; n < path.len; ++n) {
-		if (path.chars[n] == '/') {
+	for (size_t n = 0; n < self.len; ++n) {
+		if (self.chars[n] == '/') {
 			sep_pos = n;
 		}
 	}
 
 	// Set both paths
 	if (parent != NULL) {
-		parent->chars = path.chars;
+		parent->chars = self.chars;
 		// Note: If we didn't find any separator, parent should have length 0
 		parent->len = (sep_pos == (size_t)-1 ? 0 : sep_pos);
 	}
@@ -58,21 +58,21 @@ void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child) {
 	if (child != NULL) {
 		// If we didn't find any separator, set the child to the whole path
 		if (sep_pos == (size_t)-1) {
-			*child = path;
+			*child = self;
 		}
 		// Else just skip the separator and set the child as the rest
 		else {
-			child->chars = path.chars + sep_pos + 1;
-			child->len	 = path.len - sep_pos - 1;
+			child->chars = self.chars + sep_pos + 1;
+			child->len	 = self.len - sep_pos - 1;
 		}
 	}
 }
 
-void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child) {
+void tfs_path_split_first(TfsPath self, TfsPath* parent, TfsPath* child) {
 	// Find the first separator
 	size_t sep_pos = (size_t)-1;
-	for (size_t n = 0; n < path.len; ++n) {
-		if (path.chars[n] == '/') {
+	for (size_t n = 0; n < self.len; ++n) {
+		if (self.chars[n] == '/') {
 			sep_pos = n;
 			break;
 		}
@@ -82,12 +82,12 @@ void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child) {
 	if (parent != NULL) {
 		// If we didn't find any separator, set the parent as the whole path
 		if (sep_pos == (size_t)-1) {
-			*parent = path;
+			*parent = self;
 		}
 
 		// Else set it until the separator, not including it
 		else {
-			parent->chars = path.chars;
+			parent->chars = self.chars;
 			parent->len	  = sep_pos;
 		}
 	}
@@ -95,14 +95,14 @@ void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child) {
 	if (child != NULL) {
 		// If we didn't find any separator, set the child as empty
 		if (sep_pos == (size_t)-1) {
-			child->chars = path.chars + path.len;
+			child->chars = self.chars + self.len;
 			child->len	 = 0;
 		}
 
 		// Else skip the separator
 		else {
-			child->chars = path.chars + sep_pos + 1;
-			child->len	 = path.len - sep_pos - 1;
+			child->chars = self.chars + sep_pos + 1;
+			child->len	 = self.len - sep_pos - 1;
 		}
 	}
 }

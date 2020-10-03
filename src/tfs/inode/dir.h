@@ -76,10 +76,10 @@ typedef struct TfsInodeDirAddEntryResult {
 	} data;
 } TfsInodeDirAddEntryResult;
 
-/// @brief Prints a textual representation of an result
-/// @param result The result to print
+/// @brief Prints a textual representation of a result
+/// @param self
 /// @param out File descriptor to output to
-void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* result, FILE* out);
+void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* self, FILE* out);
 
 /// @brief Creates a new inode directory
 /// @details
@@ -87,30 +87,29 @@ void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* resul
 TfsInodeDir tfs_inode_dir_new(void);
 
 /// @brief Drops an inode directory
-void tfs_inode_dir_drop(TfsInodeDir* dir);
+void tfs_inode_dir_drop(TfsInodeDir* self);
 
 /// @brief Checks if a directory is empty.
-/// @param dir The directory inode to check.
-bool tfs_inode_dir_is_empty(const TfsInodeDir* dir);
+bool tfs_inode_dir_is_empty(const TfsInodeDir* self);
 
 /// @brief Searches for an entry with a given name.
-/// @param dir The directory inode to search in.
+/// @param self
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
 /// @return The inode index if found or `TFS_INODE_IDX_NONE` otherwise.
-TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* dir, const char* name, size_t name_len);
+TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len);
 
 /// @brief Removes an entry given it's index.
-/// @param dir The directory inode to remove the entry in.
+/// @param self
 /// @param idx The index of the entry to remove.
 /// @return If successfully removed. If `false`, `idx` was not an entry within this directory.
-bool tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx);
+bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx);
 
 /// @brief Adds an entry given it's index and name.
-/// @param dir The directory inode to add the entry in.
+/// @param self
 /// @param idx The index of the inode to add.
 /// @param name The name of the entry to add. Is not required to be null terminated.
 /// @param name_len Length of @p name.
-TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, const char* name, size_t name_len);
+TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* name, size_t name_len);
 
 #endif
