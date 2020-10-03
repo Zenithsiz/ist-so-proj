@@ -17,7 +17,7 @@ typedef enum TfsInodeType {
 } TfsInodeType;
 
 /// @brief Returns a string with the textual representation of `type`
-/// @param TfsInodeType The inode type
+/// @param type The inode type
 const char* tfs_inode_type_str(TfsInodeType type);
 
 #endif

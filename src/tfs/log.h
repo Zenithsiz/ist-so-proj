@@ -13,9 +13,14 @@
 #include <stdio.h> // fprintf, stderr
 
 // If `DEBUG` isn't defined, set it as 0
+// Note: We disable warnings for defining `DEBUG`, as
+//       we aren't responsible for it, we just define it
+//       if it's not defined by someone else yet.
+/// @cond Doxygen_Suppress
 #ifndef DEBUG
 	#define DEBUG 0
 #endif
+/// @endcond
 
 /// @brief Prints a debug log message to stderr with formatting
 /// @details
