@@ -44,21 +44,21 @@ all: build/tecnicofs
 build/tecnicofs: $(OBJS)
 	@echo $@: Building binary
 	@mkdir -p $(dir $@)
-	@$(LD) $(CFLAGS) $(LDFLAGS) $^ -o $@
-	@mv -f $@.exe $@
+	@$(LD) $(CFLAGS) $(LDFLAGS) $^ -o '$@'
+	@[ ! -f '$@.exe' ] || mv -f '$@.exe' '$@'
 
 # Build all `obj/` files from `src/`
 $(OBJS): obj/%.o: src/%.c
 	@echo $<: Building
 	@mkdir -p $(dir $@)
-	@$(CC) $(CFLAGS) -o $@ -c $<
+	@$(CC) $(CFLAGS) -o '$@' -c '$<'
 
 # Automatic prerequisites generation.
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
 obj/%.d: src/%.c
 	@echo $<: Generating dependencies
 	@mkdir -p $(dir $@)
-	@$(CC) -M $(CFLAGS) $< | sed -e 's|$(patsubst %.d,%.o,$(notdir $@))|$(patsubst %.d,%.o,$@)|' > $@
+	@$(CC) -M $(CFLAGS) $< | sed -e 's|$(patsubst %.d,%.o,$(notdir $@))|$(patsubst %.d,%.o,$@)|' > '$@'
 
 # Include all `.d` dependencies
 include $(patsubst src/%.c,obj/%.d,$(SRCS))
