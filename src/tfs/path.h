@@ -5,7 +5,8 @@
 /// is used to refer to all paths within the file system.
 
 // Imports
-#include <stdlib.h> // size_t
+#include <stdbool.h> // bool
+#include <stdlib.h>	 // size_t
 
 /// @brief A file system path
 /// @details
@@ -24,6 +25,12 @@ typedef struct TfsPath {
 /// @brief Creates a new path from a null-terminated string
 TfsPath tfs_path_from_cstr(const char* cstr);
 
+/// @brief Checks if two paths are equal.
+/// @details
+/// This ignores any number of trailing slashes,
+/// as well as any whitespace on either side.
+bool tfs_path_eq(TfsPath lhs, TfsPath rhs);
+
 /// @brief Splits this path at it's final component
 /// @details
 /// Trailing slashes are ignored, and the final slash
@@ -35,14 +42,14 @@ TfsPath tfs_path_from_cstr(const char* cstr);
 /// for some common paths:
 /// | `path`    | `parent` | `child` |
 /// |-----------|----------|---------|
-/// | 'a/b/c'   | 'a/b'    | 'c'     |
-/// | 'a/b/c/'  | ^        | ^       |
-/// | '/a/b/c'  | '/a/b'   | ^       |
-/// | '/a/b/c/' | ^        | ^       |
-/// | '/c'      | ''       | 'c'     |
-/// | '/c/'     | ^        | ^       |
-/// | '/'       | ^        | ''      |
-/// | ''        | ^        | ^       |
+/// | "a/b/c"   | "a/b"    | "c"     |
+/// | "a/b/c/"  | ^        | ^       |
+/// | "/a/b/c"  | "/a/b"   | ^       |
+/// | "/a/b/c/" | ^        | ^       |
+/// | "/c"      | ""       | ^       |
+/// | "/c/"     | ^        | ^       |
+/// | "/"       | ^        | ""      |
+/// | ""        | ^        | ^       |
 void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child);
 
 /// @brief Splits this path at it's final component
@@ -53,16 +60,16 @@ void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child);
 ///
 /// The following table shows the return values
 /// for some common paths:
-/// | `path`    | `parent` | `child` |
-/// |-----------|----------|---------|
-/// | 'a/b/c'   | 'a'      | 'b/c'   |
-/// | 'a/b/c/'  | ^        | 'b/c/'  |
-/// | 'a'       | ^        | ''      |
-/// | 'a/'      | ^        | ^       |
-/// | '/a/b/c'  | ''       | 'a/b/c' |
-/// | '/a/b/c/' | ^        | 'a/b/c/'|
-/// | '/c'      | ^        | 'c'     |
-/// | '/c/'     | ^        | 'c/'    |
-/// | '/'       | ^        | ''      |
-/// | ''        | ^        | ^       |
+/// | `path`    | `parent` | `child`  |
+/// |-----------|----------|----------|
+/// | "a/b/c"   | "a"      | "b/c"    |
+/// | "a/b/c/"  | ^        | "b/c/"   |
+/// | "a"       | ^        | ""       |
+/// | "a/"      | ^        | ^        |
+/// | "/a/b/c"  | ""       | "a/b/c"  |
+/// | "/a/b/c/" | ^        | "a/b/c/" |
+/// | "/c"      | ^        | "c"      |
+/// | "/c/"     | ^        | "c/"     |
+/// | "/"       | ^        | ""       |
+/// | ""        | ^        | ^        |
 void tfs_path_split_first(TfsPath path, TfsPath* parent, TfsPath* child);

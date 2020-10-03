@@ -1,6 +1,7 @@
 #include "path.h"
 
 // Includes
+#include <ctype.h>	// isspace
 #include <string.h> // strlen
 
 TfsPath tfs_path_from_cstr(const char* cstr) {
@@ -9,6 +10,28 @@ TfsPath tfs_path_from_cstr(const char* cstr) {
 
 	TfsPath path = {.chars = cstr, .len = len};
 	return path;
+}
+
+bool tfs_path_eq(TfsPath lhs, TfsPath rhs) {
+	// Remove any leading whitespace
+	while (lhs.len > 0 && isspace(lhs.chars[0])) {
+		lhs.chars++;
+		lhs.len--;
+	}
+	while (rhs.len > 0 && isspace(rhs.chars[0])) {
+		rhs.chars++;
+		rhs.len--;
+	}
+
+	// Remove any trailing slashes and whitespace
+	while (lhs.len > 0 && (lhs.chars[lhs.len - 1] == '/' || isspace(lhs.chars[lhs.len - 1]))) {
+		lhs.len--;
+	}
+	while (rhs.len > 0 && (rhs.chars[rhs.len - 1] == '/' || isspace(rhs.chars[rhs.len - 1]))) {
+		rhs.len--;
+	}
+
+	return lhs.len == rhs.len && strncmp(lhs.chars, rhs.chars, lhs.len) == 0;
 }
 
 void tfs_path_split_last(TfsPath path, TfsPath* parent, TfsPath* child) {

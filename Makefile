@@ -14,8 +14,7 @@ CFLAGS =-g\
 	-Winit-self -Wimplicit-fallthrough -Wswitch-default\
 	-Wswitch-enum -Wunused-parameter -Wduplicated-cond\
 	-Wduplicated-branches -Wlogical-op -Wunsafe-loop-optimizations\
-	-posix -std=gnu99 -Isrc/\
-	-DDEBUG
+	-posix -std=gnu99 -Isrc
 
 # Linker flags
 LDFLAGS=-lm
