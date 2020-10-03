@@ -18,12 +18,10 @@
 #include <stdlib.h>		   // size_t
 #include <tfs/inode/idx.h> // TfsInodeIdx
 
-enum {
-	/// @brief Maximum file name length
-	/// @details
-	/// This does not include the null terminator.
-	TFS_DIR_MAX_FILE_NAME_LEN = 100,
-};
+/// @brief Maximum file name length
+/// @details
+/// This does not include the null terminator.
+#define TFS_DIR_MAX_FILE_NAME_LEN ((size_t)100)
 
 /// @brief A directory entry.
 /// @details

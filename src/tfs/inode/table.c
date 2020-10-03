@@ -42,7 +42,7 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeT
 	if (empty_idx == TFS_INODE_IDX_NONE) {
 		// Double the current capacity so we don't allocate often
 		// Note: We allocate at least 4 because `2 + 0 == 0`.
-		size_t new_capacity = TFS_MAX(4, 2 * table->capacity);
+		size_t new_capacity = TFS_MAX((size_t)4, 2 * table->capacity);
 
 		// Try to allocate
 		// Note: It's fine even if `table->inodes` is `NULL`

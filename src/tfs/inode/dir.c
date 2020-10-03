@@ -118,7 +118,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 	if (empty_idx == (size_t)-1) {
 		// Double the current capacity so we don't allocate often
 		// Note: We allocate at least 4 because `2 + 0 == 0`.
-		size_t new_capacity = TFS_MAX(4, 2 * dir->capacity);
+		size_t new_capacity = TFS_MAX((size_t)4, 2 * dir->capacity);
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`

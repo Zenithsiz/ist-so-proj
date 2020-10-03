@@ -20,40 +20,68 @@ CFLAGS =-g\
 # Linker flags
 LDFLAGS=-lm
 
-# All source files from `src/`
-SRCS := $(shell find 'src/' -name '*.c')
+# Library sources
+LIB_SRCS := $(shell find 'src/tfs/' -name '*.c')
 
-# All object files in `obj/`
-OBJS := $(patsubst src/%.c,obj/%.o,$(SRCS))
+# Library object files
+LIB_OBJS := $(patsubst src/%.c,obj/%.o,$(LIB_SRCS))
+
+# Library dependencies
+LIB_DEPS := $(patsubst src/%.c,obj/%.d,$(LIB_SRCS))
+
+# Test sources
+TEST_SRCS := $(shell find 'src/tests' -name '*.c')
+
+# Test objects
+TEST_OBJS := $(patsubst src/%.c,obj/%.o,$(TEST_SRCS))
+
+# Test dependencies
+TEST_DEPS := $(patsubst src/%.c,obj/%.d,$(TEST_SRCS))
+
+# Test binaries
+TEST_BINS := $(patsubst src/%.c,build/%,$(TEST_SRCS))
+
+# Program sources
+PROG_SRCS := $(shell find 'src/bin' -name '*.c')
+
+# Program objects
+PROG_OBJS := $(patsubst src/%.c,obj/%.o,$(PROG_SRCS))
+
+# Program dependencies
+PROG_DEPS := $(patsubst src/%.c,obj/%.d,$(PROG_SRCS))
+
+# Program binaries
+PROG_BINS := $(patsubst src/%.c,build/%,$(PROG_SRCS))
 
 # A phony target is one that is not really the name of a file
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: all clean run
 
-all: build/tecnicofs
 
-# Final binary
-build/tecnicofs: $(OBJS)
+all: $(PROG_BINS)
+
+# Binaries
+$(TEST_BINS) $(PROG_BINS): build/%: obj/%.o $(LIB_OBJS)
 	@echo $@: Building binary
 	@mkdir -p $(dir $@)
 	@$(LD) $(CFLAGS) $(LDFLAGS) $^ -o '$@'
 	@[ ! -f '$@.exe' ] || mv -f '$@.exe' '$@'
 
 # Build all `obj/` files from `src/`
-$(OBJS): obj/%.o: src/%.c
+$(LIB_OBJS) $(PROG_OBJS) $(TEST_OBJS): obj/%.o: src/%.c
 	@echo $<: Building
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -o '$@' -c '$<'
 
 # Automatic prerequisites generation.
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
-obj/%.d: src/%.c
+$(LIB_DEPS) $(PROG_DEPS) $(TEST_DEPS): obj/%.d: src/%.c
 	@echo $<: Generating dependencies
 	@mkdir -p $(dir $@)
 	@$(CC) -M $(CFLAGS) $< | sed -e 's|$(patsubst %.d,%.o,$(notdir $@))|$(patsubst %.d,%.o,$@)|' > '$@'
 
 # Include all `.d` dependencies
-include $(patsubst src/%.c,obj/%.d,$(SRCS))
+include $(LIB_DEPS) $(PROG_DEPS) $(TEST_DEPS)
 
 # Remove build artifacts
 clean:
@@ -61,6 +89,6 @@ clean:
 	@rm -rf obj/
 	@rm -rf build/
 
-# Run binary
-run: build/tecnicofs
-	@./build/tecnicofs
+# Run all tests
+test: $(TEST_BINS)
+	@for test in build/tests/*; do ./$$test; done
