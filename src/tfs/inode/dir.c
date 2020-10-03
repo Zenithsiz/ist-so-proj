@@ -1,7 +1,8 @@
 #include "dir.h"
 
 // Includes
-#include <string.h> // strcmp
+#include <string.h>	 // strcmp
+#include <tfs/log.h> // DEBUG_LOG
 
 void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* result, FILE* out) {
 	switch (result->kind) {
@@ -11,7 +12,7 @@ void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* resul
 		}
 
 		case TfsInodeDirAddEntryResultErrorDuplicateName:
-			fprintf(out, "A path with the same name, with inode index '%u', already exists\n", result->data.duplicate_name.idx);
+			fprintf(out, "A path with the same name, with inode index %zu, already exists\n", result->data.duplicate_name.idx);
 			break;
 
 		case TfsInodeDirAddEntryResultSuccess:
@@ -85,6 +86,8 @@ bool tfs_inode_dir_remove_entry(TfsInodeDir* dir, TfsInodeIdx idx) {
 }
 
 TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx idx, const char* name, size_t name_len) {
+	TFS_DEBUG_LOG("'%p': Adding new entry '%.*s' with index %zu", (void*)dir, (int)name_len, name, idx);
+
 	// If the name is empty, return Err
 	if (name_len == 0) {
 		return (TfsInodeDirAddEntryResult){.kind = TfsInodeDirAddEntryResultErrorEmptyName};
@@ -120,9 +123,10 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* dir, TfsInodeIdx 
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`
+		TFS_DEBUG_LOG("'%p': Expanding entries from %zu to %zu", (void*)dir, dir->capacity, new_capacity);
 		TfsDirEntry* new_entries = realloc(dir->entries, new_capacity * sizeof(TfsDirEntry));
 		if (new_entries == NULL) {
-			fprintf(stderr, "Unable to expand directory capacity to %u", new_capacity);
+			fprintf(stderr, "Unable to expand directory capacity to %zu\n", new_capacity);
 			exit(EXIT_FAILURE);
 		}
 

@@ -1,20 +1,21 @@
 #include "fs.h"
 
 // Includes
-#include <assert.h> // assert
-#include <string.h> // strcpy
+#include <assert.h>	 // assert
+#include <string.h>	 // strcpy
+#include <tfs/log.h> // TFS_DEBUG_LOG
 
 void tfs_fs_find_result_print(const TfsFsFindResult* result, FILE* out) {
 	switch (result->kind) {
 		case TfsFsFindResultErrorParentsNotDir: {
 			const TfsPath* path = &result->data.parents_not_dir.path;
-			fprintf(out, "Entry '%.*s' is not a directory\n", path->len, path->chars);
+			fprintf(out, "Entry '%.*s' is not a directory\n", (int)path->len, path->chars);
 			break;
 		}
 
 		case TfsFsFindResultErrorNameNotFound: {
 			const TfsPath* path = &result->data.name_not_found.path;
-			fprintf(out, "Entry '%.*s' does not exist\n", path->len, path->chars);
+			fprintf(out, "Entry '%.*s' does not exist\n", (int)path->len, path->chars);
 			break;
 		}
 
@@ -29,14 +30,14 @@ void tfs_fs_create_result_print(const TfsFsCreateResult* result, FILE* out) {
 	switch (result->kind) {
 		case TfsFsCreateResultErrorInexistentParentDir: {
 			const TfsPath* parent_path = &result->data.inexistent_parent_dir.parent;
-			fprintf(out, "Unable to find parent directory '%.*s'\n", parent_path->len, parent_path->chars);
+			fprintf(out, "Unable to find parent directory '%.*s'\n", (int)parent_path->len, parent_path->chars);
 			tfs_fs_find_result_print(&result->data.inexistent_parent_dir.err, out);
 			break;
 		}
 
 		case TfsFsCreateResultErrorParentNotDir: {
 			const TfsPath* parent_path = &result->data.parent_not_dir.parent;
-			fprintf(out, "Parent directory '%.*s' was not a directory\n", parent_path->len, parent_path->chars);
+			fprintf(out, "Parent directory '%.*s' was not a directory\n", (int)parent_path->len, parent_path->chars);
 			break;
 		}
 
@@ -56,26 +57,26 @@ void tfs_fs_remove_result_print(const TfsFsRemoveResult* result, FILE* out) {
 	switch (result->kind) {
 		case TfsFsRemoveResultErrorInexistentParentDir: {
 			const TfsPath* parent_path = &result->data.inexistent_parent_dir.parent;
-			fprintf(out, "Unable to find parent directory '%.*s'\n", parent_path->len, parent_path->chars);
+			fprintf(out, "Unable to find parent directory '%.*s'\n", (int)parent_path->len, parent_path->chars);
 			tfs_fs_find_result_print(&result->data.inexistent_parent_dir.err, out);
 			break;
 		}
 
 		case TfsFsRemoveResultErrorParentNotDir: {
 			const TfsPath* parent_path = &result->data.parent_not_dir.parent;
-			fprintf(out, "Parent directory '%.*s' was not a directory\n", parent_path->len, parent_path->chars);
+			fprintf(out, "Parent directory '%.*s' was not a directory\n", (int)parent_path->len, parent_path->chars);
 			break;
 		}
 
 		case TfsFsRemoveResultErrorNameNotFound: {
 			const TfsPath* entry_name = &result->data.name_not_found.entry_name;
-			fprintf(out, "Cannot find entry '%.*s'\n", entry_name->len, entry_name->chars);
+			fprintf(out, "Cannot find entry '%.*s'\n", (int)entry_name->len, entry_name->chars);
 			break;
 		}
 
 		case TfsFsRemoveResultErrorRemoveNonEmptyDir: {
 			const TfsPath* dir_name = &result->data.remove_non_empty_dir.dir_name;
-			fprintf(out, "Cannot remove non-empty directory '%.*s'\n", dir_name->len, dir_name->chars);
+			fprintf(out, "Cannot remove non-empty directory '%.*s'\n", (int)dir_name->len, dir_name->chars);
 			break;
 		}
 
@@ -105,6 +106,8 @@ void tfs_fs_drop(TfsFs* fs) {
 }
 
 TfsFsCreateResult tfs_fs_create(TfsFs* fs, TfsInodeType type, TfsPath path) {
+	TFS_DEBUG_LOG("'%p': Creating new inode '%.*s'", (void*)fs, (int)path.len, path.chars);
+
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
 	TfsPath entry_name;

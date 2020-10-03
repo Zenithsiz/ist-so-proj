@@ -24,11 +24,12 @@ CFLAGS =-g\
 	-Wlogical-op\
 	-Wunsafe-loop-optimizations\
 	-std=gnu99\
-	-Isrc/
+	-Isrc/\
+	-DDEBUG
 LDFLAGS=-lm
 
 # All source files from `src/`
-SRCS := $(shell find src/ -name '*.c')
+SRCS := $(shell find 'src/' -name '*.c')
 
 # All object files in `obj/`
 OBJS := $(patsubst src/%.c,obj/%.o,$(SRCS))

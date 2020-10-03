@@ -45,7 +45,7 @@ static void apply_commands(TfsFs* fs) {
 							tfs_fs_create_result_print(&res, stdout);
 						}
 						else {
-							printf("Successfully created '%s' (with index %u)\n", name, res.data.success.idx);
+							printf("Successfully created '%s' (with index %zu)\n", name, res.data.success.idx);
 						}
 						break;
 					}
@@ -74,7 +74,7 @@ static void apply_commands(TfsFs* fs) {
 					tfs_fs_remove_result_print(&res, stdout);
 				}
 				else {
-					printf("Successfully deleted %s (with index %u)\n", name, res.data.success.idx);
+					printf("Successfully deleted %s (with index %zu)\n", name, res.data.success.idx);
 				}
 				break;
 			}

@@ -1,9 +1,10 @@
 #include "table.h"
 
 // Includes
-#include <stdio.h>	// stderr, fprintf
-#include <stdlib.h> // exit, EXIT_FAILURE
-#include <string.h> // strlen, strncpy
+#include <stdio.h>	 // stderr, fprintf
+#include <stdlib.h>	 // exit, EXIT_FAILURE
+#include <string.h>	 // strlen, strncpy
+#include <tfs/log.h> // DEBUG_LOG
 
 TfsInodeTable tfs_inode_table_new(void) {
 	return (TfsInodeTable){
@@ -25,6 +26,8 @@ void tfs_inode_table_drop(TfsInodeTable* table) {
 }
 
 TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeType type) {
+	TFS_DEBUG_LOG("'%p': Creating new inode (Type %s)", (void*)table, tfs_inode_type_str(type));
+
 	// Find the first non-empty node
 	TfsInodeIdx empty_idx = TFS_INODE_IDX_NONE;
 	for (TfsInodeIdx n = 0; n < table->capacity; n++) {
@@ -43,14 +46,16 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeT
 
 		// Try to allocate
 		// Note: It's fine even if `table->inodes` is `NULL`
+		TFS_DEBUG_LOG("'%p': Expanding entries from %zu to %zu", (void*)table, table->capacity, new_capacity);
 		TfsInode* new_inodes = realloc(table->inodes, new_capacity * sizeof(TfsInode));
 		if (new_inodes == NULL) {
-			fprintf(stderr, "Unable to expand inode table capacity to %u", new_capacity);
+			fprintf(stderr, "Unable to expand inode table capacity to %zu\n", new_capacity);
 			exit(EXIT_FAILURE);
 		}
 
 		// Set all new inodes as empty
 		// Note: We skip the first, as we'll initialize it after this.
+		TFS_DEBUG_LOG("'%p': Setting entries %zu..%zu as empty", (void*)table, table->capacity + 1, new_capacity);
 		for (size_t n = table->capacity + 1; n < new_capacity; n++) {
 			new_inodes[n] = tfs_inode_new(TfsInodeTypeNone);
 		}
@@ -64,6 +69,7 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeT
 	}
 
 	// Then initialize the node
+	TFS_DEBUG_LOG("'%p': Initializing new entry %zu", (void*)table, empty_idx);
 	table->inodes[empty_idx] = tfs_inode_new(type);
 
 	// And return it
@@ -74,6 +80,8 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* table, TfsInodeT
 }
 
 TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* table, TfsInodeIdx idx) {
+	TFS_DEBUG_LOG("'%p': Removing inode %zu", (void*)table, idx);
+
 	// If it's out of bounds, or empty, return Err
 	if (idx >= table->capacity || table->inodes[idx].type == TfsInodeTypeNone) {
 		return TfsInodeTableRemoveErrorInvalidIdx;
@@ -102,16 +110,26 @@ TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* table, TfsInodeIdx idx,
 }
 
 void tfs_inode_table_print_tree(TfsInodeTable* table, FILE* out, TfsInodeIdx idx, const char* cur_path) {
+	// Print it's path
+	fprintf(out, "Path: '%s%s'\n", cur_path, table->inodes[idx].type == TfsInodeTypeDir ? "/" : "");
+
+	// Print it's inode
+	fprintf(out, "\tInode: %zu\n", idx);
+
+	// Print it's type
+	fprintf(out, "\tType: %s\n", tfs_inode_type_str(table->inodes[idx].type));
+
+	// Print it's data
 	switch (table->inodes[idx].type) {
-		// For files, just print it's path and return
 		case TfsInodeTypeFile: {
-			fprintf(out, "%s\n", cur_path);
+			// TODO: Print file length
 			break;
 		}
 
-		// For directories, print their path and then print the tree of their children
 		case TfsInodeTypeDir: {
-			fprintf(out, "%s\n", cur_path);
+			// Print the capacity for this directory
+			fprintf(out, "\tCapacity: %zu\n", table->inodes[idx].data.dir.capacity);
+
 			for (size_t n = 0; n < table->inodes[idx].data.dir.capacity; n++) {
 				// If this entry is empty, skip
 				if (table->inodes[idx].data.dir.entries[n].inode_idx == TFS_INODE_IDX_NONE) {
