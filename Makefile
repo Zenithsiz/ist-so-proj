@@ -1,31 +1,23 @@
 # Makefile, versao 1
 # Sistemas Operativos, DEI/IST/ULisboa 2020-21
 
+# Compiler and linker
 CC   = gcc
 LD   = gcc
+
+# Compiler flags
+# Note: `-posix` is required to have conforming C99 `printf` and others on windows (reference: MinGW's `_mingw.h:407`).
 CFLAGS =-g\
-	-Wall\
-	-Wextra\
-	-Werror\
-	-pedantic\
-	-Wnull-dereference\
-	-Wformat=2\
-	-Wstrict-prototypes\
-	-Wcast-qual\
-	-Wmissing-prototypes\
-	-Wformat-security\
-	-Winit-self\
-	-Wimplicit-fallthrough\
-	-Wswitch-default\
-	-Wswitch-enum\
-	-Wunused-parameter\
-	-Wduplicated-cond\
-	-Wduplicated-branches\
-	-Wlogical-op\
-	-Wunsafe-loop-optimizations\
-	-std=gnu99\
-	-Isrc/\
+	-Wall -Wextra -Werror -pedantic\
+	-Wnull-dereference -Wformat=2 -Wstrict-prototypes\
+	-Wcast-qual -Wmissing-prototypes -Wformat-security\
+	-Winit-self -Wimplicit-fallthrough -Wswitch-default\
+	-Wswitch-enum -Wunused-parameter -Wduplicated-cond\
+	-Wduplicated-branches -Wlogical-op -Wunsafe-loop-optimizations\
+	-posix -std=gnu99 -Isrc/\
 	-DDEBUG
+
+# Linker flags
 LDFLAGS=-lm
 
 # All source files from `src/`
