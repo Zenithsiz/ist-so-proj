@@ -2,7 +2,7 @@
 
 // Includes
 #include <string.h>	  // strcmp
-#include <tfs/util.h> // TFS_MIN, TFS_MAX
+#include <tfs/util.h> // tfs_min_size_t
 
 void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* self, FILE* out) {
 	switch (self->kind) {
@@ -57,7 +57,7 @@ TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* na
 		}
 
 		// If the names are different, continue
-		if (strncmp(self->entries[n].name, name, TFS_MIN(name_len, TFS_DIR_MAX_FILE_NAME_LEN)) != 0) {
+		if (strncmp(self->entries[n].name, name, tfs_min_size_t(name_len, TFS_DIR_MAX_FILE_NAME_LEN)) != 0) {
 			continue;
 		}
 
@@ -103,7 +103,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx
 		// Else check if we're adding a duplicate
 		else {
 			size_t entry_len = strlen(self->entries[n].name);
-			if (entry_len == name_len && strncmp(self->entries[n].name, name, TFS_MIN(entry_len, name_len)) == 0) {
+			if (entry_len == name_len && strncmp(self->entries[n].name, name, tfs_min_size_t(entry_len, name_len)) == 0) {
 				return (TfsInodeDirAddEntryResult){
 					.kind = TfsInodeDirAddEntryResultErrorDuplicateName,
 					.data = {.duplicate_name = {.idx = self->entries[n].inode_idx}}};
@@ -115,7 +115,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx
 	if (empty_idx == (size_t)-1) {
 		// Double the current capacity so we don't allocate often
 		// Note: We allocate at least 4 because `2 + 0 == 0`.
-		size_t new_capacity = TFS_MAX((size_t)4, 2 * self->capacity);
+		size_t new_capacity = tfs_max_size_t(4, 2 * self->capacity);
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`
@@ -143,7 +143,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx
 	// Else set it's node and copy the name
 	self->entries[empty_idx].inode_idx = idx;
 
-	size_t min_len = TFS_MIN(name_len, TFS_DIR_MAX_FILE_NAME_LEN);
+	size_t min_len = tfs_min_size_t(name_len, TFS_DIR_MAX_FILE_NAME_LEN);
 	strncpy(self->entries[empty_idx].name, name, min_len);
 	self->entries[empty_idx].name[min_len] = '\0';
 
