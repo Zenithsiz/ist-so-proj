@@ -1,8 +1,8 @@
 /// @file
 /// Errors
 
-#ifndef TFS_ERRORS_H
-#define TFS_ERRORS_H
+#ifndef TFS_ERROR_H
+#define TFS_ERROR_H
 
 /// @brief Generic error type.
 typedef enum TfsError {

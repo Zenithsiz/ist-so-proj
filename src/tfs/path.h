@@ -4,6 +4,9 @@
 /// This file contains the @ref TfsPath type, which
 /// is used to refer to all paths within the file system.
 
+#ifndef TFS_PATH_H
+#define TFS_PATH_H
+
 // Imports
 #include <stdbool.h> // bool
 #include <stdlib.h>	 // size_t
@@ -79,3 +82,5 @@ void tfs_path_split_last(TfsPath self, TfsPath* parent, TfsPath* child);
 /// @param parent Pointer to place the parent at. May be null
 /// @param child Pointer to place the child at. May be null
 void tfs_path_split_first(TfsPath self, TfsPath* parent, TfsPath* child);
+
+#endif

@@ -4,8 +4,8 @@
 /// This file contains the @ref TfsInode type, the building block
 /// for the file system.
 
-#ifndef TFS_INODE_H
-#define TFS_INODE_H
+#ifndef TFS_INODE_INODE_H
+#define TFS_INODE_INODE_H
 
 // Includes
 #include <stdlib.h>			// size_t

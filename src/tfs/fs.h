@@ -5,8 +5,8 @@
 /// for managing the whole file system, as well as enforcing certain invariants
 /// on the inode table.
 
-#ifndef TFS_H
-#define TFS_H
+#ifndef TFS_FS_H
+#define TFS_FS_H
 
 // Imports
 #include <stdio.h>			 // FILE*
