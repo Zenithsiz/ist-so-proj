@@ -26,6 +26,7 @@ TfsInode tfs_inode_new(TfsInodeType type) {
 void tfs_inode_destroy(TfsInode* self) {
 	switch (self->type) {
 		// Deallocate a file's contents
+		// Note: Fine to pass `NULL` here.
 		case TfsInodeTypeFile:
 			free(self->data.file.contents);
 			break;
