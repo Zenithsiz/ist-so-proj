@@ -91,7 +91,9 @@ TfsFs tfs_fs_new() {
 	TfsFs fs = {.inode_table = tfs_inode_table_new()};
 
 	// Create the root node at index `0`.
-	if (tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir).idx != 0) {
+	TfsInodeIdx idx;
+	tfs_inode_table_create(&fs.inode_table, TfsInodeTypeDir, &idx, NULL);
+	if (idx != 0) {
 		fprintf(stderr, "Failed to create root");
 		exit(EXIT_FAILURE);
 	}
@@ -124,7 +126,8 @@ TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path) {
 	}
 
 	// Else create the inode
-	TfsInodeIdx idx = tfs_inode_table_create(&self->inode_table, type).idx;
+	TfsInodeIdx idx;
+	tfs_inode_table_create(&self->inode_table, type, &idx, NULL);
 
 	// Get the parent's data
 	// Note: We only do this here, instead of at the previous `find` because
@@ -136,7 +139,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path) {
 	TfsInodeDirAddEntryResult add_entry_res = tfs_inode_dir_add_entry(&parent_data->dir, idx, entry_name.chars, entry_name.len);
 	if (add_entry_res.kind != TfsInodeDirAddEntryResultSuccess) {
 		// Note: If unable to, we delete the inode we just created.
-		assert(tfs_inode_table_remove(&self->inode_table, idx) == TfsInodeTableRemoveErrorSuccess);
+		assert(tfs_inode_table_remove(&self->inode_table, idx));
 		return (TfsFsCreateResult){.kind = TfsFsCreateResultErrorAddEntry, .data = {.add_entry = {.err = add_entry_res}}};
 	}
 
@@ -173,7 +176,7 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 	// Get the type and data of the node to delete
 	TfsInodeType type;
 	TfsInodeData* data;
-	assert(tfs_inode_table_get(&self->inode_table, idx, &type, &data) == TfsInodeTableGetErrorSuccess);
+	assert(tfs_inode_table_get(&self->inode_table, idx, &type, &data));
 
 	// If it's a directory but it's not empty, return Err
 	if (type == TfsInodeTypeDir && !tfs_inode_dir_is_empty(&data->dir)) {
@@ -184,7 +187,7 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 	assert(tfs_inode_dir_remove_entry(&parent_data->dir, idx));
 
 	// And delete it from the inode table
-	assert(tfs_inode_table_remove(&self->inode_table, idx) == TfsInodeTableRemoveErrorSuccess);
+	assert(tfs_inode_table_remove(&self->inode_table, idx));
 
 	return (TfsFsRemoveResult){.kind = TfsFsRemoveResultSuccess, .data = {.success = {.idx = idx}}};
 }
@@ -204,7 +207,7 @@ TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path) {
 		// Get the current inode's type and data
 		TfsInodeData* cur_data;
 		TfsInodeType cur_type;
-		assert(tfs_inode_table_get(&self->inode_table, cur_idx, &cur_type, &cur_data) == TfsInodeTableGetErrorSuccess);
+		assert(tfs_inode_table_get(&self->inode_table, cur_idx, &cur_type, &cur_data));
 
 		// If there's no more path to split, return the current inode
 		if (cur_path.len == 0) {

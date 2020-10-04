@@ -25,7 +25,7 @@ void tfs_inode_table_drop(TfsInodeTable* self) {
 	free(self->inodes);
 }
 
-TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeType type) {
+void tfs_inode_table_create(TfsInodeTable* self, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data) {
 	// Find the first non-empty node
 	TfsInodeIdx empty_idx = TFS_INODE_IDX_NONE;
 	for (TfsInodeIdx n = 0; n < self->capacity; n++) {
@@ -66,39 +66,44 @@ TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeTy
 	// Then initialize the node
 	self->inodes[empty_idx] = tfs_inode_new(type);
 
-	// And return it
-	return (TfsInodeTableCreateReturn){
-		.idx  = empty_idx,
-		.data = &self->inodes[empty_idx].data,
-	};
+	// And set out parameters
+	if (idx != NULL) {
+		*idx = empty_idx;
+	}
+	if (data != NULL) {
+		*data = &self->inodes[empty_idx].data;
+	}
 }
 
-TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx) {
+bool tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx) {
 	// If it's out of bounds, or empty, return Err
 	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableRemoveErrorInvalidIdx;
+		return false;
 	}
 
 	// Drop the node and replace it with an empty node
 	tfs_inode_drop(&self->inodes[idx]);
 	self->inodes[idx] = tfs_inode_new(TfsInodeTypeNone);
 
-	return TfsInodeTableRemoveErrorSuccess;
+	return true;
 }
 
-TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data) {
+bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data) {
 	// If it's out of bounds, or empty, return Err
 	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
-		return TfsInodeTableGetErrorInvalidIdx;
+		return false;
 	}
 
-	if (type != NULL)
+	// Else write the type and data
+	if (type != NULL) {
 		*type = self->inodes[idx].type;
+	}
 
-	if (data != NULL)
+	if (data != NULL) {
 		*data = &self->inodes[idx].data;
+	}
 
-	return TfsInodeTableGetErrorSuccess;
+	return true;
 }
 
 void tfs_inode_table_print_tree(TfsInodeTable* self, FILE* out, TfsInodeIdx idx, const char* cur_path) {

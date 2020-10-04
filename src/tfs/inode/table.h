@@ -8,6 +8,7 @@
 #define TFS_INODE_TABLE_H
 
 // Includes
+#include <stdbool.h>		 // bool
 #include <stdio.h>			 // FILE
 #include <tfs/inode/inode.h> // TfsInode
 
@@ -23,33 +24,6 @@ typedef struct TfsInodeTable {
 	size_t capacity;
 } TfsInodeTable;
 
-/// @brief Return type for @ref tfs_inode_table_create
-typedef struct TfsInodeTableCreateReturn {
-	/// @brief The index of the created inode
-	TfsInodeIdx idx;
-
-	/// @brief Data of the created inode
-	TfsInodeData* data;
-} TfsInodeTableCreateReturn;
-
-/// @brief Error type for @ref tfs_inode_table_remove
-typedef enum TfsInodeTableRemoveError {
-	/// @brief Success
-	TfsInodeTableRemoveErrorSuccess,
-
-	/// @brief No inode with `idx` was found
-	TfsInodeTableRemoveErrorInvalidIdx,
-} TfsInodeTableRemoveError;
-
-/// @brief Error type for @ref tfs_inode_table_get
-typedef enum TfsInodeTableGetError {
-	/// @brief Success
-	TfsInodeTableGetErrorSuccess,
-
-	/// @brief No inode with `idx` was found
-	TfsInodeTableGetErrorInvalidIdx,
-} TfsInodeTableGetError;
-
 /// @brief Creates a new inode table
 /// @details
 /// The returned table has no inodes.
@@ -62,13 +36,16 @@ void tfs_inode_table_drop(TfsInodeTable* self);
 ///
 /// @param self
 /// @param type The type of inode to create
-TfsInodeTableCreateReturn tfs_inode_table_create(TfsInodeTable* self, TfsInodeType type);
+/// @param[out] idx Index of the created index
+/// @param[out] data Data for the created index.
+void tfs_inode_table_create(TfsInodeTable* self, TfsInodeType type, TfsInodeIdx* idx, TfsInodeData** data);
 
 /// @brief Removes an inode from the table
 ///
 /// @param self
 /// @param idx The index of the inode to delete.
-TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx);
+/// @return If the inode was deleted.
+bool tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx);
 
 /// @brief Accesses an inode from the table
 ///
@@ -76,7 +53,8 @@ TfsInodeTableRemoveError tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx
 /// @param idx The index of the inode to access
 /// @param[out] data Data of the inode
 /// @param[out] type Type of the inode
-TfsInodeTableGetError tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
+/// @return If the inode was found.
+bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
 
 /// @brief Prints a tree of the whole inode table
 ///
