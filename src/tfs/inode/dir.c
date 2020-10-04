@@ -30,7 +30,7 @@ TfsInodeDir tfs_inode_dir_new(void) {
 	};
 }
 
-void tfs_inode_dir_drop(TfsInodeDir* self) {
+void tfs_inode_dir_destroy(TfsInodeDir* self) {
 	// Free our entries
 	// Note: This is fine even if it's `NULL`.
 	free(self->entries);

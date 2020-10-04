@@ -14,10 +14,10 @@ TfsInodeTable tfs_inode_table_new(void) {
 	};
 }
 
-void tfs_inode_table_drop(TfsInodeTable* self) {
-	// Drop each inode
+void tfs_inode_table_destroy(TfsInodeTable* self) {
+	// Destroy each inode
 	for (size_t n = 0; n < self->capacity; n++) {
-		tfs_inode_drop(&self->inodes[n]);
+		tfs_inode_destroy(&self->inodes[n]);
 	}
 
 	// And free the inode table
@@ -81,8 +81,8 @@ bool tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx) {
 		return false;
 	}
 
-	// Drop the node and replace it with an empty node
-	tfs_inode_drop(&self->inodes[idx]);
+	// Destroy the node and replace it with an empty node
+	tfs_inode_destroy(&self->inodes[idx]);
 	self->inodes[idx] = tfs_inode_new(TfsInodeTypeNone);
 
 	return true;

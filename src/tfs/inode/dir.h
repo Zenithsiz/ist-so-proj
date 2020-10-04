@@ -86,8 +86,8 @@ void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* self,
 /// The returned directory has no entries.
 TfsInodeDir tfs_inode_dir_new(void);
 
-/// @brief Drops an inode directory
-void tfs_inode_dir_drop(TfsInodeDir* self);
+/// @brief Destroys an inode directory
+void tfs_inode_dir_destroy(TfsInodeDir* self);
 
 /// @brief Checks if a directory is empty.
 bool tfs_inode_dir_is_empty(const TfsInodeDir* self);

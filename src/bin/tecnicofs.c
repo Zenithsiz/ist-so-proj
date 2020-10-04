@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 	tfs_fs_print(&fs, stdout);
 
 	/* release allocated memory */
-	tfs_fs_drop(&fs);
+	tfs_fs_destroy(&fs);
 
 	return EXIT_SUCCESS;
 }

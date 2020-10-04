@@ -203,9 +203,9 @@ void tfs_fs_remove_result_print(const TfsFsRemoveResult* self, FILE* out);
 /// for the file system.
 TfsFs tfs_fs_new(void);
 
-/// @brief Drops a file system
+/// @brief Destroys a file system
 /// @param self
-void tfs_fs_drop(TfsFs* self);
+void tfs_fs_destroy(TfsFs* self);
 
 /// @brief Creates a new inode
 /// @param self

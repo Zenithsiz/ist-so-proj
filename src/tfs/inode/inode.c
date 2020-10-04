@@ -23,7 +23,7 @@ TfsInode tfs_inode_new(TfsInodeType type) {
 	}
 }
 
-void tfs_inode_drop(TfsInode* self) {
+void tfs_inode_destroy(TfsInode* self) {
 	switch (self->type) {
 		// Deallocate a file's contents
 		case TfsInodeTypeFile:
@@ -32,7 +32,7 @@ void tfs_inode_drop(TfsInode* self) {
 
 		// Deallocate a directory's children
 		case TfsInodeTypeDir:
-			tfs_inode_dir_drop(&self->data.dir);
+			tfs_inode_dir_destroy(&self->data.dir);
 			break;
 
 		case TfsInodeTypeNone:

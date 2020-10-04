@@ -101,9 +101,9 @@ TfsFs tfs_fs_new() {
 	return fs;
 }
 
-void tfs_fs_drop(TfsFs* self) {
-	// Drop the inode table
-	tfs_inode_table_drop(&self->inode_table);
+void tfs_fs_destroy(TfsFs* self) {
+	// Destroy the inode table
+	tfs_inode_table_destroy(&self->inode_table);
 }
 
 TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path) {

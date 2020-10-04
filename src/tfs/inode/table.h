@@ -29,8 +29,8 @@ typedef struct TfsInodeTable {
 /// The returned table has no inodes.
 TfsInodeTable tfs_inode_table_new(void);
 
-/// @brief Drops an inode table
-void tfs_inode_table_drop(TfsInodeTable* self);
+/// @brief Destroys an inode table
+void tfs_inode_table_destroy(TfsInodeTable* self);
 
 /// @brief Creates a new inode in a table
 ///

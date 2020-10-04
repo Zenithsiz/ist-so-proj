@@ -31,7 +31,7 @@ typedef struct TfsInode {
 /// @param type The type of inode to create
 TfsInode tfs_inode_new(TfsInodeType type);
 
-/// @brief Drops an inode
-void tfs_inode_drop(TfsInode* self);
+/// @brief Destroys an inode
+void tfs_inode_destroy(TfsInode* self);
 
 #endif
