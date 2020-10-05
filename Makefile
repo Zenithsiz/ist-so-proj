@@ -1,12 +1,9 @@
-# Makefile, versao 1
-# Sistemas Operativos, DEI/IST/ULisboa 2020-21
-
 # Compiler and linker
 CC   = gcc
 LD   = gcc
 
 # Compiler flags
-# Note: `-posix` is required to have conforming C99 `printf` and others on windows (reference: MinGW's `_mingw.h:407`).
+# Note: `-posix` is required to have a conforming C99 stdlib on windows MINGW (from `_mingw.h:407`)
 CFLAGS =-g\
 	-Wall -Wextra -Werror -pedantic\
 	-Wnull-dereference -Wformat=2 -Wstrict-prototypes\
@@ -52,21 +49,25 @@ PROG_DEPS := $(patsubst src/%.c,obj/%.d,$(PROG_SRCS))
 # Program binaries
 PROG_BINS := $(patsubst src/%.c,build/%,$(PROG_SRCS))
 
-# A phony target is one that is not really the name of a file
-# https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
-.PHONY: all clean run
+# Phony targets
+.PHONY: all clean test
 
-
+# Build all program binaries by default.
 all: $(PROG_BINS)
 
 # Binaries
 $(TEST_BINS) $(PROG_BINS): build/%: obj/%.o $(LIB_OBJS)
 	@echo $@: Building binary
 	@mkdir -p $(dir $@)
-	@$(LD) $(CFLAGS) $(LDFLAGS) $^ -o '$@'
+	@$(LD) $(CFLAGS) $(LDFLAGS) -o '$@' $^
+
+# On windows, rename the `bin.exe` to `bin`, so makefile
+# doesn't rebuild it, since `bin` doesn't exist.
+# Note: The double negative, `!` + `||` is so this returns
+#       success even when the file doesn't exist.
 	@[ ! -f '$@.exe' ] || mv -f '$@.exe' '$@'
 
-# Build all `obj/` files from `src/`
+# Object files
 $(LIB_OBJS) $(PROG_OBJS) $(TEST_OBJS): obj/%.o: src/%.c
 	@echo $<: Building
 	@mkdir -p $(dir $@)

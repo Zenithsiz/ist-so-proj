@@ -9,13 +9,12 @@ TfsTestResult tfs_test_all(const TfsTest* tests, const char* module) {
 	TfsTestResult status = TfsTestResultSuccess;
 
 	// Run all tests
-	printf("Tests '%s':\n", module);
 	for (size_t n = 0;; n++) {
 		if (tests[n].fn == NULL) {
 			break;
 		}
 
-		printf("\t%s/%s: ..", module, tests[n].name);
+		printf("%s/%s: ..", module, tests[n].name);
 		if (tests[n].fn() == TfsTestResultSuccess) {
 			printf("Passed\n");
 		}
