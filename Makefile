@@ -4,14 +4,22 @@ LD   = gcc
 
 # Compiler flags
 # Note: `-posix` is required to have a conforming C99 stdlib on windows MINGW (from `_mingw.h:407`)
-CFLAGS =-g\
+CFLAGS =\
+	-posix -std=gnu99 -g -O3\
+	-Isrc/\
 	-Wall -Wextra -Werror -pedantic\
-	-Wnull-dereference -Wformat=2 -Wstrict-prototypes\
-	-Wcast-qual -Wmissing-prototypes -Wformat-security\
-	-Winit-self -Wimplicit-fallthrough -Wswitch-default\
-	-Wswitch-enum -Wunused-parameter -Wduplicated-cond\
-	-Wduplicated-branches -Wlogical-op -Wunsafe-loop-optimizations\
-	-posix -std=gnu99 -Isrc
+	-Wformat=2 -Winit-self -Wmissing-include-dirs -Wswitch-default\
+	-Wswitch-enum -Wunused-parameter\
+	-Wstrict-overflow=5 -Wfloat-equal -Wundef -Wshadow -Wunsafe-loop-optimizations\
+	-Wbad-function-cast -Wcast-qual -Wcast-align=strict -Wwrite-strings -Wconversion\
+	-Wsign-conversion -Wlogical-op -Wstrict-prototypes -Wold-style-definition\
+	-Wmissing-prototypes -Wmissing-declarations -Wmissing-noreturn\
+	-Wmissing-format-attribute -Woverride-init -Wredundant-decls\
+	-Wunreachable-code -Winline -Wdouble-promotion -Wnonnull\
+	-Wnonnull-compare -Wimplicit-fallthrough -Wuninitialized\
+	-Wstringop-overflow=4 -Wstringop-truncation -Walloc-zero\
+	-Warray-bounds=2 -Wduplicated-branches -Wduplicated-cond\
+	-Wc99-c11-compat -Wformat-security -Wnull-dereference
 
 # Linker flags
 LDFLAGS=-lm

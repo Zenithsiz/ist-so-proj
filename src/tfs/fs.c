@@ -86,7 +86,7 @@ void tfs_fs_remove_result_print(const TfsFsRemoveResult* self, FILE* out) {
 	}
 }
 
-TfsFs tfs_fs_new() {
+TfsFs tfs_fs_new(void) {
 	// Create the inode table
 	TfsFs fs = {.inode_table = tfs_inode_table_new()};
 
@@ -221,7 +221,7 @@ TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path) {
 		// Else, if this isn't a directory, return Err
 		if (cur_type != TfsInodeTypeDir) {
 			TfsPath bad_dir_path = path;
-			bad_dir_path.len	 = cur_dir.chars - path.chars;
+			bad_dir_path.len	 = (size_t)(cur_dir.chars - path.chars);
 			return (TfsFsFindResult){.kind = TfsFsFindResultErrorParentsNotDir, .data = {.parents_not_dir = {.path = bad_dir_path}}};
 		}
 
@@ -229,7 +229,7 @@ TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path) {
 		cur_idx = tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len);
 		if (cur_idx == TFS_INODE_IDX_NONE) {
 			TfsPath bad_dir_path = path;
-			bad_dir_path.len	 = cur_dir.chars - path.chars;
+			bad_dir_path.len	 = (size_t)(cur_dir.chars - path.chars);
 			return (TfsFsFindResult){.kind = TfsFsFindResultErrorNameNotFound, .data = {.name_not_found = {.path = bad_dir_path}}};
 		}
 	} while (1);
