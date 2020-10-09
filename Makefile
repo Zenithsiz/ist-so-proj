@@ -5,7 +5,7 @@ LD   = gcc
 # Compiler flags
 # Note: `-posix` is required to have a conforming C99 stdlib on windows MINGW (from `_mingw.h:407`)
 CFLAGS =\
-	-posix -std=gnu99 -g -O3\
+	-posix -pthread -std=gnu99 -g\
 	-Isrc/\
 	-Wall -Wextra -Werror -pedantic\
 	-Wformat=2 -Winit-self -Wmissing-include-dirs -Wswitch-default\

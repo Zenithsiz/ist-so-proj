@@ -1,11 +1,44 @@
 #include "command.h"
 
+void tfs_command_parse_result_print(const TfsCommandParseResult* self, FILE* out) {
+	switch (self->kind) {
+		case TfsCommandParseResultErrorNoCommand: {
+			fprintf(out, "No command was supplied\n");
+			break;
+		}
+
+		case TfsCommandParseResultErrorNoPath: {
+			fprintf(out, "No path was supplied\n");
+			break;
+		}
+
+		case TfsCommandParseResultErrorNoType: {
+			fprintf(out, "No type was supplied\n");
+			break;
+		}
+
+		case TfsCommandParseResultErrorInvalidCommand: {
+			fprintf(out, "Invalid command '%c'\n", self->data.invalid_command.command);
+			break;
+		}
+
+		case TfsCommandParseResultErrorInvalidType: {
+			fprintf(out, "Invalid type '%c'\n", self->data.invalid_type.type);
+			break;
+		}
+
+		case TfsCommandParseResultSuccess:
+		default:
+			fprintf(out, "Success\n");
+			break;
+	}
+}
+
 TfsCommandParseResult tfs_command_parse(FILE* in) {
+	// Read the command and path
 	char command;
 	char path_cstr[1024];
-	char type;
-
-	int tokens_read = fscanf(in, " %c %1024s %c \n", &command, path_cstr, &type);
+	int tokens_read = fscanf(in, " %c %1024s", &command, path_cstr);
 	if (tokens_read <= 0) {
 		return (TfsCommandParseResult){
 			.kind = TfsCommandParseResultErrorNoCommand,
@@ -21,8 +54,10 @@ TfsCommandParseResult tfs_command_parse(FILE* in) {
 	switch (command) {
 		// Create path
 		case 'c': {
-			// If we didn't get a type, return Err
-			if (tokens_read != 3) {
+			// Read the type
+			char type;
+			tokens_read = fscanf(in, " %c", &type);
+			if (tokens_read != 1) {
 				return (TfsCommandParseResult){
 					.kind = TfsCommandParseResultErrorNoType,
 				};
@@ -41,7 +76,8 @@ TfsCommandParseResult tfs_command_parse(FILE* in) {
 				}
 				default: {
 					return (TfsCommandParseResult){
-						.kind = TfsCommandParseResultErrorInvalidType};
+						.kind = TfsCommandParseResultErrorInvalidType,
+						.data = {.invalid_type = {.type = type}}};
 				}
 			}
 
@@ -68,25 +104,26 @@ TfsCommandParseResult tfs_command_parse(FILE* in) {
 		}
 		default: {
 			return (TfsCommandParseResult){
-				.kind = TfsCommandParseResultErrorInvalidCommand};
+				.kind = TfsCommandParseResultErrorInvalidCommand,
+				.data = {.invalid_command = {.command = command}}};
 		}
 	}
 }
 
-void tfs_command_destroy(TfsCommand command) {
-	switch (command.kind) {
+void tfs_command_destroy(TfsCommand* command) {
+	switch (command->kind) {
 		case TfsCommandCreate: {
-			tfs_path_owned_destroy(command.data.create.path);
+			tfs_path_owned_destroy(&command->data.create.path);
 			break;
 		}
 
 		case TfsCommandSearch: {
-			tfs_path_owned_destroy(command.data.search.path);
+			tfs_path_owned_destroy(&command->data.search.path);
 			break;
 		}
 
 		case TfsCommandRemove: {
-			tfs_path_owned_destroy(command.data.remove.path);
+			tfs_path_owned_destroy(&command->data.remove.path);
 			break;
 		}
 

@@ -48,7 +48,7 @@ TfsPath tfs_path_from_owned(TfsPathOwned path);
 /// @brief Destroys a @ref TfsPathOwned
 /// @details
 /// This takes ownership of @param path
-void tfs_path_owned_destroy(TfsPathOwned path);
+void tfs_path_owned_destroy(TfsPathOwned* path);
 
 /// @brief Checks if two paths are equal.
 /// @details

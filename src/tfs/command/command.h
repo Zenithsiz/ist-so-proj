@@ -4,6 +4,9 @@
 /// This file contains the type @ref TfsCommand that fully describes
 /// all commands executable by the tfs server.
 
+#ifndef TFS_COMMAND_COMMAND_H
+#define TFS_COMMAND_COMMAND_H
+
 // Includes
 #include <stdio.h>			// FILE
 #include <tfs/inode/type.h> // TfsInodeType
@@ -86,11 +89,30 @@ typedef struct TfsCommandParseResult {
 			/// @brief The parsed command
 			TfsCommand command;
 		} success;
+
+		/// @brief Data for `InvalidCommand`.
+		struct {
+			/// @brief Character received
+			char command;
+		} invalid_command;
+
+		/// @brief Data for `InvalidType`.
+		struct {
+			/// @brief Character received
+			char type;
+		} invalid_type;
 	} data;
 } TfsCommandParseResult;
 
-/// @brief Parses a command from a newline-terminated space-separated argument list.
+/// @brief Prints a textual representation of an result
+/// @param self
+/// @param out File descriptor to output to
+void tfs_command_parse_result_print(const TfsCommandParseResult* self, FILE* out);
+
+/// @brief Parses a command from a space-separated argument list
 TfsCommandParseResult tfs_command_parse(FILE* in);
 
 /// @brief Destroys a command
-void tfs_command_destroy(TfsCommand command);
+void tfs_command_destroy(TfsCommand* command);
+
+#endif
