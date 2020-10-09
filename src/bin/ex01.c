@@ -6,13 +6,15 @@
 #include <tfs/fs.h>
 
 /// @brief Applies commands from stdin
-static void apply_commands(TfsFs* fs) {
+static void apply_commands(TfsFs* fs, FILE* input, FILE* out) {
+	(void)out;
+
 	// Each command has at most `[command] [name] {type}\n`
 	// `command` / `type`: 1 character,
 	// `name`: TFS_DIR_MAX_FILE_NAME_LEN characters + 1 null.
 	char line[TFS_DIR_MAX_FILE_NAME_LEN + 6];
 
-	while (fgets(line, sizeof(line), stdin)) {
+	while (fgets(line, sizeof(line), input) != NULL) {
 		// If the line starts with ^D, return
 		if (line[0] == '\x4') {
 			return;
@@ -104,15 +106,37 @@ static void apply_commands(TfsFs* fs) {
 	}
 }
 
-int main(void) {
+int main(int argc, char** argv) {
+	if (argc != 5) {
+		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>");
+		return EXIT_FAILURE;
+	}
+	(void)argv;
+	FILE* input = stdin;
+	FILE* out	= stdout;
+
+	// Open the input file
+	FILE* input = fopen(argv[1], "r");
+	if (input == NULL) {
+		fprintf(stderr, "Unable to open input file");
+		return EXIT_FAILURE;
+	}
+
+	// Open the output file
+	FILE* out = fopen(argv[2], "w");
+	if (out == NULL) {
+		fprintf(stderr, "Unable to open output file");
+		return EXIT_FAILURE;
+	}
+
 	// Create the file system
 	TfsFs fs = tfs_fs_new();
 
 	// Process all input
-	apply_commands(&fs);
+	apply_commands(&fs, input, out);
 
 	// Print the tree before exiting
-	tfs_fs_print(&fs, stdout);
+	tfs_fs_print(&fs, out);
 
 	// And destroy the file system.
 	tfs_fs_destroy(&fs);
