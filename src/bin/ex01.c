@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <errno.h> // errno
 #include <getopt.h>
+#include <pthread.h> // pthread_create, pthread_join
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>			   // strerror
