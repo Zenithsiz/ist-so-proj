@@ -24,6 +24,8 @@ typedef struct TfsFs {
 	/// The first inode, called 'root node' will always
 	/// be a directory.
 	TfsInodeTable inode_table;
+
+	// TODO: Add lock
 } TfsFs;
 
 /// @brief Result type for @ref tfs_fs_find
