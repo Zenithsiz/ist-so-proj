@@ -12,9 +12,6 @@ typedef struct WorkerData {
 	/// @brief File system
 	TfsFs* fs;
 
-	/// @brief Output file
-	FILE* out;
-
 	/// @brief Command table
 	TfsCommandTable* command_table;
 } WorkerData;
@@ -175,7 +172,6 @@ int main(int argc, char** argv) {
 	WorkerData data = (WorkerData){
 		.command_table = command_table,
 		.fs			   = &fs,
-		.out		   = out,
 	};
 
 	// VLA with all worker threads
@@ -183,6 +179,7 @@ int main(int argc, char** argv) {
 
 	// Create all threads
 	for (size_t n = 0; n < num_threads; n++) {
+		printf("Creating new thread (%zu)\n", n);
 		int res = pthread_create(&worker_threads[n], NULL, worker_thread_fn, &data);
 		if (res != 0) {
 			fprintf(stderr, "Unable to create thread #%zu: %d\n", n, res);
@@ -192,6 +189,7 @@ int main(int argc, char** argv) {
 
 	// Then join them
 	for (size_t n = 0; n < num_threads; n++) {
+		printf("Joining thread (%zu)\n", n);
 		int res = pthread_join(worker_threads[n], NULL);
 		if (res != 0) {
 			fprintf(stderr, "Unable to join thread #%zu: %d\n", n, res);

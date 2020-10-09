@@ -12,12 +12,12 @@
 #include <stdlib.h>	 // size_t
 
 /// @brief Returns the minimum value between `lhs` and `rhs`
-inline static bool tfs_min_size_t(size_t lhs, size_t rhs) {
+inline static size_t tfs_min_size_t(size_t lhs, size_t rhs) {
 	return lhs > rhs ? rhs : lhs;
 }
 
 /// @brief Returns the maximum value between `lhs` and `rhs`
-inline static bool tfs_max_size_t(size_t lhs, size_t rhs) {
+inline static size_t tfs_max_size_t(size_t lhs, size_t rhs) {
 	return lhs > rhs ? lhs : rhs;
 }
 
