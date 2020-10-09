@@ -108,25 +108,15 @@ bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* typ
 
 void tfs_inode_table_print_tree(TfsInodeTable* self, FILE* out, TfsInodeIdx idx, const char* cur_path) {
 	// Print it's path
-	fprintf(out, "Path: '%s%s'\n", cur_path, self->inodes[idx].type == TfsInodeTypeDir ? "/" : "");
-
-	// Print it's inode
-	fprintf(out, "\tInode: %zu\n", idx);
-
-	// Print it's type
-	fprintf(out, "\tType: %s\n", tfs_inode_type_str(self->inodes[idx].type));
+	fprintf(out, "%s\n", cur_path);
 
 	// Print it's data
 	switch (self->inodes[idx].type) {
 		case TfsInodeTypeFile: {
-			// TODO: Print file length
 			break;
 		}
 
 		case TfsInodeTypeDir: {
-			// Print the capacity for this directory
-			fprintf(out, "\tCapacity: %zu\n", self->inodes[idx].data.dir.capacity);
-
 			for (size_t n = 0; n < self->inodes[idx].data.dir.capacity; n++) {
 				// If this entry is empty, skip
 				if (self->inodes[idx].data.dir.entries[n].inode_idx == TFS_INODE_IDX_NONE) {
