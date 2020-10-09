@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
 		}
 
 		// Then push it
-		printf("Adding new command (%zu)\n", cur_line);
+		fprintf(stderr, "Adding new command (%zu)\n", cur_line);
 		TfsCommandTablePushResult push_res = tfs_command_table_push(command_table, parse_res.data.success.command);
 		if (push_res != TfsCommandTablePushResultSuccess) {
 			fprintf(stderr, "Unable to push command onto table");
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
 
 	// Create all threads
 	for (size_t n = 0; n < num_threads; n++) {
-		printf("Creating new thread (%zu)\n", n);
+		fprintf(stderr, "Creating new thread (%zu)\n", n);
 		int res = pthread_create(&worker_threads[n], NULL, worker_thread_fn, &data);
 		if (res != 0) {
 			fprintf(stderr, "Unable to create thread #%zu: %d\n", n, res);
@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
 
 	// Then join them
 	for (size_t n = 0; n < num_threads; n++) {
-		printf("Joining thread (%zu)\n", n);
+		fprintf(stderr, "Joining thread (%zu)\n", n);
 		int res = pthread_join(worker_threads[n], NULL);
 		if (res != 0) {
 			fprintf(stderr, "Unable to join thread #%zu: %d\n", n, res);
