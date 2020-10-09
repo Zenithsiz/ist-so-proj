@@ -2,7 +2,9 @@
 
 // Includes
 #include <ctype.h>	// isspace
+#include <stdlib.h> // malloc, free
 #include <string.h> // strlen
+#include <string.h> // strncpy
 
 TfsPath tfs_path_from_cstr(const char* cstr) {
 	// Get the length, exclusing the null pointer
@@ -10,6 +12,29 @@ TfsPath tfs_path_from_cstr(const char* cstr) {
 
 	TfsPath path = {.chars = cstr, .len = len};
 	return path;
+}
+
+TfsPathOwned tfs_path_to_owned(TfsPath path) {
+	// Copy over the string
+	char* chars = malloc(path.len * sizeof(char));
+	strncpy(chars, path.chars, path.len);
+
+	return (TfsPathOwned){
+		.chars = chars,
+		.len   = path.len,
+	};
+}
+
+TfsPath tfs_path_from_owned(TfsPathOwned path) {
+	return (TfsPath){
+		.chars = path.chars,
+		.len   = path.len,
+	};
+}
+
+void tfs_path_owned_destroy(TfsPathOwned path) {
+	// Free the string
+	free(path.chars);
 }
 
 bool tfs_path_eq(TfsPath lhs, TfsPath rhs) {

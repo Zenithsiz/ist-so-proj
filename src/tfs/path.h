@@ -25,8 +25,30 @@ typedef struct TfsPath {
 	size_t len;
 } TfsPath;
 
+/// @brief Owned version of @ref TfsPath
+typedef struct TfsPathOwned {
+	/// @brief All characters
+	char* chars;
+
+	/// @brief Number of characters
+	size_t len;
+} TfsPathOwned;
+
 /// @brief Creates a new path from a null-terminated string
 TfsPath tfs_path_from_cstr(const char* cstr);
+
+/// @brief Creates a new owned path from a path
+TfsPathOwned tfs_path_to_owned(TfsPath path);
+
+/// @brief Retrieves a path from an owned path
+/// @details
+/// This only borrows @param path.
+TfsPath tfs_path_from_owned(TfsPathOwned path);
+
+/// @brief Destroys a @ref TfsPathOwned
+/// @details
+/// This takes ownership of @param path
+void tfs_path_owned_destroy(TfsPathOwned path);
 
 /// @brief Checks if two paths are equal.
 /// @details
