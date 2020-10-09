@@ -136,13 +136,24 @@ int main(int argc, char** argv) {
 
 	// Fill the comand table
 	for (size_t cur_line = 0;; cur_line++) {
+		// Skip any whitespace
+		int last_char;
+		while (last_char = fgetc(in), isspace(last_char)) {}
+		ungetc(last_char, in);
+
 		// If it starts with '#', skip this line
 		int peek = fgetc(in);
 		if (peek == '#') {
 			while (fgetc(in) != '\n' && !feof(in)) {}
+			continue;
 		}
 		else {
 			ungetc(peek, in);
+		}
+
+		// If the line is empty, stop
+		if (feof(in)) {
+			break;
 		}
 
 		// Try to parse it
@@ -160,11 +171,6 @@ int main(int argc, char** argv) {
 			fprintf(stderr, "Unable to push command onto table");
 			tfs_command_table_push_result_print(&push_res, stderr);
 			return EXIT_FAILURE;
-		}
-
-		// If the line is empty, stop
-		if (feof(in)) {
-			break;
 		}
 	}
 
