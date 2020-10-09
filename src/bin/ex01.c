@@ -79,6 +79,9 @@ static void* worker_thread_fn(void* arg) {
 			default: {
 			}
 		}
+
+		// Free the command
+		tfs_command_destroy(&command);
 	}
 
 	return NULL;
@@ -86,7 +89,7 @@ static void* worker_thread_fn(void* arg) {
 
 int main(int argc, char** argv) {
 	if (argc != 5) {
-		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>");
+		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>\n");
 		return EXIT_FAILURE;
 	}
 
@@ -99,7 +102,7 @@ int main(int argc, char** argv) {
 	else {
 		in = fopen(argv[1], "r");
 		if (in == NULL) {
-			fprintf(stderr, "Unable to open input file '%s': %s\n", argv[1]);
+			fprintf(stderr, "Unable to open input file '%s'\n", argv[1]);
 			fprintf(stderr, "%s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
@@ -206,8 +209,21 @@ int main(int argc, char** argv) {
 	// Print the tree before exiting
 	tfs_fs_print(&fs, out);
 
+	// Destroy the command table
+	tfs_command_table_destroy(command_table);
+
 	// And destroy the file system.
 	tfs_fs_destroy(&fs);
+
+	// If `in` isn't stdin, close it
+	if (in != stdin) {
+		fclose(in);
+	}
+
+	// If `out` isn't stdout, close it
+	if (out != stdout) {
+		fclose(out);
+	}
 
 	return EXIT_SUCCESS;
 }
