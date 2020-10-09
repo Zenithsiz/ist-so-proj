@@ -1,8 +1,9 @@
 #include <ctype.h>
+#include <errno.h> // errno
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> // strerror
 #include <tfs/fs.h>
 
 /// @brief Applies commands from stdin
@@ -111,22 +112,35 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>");
 		return EXIT_FAILURE;
 	}
-	(void)argv;
-	FILE* input = stdin;
-	FILE* out	= stdout;
 
 	// Open the input file
-	FILE* input = fopen(argv[1], "r");
-	if (input == NULL) {
-		fprintf(stderr, "Unable to open input file");
-		return EXIT_FAILURE;
+	// Note: If we receive '-', use stdin
+	FILE* input;
+	if (strcmp(argv[1], "-") == 0) {
+		input = stdin;
+	}
+	else {
+		input = fopen(argv[1], "r");
+		if (input == NULL) {
+			fprintf(stderr, "Unable to open input file '%s': %s\n", argv[1]);
+			fprintf(stderr, "%s\n", strerror(errno));
+			return EXIT_FAILURE;
+		}
 	}
 
 	// Open the output file
-	FILE* out = fopen(argv[2], "w");
-	if (out == NULL) {
-		fprintf(stderr, "Unable to open output file");
-		return EXIT_FAILURE;
+	// Note: If we receive '-', use stdout
+	FILE* out;
+	if (strcmp(argv[2], "-") == 0) {
+		out = stdout;
+	}
+	else {
+		out = fopen(argv[2], "r");
+		if (out == NULL) {
+			fprintf(stderr, "Unable to open output file '%s'\n", argv[2]);
+			fprintf(stderr, "%s\n", strerror(errno));
+			return EXIT_FAILURE;
+		}
 	}
 
 	// Create the file system
