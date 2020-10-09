@@ -91,7 +91,7 @@ typedef struct TfsFsCreateResult {
 		/// @details
 		/// This is an inode directory specific error,
 		/// see the underlying `add_entry` data.
-		TfsFsCreateResultErrorAddEntry = -4,
+		TfsFsCreateResultErrorAddEntry = -3,
 	} kind;
 
 	/// @brief Result data

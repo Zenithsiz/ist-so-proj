@@ -63,7 +63,7 @@ typedef struct TfsInodeDirAddEntryResult {
 		TfsInodeDirAddEntryResultErrorEmptyName = -1,
 
 		/// @brief An entry with the same name already exists.
-		TfsInodeDirAddEntryResultErrorDuplicateName = -3,
+		TfsInodeDirAddEntryResultErrorDuplicateName = -2,
 	} kind;
 
 	/// @brief Result data
