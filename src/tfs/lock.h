@@ -23,6 +23,7 @@ typedef enum TfsLockKind {
 	TfsKindNone,
 } TfsLockKind;
 
+/// @brief Synchronization lock
 typedef struct TfsLock {
 	/// @brief Lock kind
 	TfsLockKind kind;

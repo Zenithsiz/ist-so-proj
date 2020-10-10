@@ -40,15 +40,13 @@ TfsPath tfs_path_from_cstr(const char* cstr);
 /// @brief Creates a new owned path from a path
 TfsPathOwned tfs_path_to_owned(TfsPath path);
 
-/// @brief Retrieves a path from an owned path
-/// @details
-/// This only borrows @param path.
+/// @brief Retrieves a borrowed path from an owned path
+/// @param path The path to borrow from.
 TfsPath tfs_path_from_owned(TfsPathOwned path);
 
 /// @brief Destroys a @ref TfsPathOwned
-/// @details
-/// This takes ownership of @param path
-void tfs_path_owned_destroy(TfsPathOwned* path);
+/// @param self
+void tfs_path_owned_destroy(TfsPathOwned* self);
 
 /// @brief Checks if two paths are equal.
 /// @details
