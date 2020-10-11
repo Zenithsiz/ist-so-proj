@@ -55,9 +55,6 @@ static void* worker_thread_fn(void* arg) {
 			}
 
 			case TfsCommandSearch: {
-				// Downgrade the lock to read lock
-				tfs_lock_downgrade_lock(data->lock);
-
 				TfsPath path = tfs_path_from_owned(command.data.search.path);
 
 				TfsFsFindResult res = tfs_fs_find(data->fs, path);
@@ -144,6 +141,22 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
+	// Get sync strategy
+	TfsLockKind lock_kind;
+	if (strcmp(argv[4], "mutex") == 0) {
+		lock_kind = TfsLockKindMutex;
+	}
+	else if (strcmp(argv[4], "rwlock") == 0) {
+		lock_kind = TfsLockKindRWLock;
+	}
+	else if (strcmp(argv[4], "nosync") == 0) {
+		lock_kind = TfsLockKindNone;
+	}
+	else {
+		fprintf(stderr, "Invalid sync strategy '%s'", argv[4]);
+		return EXIT_FAILURE;
+	}
+
 	// Create the file system
 	TfsFs fs = tfs_fs_new();
 
@@ -151,7 +164,7 @@ int main(int argc, char** argv) {
 	TfsCommandTable* command_table = tfs_command_table_new();
 
 	// Create the lock
-	TfsLock lock = tfs_lock_new(TfsKindMutex);
+	TfsLock lock = tfs_lock_new(lock_kind);
 
 	// Fill the comand table
 	for (size_t cur_line = 0;; cur_line++) {
@@ -184,7 +197,6 @@ int main(int argc, char** argv) {
 		}
 
 		// Then push it
-		fprintf(stderr, "Adding new command (%zu)\n", cur_line);
 		TfsCommandTablePushResult push_res = tfs_command_table_push(command_table, parse_res.data.success.command);
 		if (push_res != TfsCommandTablePushResultSuccess) {
 			fprintf(stderr, "Unable to push command onto table");
@@ -205,7 +217,6 @@ int main(int argc, char** argv) {
 
 	// Create all threads
 	for (size_t n = 0; n < num_threads; n++) {
-		fprintf(stderr, "Creating new thread (%zu)\n", n);
 		int res = pthread_create(&worker_threads[n], NULL, worker_thread_fn, &data);
 		if (res != 0) {
 			fprintf(stderr, "Unable to create thread #%zu: %d\n", n, res);
@@ -215,7 +226,6 @@ int main(int argc, char** argv) {
 
 	// Then join them
 	for (size_t n = 0; n < num_threads; n++) {
-		fprintf(stderr, "Joining thread (%zu)\n", n);
 		int res = pthread_join(worker_threads[n], NULL);
 		if (res != 0) {
 			fprintf(stderr, "Unable to join thread #%zu: %d\n", n, res);

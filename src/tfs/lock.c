@@ -2,28 +2,22 @@
 
 TfsLock tfs_lock_new(TfsLockKind kind) {
 	switch (kind) {
-		case TfsKindMutex: {
-			pthread_mutex_t mutex;
-			pthread_mutex_init(&mutex, NULL);
-
+		case TfsLockKindMutex: {
 			return (TfsLock){
 				.kind = kind,
-				.data = {.mutex = mutex},
+				.data = {.mutex = PTHREAD_MUTEX_INITIALIZER},
 			};
 		}
 
-		case TfsKindRWLock: {
-			pthread_rwlock_t rw_lock;
-			pthread_rwlock_init(&rw_lock, NULL);
-
+		case TfsLockKindRWLock: {
 			return (TfsLock){
 				.kind = kind,
-				.data = {.rw_lock = rw_lock},
+				.data = {.rw_lock = PTHREAD_RWLOCK_INITIALIZER},
 			};
 		}
 
 		default:
-		case TfsKindNone: {
+		case TfsLockKindNone: {
 			return (TfsLock){
 				.kind = kind,
 			};
@@ -32,19 +26,23 @@ TfsLock tfs_lock_new(TfsLockKind kind) {
 }
 
 void tfs_lock_destroy(TfsLock* self) {
+	// Note: `pthread_*_destroy` can only fail if it's
+	//       argument is not a valid mutex/rwlock.
+	//       We ensure that those are correct and so the
+	//       function call cannot fail.
 	switch (self->kind) {
-		case TfsKindMutex: {
+		case TfsLockKindMutex: {
 			pthread_mutex_destroy(&self->data.mutex);
 			break;
 		}
 
-		case TfsKindRWLock: {
+		case TfsLockKindRWLock: {
 			pthread_rwlock_destroy(&self->data.rw_lock);
 			break;
 		}
 
 		default:
-		case TfsKindNone: {
+		case TfsLockKindNone: {
 			break;
 		}
 	}
@@ -52,18 +50,18 @@ void tfs_lock_destroy(TfsLock* self) {
 
 void tfs_lock_read_lock(TfsLock* self) {
 	switch (self->kind) {
-		case TfsKindMutex: {
+		case TfsLockKindMutex: {
 			pthread_mutex_lock(&self->data.mutex);
 			break;
 		}
 
-		case TfsKindRWLock: {
+		case TfsLockKindRWLock: {
 			pthread_rwlock_rdlock(&self->data.rw_lock);
 			break;
 		}
 
 		default:
-		case TfsKindNone: {
+		case TfsLockKindNone: {
 			break;
 		}
 	}
@@ -71,40 +69,18 @@ void tfs_lock_read_lock(TfsLock* self) {
 
 void tfs_lock_write_lock(TfsLock* self) {
 	switch (self->kind) {
-		case TfsKindMutex: {
+		case TfsLockKindMutex: {
 			pthread_mutex_lock(&self->data.mutex);
 			break;
 		}
 
-		case TfsKindRWLock: {
+		case TfsLockKindRWLock: {
 			pthread_rwlock_wrlock(&self->data.rw_lock);
 			break;
 		}
 
 		default:
-		case TfsKindNone: {
-			break;
-		}
-	}
-}
-
-void tfs_lock_downgrade_lock(TfsLock* self) {
-	switch (self->kind) {
-		// Note: Mutexes can't be downgraded, they are already
-		//       always exclusive.
-		case TfsKindMutex: {
-			break;
-		}
-
-		case TfsKindRWLock: {
-			// Note: Locking a lock currently held as write
-			//       to read will simply downgrade it.
-			pthread_rwlock_rdlock(&self->data.rw_lock);
-			break;
-		}
-
-		default:
-		case TfsKindNone: {
+		case TfsLockKindNone: {
 			break;
 		}
 	}
@@ -112,18 +88,18 @@ void tfs_lock_downgrade_lock(TfsLock* self) {
 
 void tfs_lock_unlock(TfsLock* self) {
 	switch (self->kind) {
-		case TfsKindMutex: {
+		case TfsLockKindMutex: {
 			pthread_mutex_unlock(&self->data.mutex);
 			break;
 		}
 
-		case TfsKindRWLock: {
+		case TfsLockKindRWLock: {
 			pthread_rwlock_unlock(&self->data.rw_lock);
 			break;
 		}
 
 		default:
-		case TfsKindNone: {
+		case TfsLockKindNone: {
 			break;
 		}
 	}
