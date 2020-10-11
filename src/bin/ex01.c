@@ -17,9 +17,15 @@ typedef struct WorkerData {
 	/// @brief Command table
 	TfsCommandTable* command_table;
 
-	/// @brief Shared lock
-	// TODO: Consider making a lock for the command table and file system separately?
-	TfsLock* lock;
+	/// @brief Command lock
+	/// @details
+	/// This lock serves to ensure commands are executed
+	/// as-if sequentially. The lock is locked for writes
+	/// when popping an element from the table. After this
+	/// the file system locks the relevant inodes for the
+	/// execution of the command and unlocks the command
+	/// table lock, allowing other commands to be executed.
+	TfsLock* command_table_lock;
 } WorkerData;
 
 /// @brief Worker function
@@ -28,10 +34,10 @@ static void* worker_thread_fn(void* arg) {
 
 	while (1) {
 		// Lock and pop a command from the table
-		tfs_lock_write_lock(data->lock);
+		tfs_lock_write_lock(data->command_table_lock);
 		TfsCommandTablePopResult pop_res = tfs_command_table_pop(data->command_table);
 		if (!pop_res.is_some) {
-			tfs_lock_unlock(data->lock);
+			tfs_lock_unlock(data->command_table_lock);
 			break;
 		}
 		TfsCommand command = pop_res.data.command;
@@ -42,7 +48,7 @@ static void* worker_thread_fn(void* arg) {
 				TfsPath path			= tfs_path_from_owned(command.data.create.path);
 
 				fprintf(stderr, "Creating %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
-				TfsFsCreateResult res = tfs_fs_create(data->fs, inode_type, path);
+				TfsFsCreateResult res = tfs_fs_create(data->fs, inode_type, path, data->command_table_lock);
 				if (res.kind != TfsFsCreateResultSuccess) {
 					fprintf(stderr, "Unable to create %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 					tfs_fs_create_result_print(&res, stderr);
@@ -57,7 +63,7 @@ static void* worker_thread_fn(void* arg) {
 			case TfsCommandSearch: {
 				TfsPath path = tfs_path_from_owned(command.data.search.path);
 
-				TfsFsFindResult res = tfs_fs_find(data->fs, path);
+				TfsFsFindResult res = tfs_fs_find(data->fs, path, data->command_table_lock);
 				if (res.kind != TfsFsFindResultSuccess) {
 					fprintf(stderr, "Unable to find %.*s\n", (int)path.len, path.chars);
 					tfs_fs_find_result_print(&res, stderr);
@@ -73,7 +79,7 @@ static void* worker_thread_fn(void* arg) {
 				TfsPath path = tfs_path_from_owned(command.data.remove.path);
 
 				fprintf(stderr, "Deleting %.*s\n", (int)path.len, path.chars);
-				TfsFsRemoveResult res = tfs_fs_remove(data->fs, path);
+				TfsFsRemoveResult res = tfs_fs_remove(data->fs, path, data->command_table_lock);
 				if (res.kind != TfsFsRemoveResultSuccess) {
 					fprintf(stderr, "Unable to delete %.*s\n", (int)path.len, path.chars);
 					tfs_fs_remove_result_print(&res, stderr);
@@ -86,9 +92,6 @@ static void* worker_thread_fn(void* arg) {
 			default: {
 			}
 		}
-
-		// Unlock
-		tfs_lock_unlock(data->lock);
 
 		// Free the command
 		tfs_command_destroy(&command);
@@ -163,8 +166,8 @@ int main(int argc, char** argv) {
 	// Create the command table
 	TfsCommandTable* command_table = tfs_command_table_new();
 
-	// Create the lock
-	TfsLock lock = tfs_lock_new(lock_kind);
+	// Create the command table lock
+	TfsLock command_table_lock = tfs_lock_new(lock_kind);
 
 	// Fill the comand table
 	for (size_t cur_line = 0;; cur_line++) {
@@ -207,9 +210,9 @@ int main(int argc, char** argv) {
 
 	// Bundle all data together for the workers
 	WorkerData data = (WorkerData){
-		.command_table = command_table,
-		.fs			   = &fs,
-		.lock		   = &lock,
+		.command_table		= command_table,
+		.fs					= &fs,
+		.command_table_lock = &command_table_lock,
 	};
 
 	// VLA with all worker threads
@@ -237,7 +240,7 @@ int main(int argc, char** argv) {
 	tfs_fs_print(&fs, out);
 
 	// Destroy the lock
-	tfs_lock_destroy(&lock);
+	tfs_lock_destroy(&command_table_lock);
 
 	// Destroy the command table
 	tfs_command_table_destroy(command_table);

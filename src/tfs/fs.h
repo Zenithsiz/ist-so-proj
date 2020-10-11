@@ -11,7 +11,8 @@
 // Imports
 #include <stdio.h>			 // FILE*
 #include <tfs/inode/table.h> // TfsInodeTable
-#include <tfs/path.h>		 // TfsPath
+#include <tfs/lock.h>
+#include <tfs/path.h> // TfsPath
 
 /// @brief The file system
 /// @details
@@ -24,8 +25,6 @@ typedef struct TfsFs {
 	/// The first inode, called 'root node' will always
 	/// be a directory.
 	TfsInodeTable inode_table;
-
-	// TODO: Add lock
 } TfsFs;
 
 /// @brief Result type for @ref tfs_fs_find
@@ -207,17 +206,29 @@ void tfs_fs_destroy(TfsFs* self);
 /// @param self
 /// @param type Type of inode to create.
 /// @param path Path of inode to to create.
-TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path);
+/// @param lock Lock unlocked once this function locks
+///             relevant inodes for this operation.
+/// @details
+/// Even if an error occurs, `lock` is guaranteed to be unlocked.
+TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path, TfsLock* lock);
 
 /// @brief Deletes an inode.
 /// @param self
 /// @param path Path of inode to remove.
-TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path);
+/// @param lock Lock unlocked once this function locks
+///             relevant inodes for this operation.
+/// @details
+/// Even if an error occurs, `lock` is guaranteed to be unlocked.
+TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock);
 
 /// @brief Returns the inode index of a path, if it exists.
 /// @param self
 /// @param path Path of inode to to find.
-TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path);
+/// @param lock Lock unlocked once this function locks
+///             relevant inodes for this operation.
+/// @details
+/// Even if an error occurs, `lock` is guaranteed to be unlocked.
+TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock);
 
 /// @brief Prints the contents of this file system
 /// @param self
