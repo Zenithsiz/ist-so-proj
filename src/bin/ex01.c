@@ -73,7 +73,7 @@ static void* worker_thread_fn(void* arg) {
 					tfs_fs_remove_result_print(&res, stderr);
 				}
 				else {
-					fprintf(stderr, "Successfully deleted %.*s (with index %zu)\n", (int)path.len, path.chars, res.data.success.idx);
+					fprintf(stderr, "Successfully deleted %.*s\n", (int)path.len, path.chars);
 				}
 				break;
 			}
