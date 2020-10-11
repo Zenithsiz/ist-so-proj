@@ -11,7 +11,6 @@
 #include <stdbool.h>			 // bool
 #include <stdlib.h>				 // size_t
 #include <tfs/command/command.h> // TfsCommand
-#include <tfs/lock.h>			 // TfsCommandTableLock
 
 /// @brief Max number of commands
 #define TFS_COMMAND_TABLE_MAX 150000
@@ -30,9 +29,6 @@ typedef struct TfsCommandTable {
 
 	/// @brief Index of last command, non-inclusive
 	size_t last_idx;
-
-	/// @brief Lock
-	TfsLock lock;
 } TfsCommandTable;
 
 /// @brief Result for @ref tfs_command_table_push
@@ -64,15 +60,15 @@ void tfs_command_table_push_result_print(const TfsCommandTablePushResult* self, 
 /// @brief Creates a new, empty, command table
 /// @details
 /// Result is allocated to prevent stack smashing
-TfsCommandTable* tfs_command_table_new(TfsLockKind lock_kind);
+TfsCommandTable* tfs_command_table_new(void);
 
 /// @brief Destroys a command table
 void tfs_command_table_destroy(TfsCommandTable* self);
 
-/// @brief Pushes a command into this command table atomically
+/// @brief Pushes a command into this command table
 TfsCommandTablePushResult tfs_command_table_push(TfsCommandTable* self, TfsCommand command);
 
-/// @brief Pops a command from this command table atomically.
+/// @brief Pops a command from this command table
 TfsCommandTablePopResult tfs_command_table_pop(TfsCommandTable* self);
 
 #endif

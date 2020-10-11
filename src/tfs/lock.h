@@ -50,6 +50,9 @@ void tfs_lock_read_lock(TfsLock* self);
 /// @brief Locks this lock for writing
 void tfs_lock_write_lock(TfsLock* self);
 
+/// @brief Downgrades a write lock to a read lock
+void tfs_lock_downgrade_lock(TfsLock* self);
+
 /// @brief Unlocks this lock
 void tfs_lock_unlock(TfsLock* self);
 

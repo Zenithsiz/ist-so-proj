@@ -7,7 +7,7 @@
 #include <string.h>			   // strerror
 #include <tfs/command/table.h> // TfsCommandTable
 #include <tfs/fs.h>
-#include <unistd.h> // TODO: Remove
+#include <tfs/lock.h> // TfsLock
 
 /// @brief Data received by each worker
 typedef struct WorkerData {
@@ -16,6 +16,10 @@ typedef struct WorkerData {
 
 	/// @brief Command table
 	TfsCommandTable* command_table;
+
+	/// @brief Shared lock
+	// TODO: Consider making a lock for the command table and file system separately?
+	TfsLock* lock;
 } WorkerData;
 
 /// @brief Worker function
@@ -23,16 +27,16 @@ static void* worker_thread_fn(void* arg) {
 	WorkerData* data = arg;
 
 	while (1) {
-		// TODO: Fix commands not being executed sequentially
-		//nanosleep(&(struct timespec){.tv_sec = 0, .tv_nsec = 500000000}, NULL);
+		// Lock and pop a command from the table
+		tfs_lock_write_lock(data->lock);
 		TfsCommandTablePopResult pop_res = tfs_command_table_pop(data->command_table);
 		if (!pop_res.is_some) {
+			tfs_lock_unlock(data->lock);
 			break;
 		}
 		TfsCommand command = pop_res.data.command;
 
 		switch (command.kind) {
-			// Create path
 			case TfsCommandCreate: {
 				TfsInodeType inode_type = command.data.create.type;
 				TfsPath path			= tfs_path_from_owned(command.data.create.path);
@@ -50,8 +54,10 @@ static void* worker_thread_fn(void* arg) {
 				break;
 			}
 
-			// Look up path
 			case TfsCommandSearch: {
+				// Downgrade the lock to read lock
+				tfs_lock_downgrade_lock(data->lock);
+
 				TfsPath path = tfs_path_from_owned(command.data.search.path);
 
 				TfsFsFindResult res = tfs_fs_find(data->fs, path);
@@ -83,6 +89,9 @@ static void* worker_thread_fn(void* arg) {
 			default: {
 			}
 		}
+
+		// Unlock
+		tfs_lock_unlock(data->lock);
 
 		// Free the command
 		tfs_command_destroy(&command);
@@ -139,7 +148,10 @@ int main(int argc, char** argv) {
 	TfsFs fs = tfs_fs_new();
 
 	// Create the command table
-	TfsCommandTable* command_table = tfs_command_table_new(TfsKindMutex);
+	TfsCommandTable* command_table = tfs_command_table_new();
+
+	// Create the lock
+	TfsLock lock = tfs_lock_new(TfsKindMutex);
 
 	// Fill the comand table
 	for (size_t cur_line = 0;; cur_line++) {
@@ -185,6 +197,7 @@ int main(int argc, char** argv) {
 	WorkerData data = (WorkerData){
 		.command_table = command_table,
 		.fs			   = &fs,
+		.lock		   = &lock,
 	};
 
 	// VLA with all worker threads
@@ -212,6 +225,9 @@ int main(int argc, char** argv) {
 
 	// Print the tree before exiting
 	tfs_fs_print(&fs, out);
+
+	// Destroy the lock
+	tfs_lock_destroy(&lock);
 
 	// Destroy the command table
 	tfs_command_table_destroy(command_table);

@@ -17,11 +17,10 @@ void tfs_command_table_push_result_print(const TfsCommandTablePushResult* self, 
 	}
 }
 
-TfsCommandTable* tfs_command_table_new(TfsLockKind lock_kind) {
+TfsCommandTable* tfs_command_table_new(void) {
 	TfsCommandTable* table = malloc(1 * sizeof(TfsCommandTable));
 	table->first_idx	   = 0;
 	table->last_idx		   = 0;
-	table->lock			   = tfs_lock_new(lock_kind);
 
 	return table;
 }
@@ -31,15 +30,12 @@ void tfs_command_table_destroy(TfsCommandTable* self) {
 		tfs_command_destroy(&self->commands[n]);
 	}
 
-	tfs_lock_destroy(&self->lock);
 	free(self);
 }
 
 TfsCommandTablePushResult tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
-	// Lock and check if we have enough capacity
-	tfs_lock_write_lock(&self->lock);
+	// If we don't have enough capacity, return Err
 	if (self->last_idx == TFS_COMMAND_TABLE_MAX) {
-		tfs_lock_unlock(&self->lock);
 		return TfsCommandTablePushResultErrorFull;
 	}
 
@@ -47,16 +43,12 @@ TfsCommandTablePushResult tfs_command_table_push(TfsCommandTable* self, TfsComma
 	self->commands[self->last_idx] = command;
 	self->last_idx++;
 
-	// Unlock and return success
-	tfs_lock_unlock(&self->lock);
 	return TfsCommandTablePushResultSuccess;
 }
 
 TfsCommandTablePopResult tfs_command_table_pop(TfsCommandTable* self) {
-	// Lock and check if we have any commands
-	tfs_lock_write_lock(&self->lock);
+	// If we don't have any commands, return Err
 	if (self->first_idx == self->last_idx) {
-		tfs_lock_unlock(&self->lock);
 		return (TfsCommandTablePopResult){.is_some = false};
 	}
 
@@ -64,7 +56,5 @@ TfsCommandTablePopResult tfs_command_table_pop(TfsCommandTable* self) {
 	TfsCommand command = self->commands[self->first_idx];
 	self->first_idx++;
 
-	// Unlock and return the command
-	tfs_lock_unlock(&self->lock);
 	return (TfsCommandTablePopResult){.is_some = true, .data = {.command = command}};
 }

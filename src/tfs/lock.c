@@ -45,6 +45,7 @@ void tfs_lock_destroy(TfsLock* self) {
 
 		default:
 		case TfsKindNone: {
+			break;
 		}
 	}
 }
@@ -63,6 +64,7 @@ void tfs_lock_read_lock(TfsLock* self) {
 
 		default:
 		case TfsKindNone: {
+			break;
 		}
 	}
 }
@@ -81,6 +83,29 @@ void tfs_lock_write_lock(TfsLock* self) {
 
 		default:
 		case TfsKindNone: {
+			break;
+		}
+	}
+}
+
+void tfs_lock_downgrade_lock(TfsLock* self) {
+	switch (self->kind) {
+		// Note: Mutexes can't be downgraded, they are already
+		//       always exclusive.
+		case TfsKindMutex: {
+			break;
+		}
+
+		case TfsKindRWLock: {
+			// Note: Locking a lock currently held as write
+			//       to read will simply downgrade it.
+			pthread_rwlock_rdlock(&self->data.rw_lock);
+			break;
+		}
+
+		default:
+		case TfsKindNone: {
+			break;
 		}
 	}
 }
@@ -99,6 +124,7 @@ void tfs_lock_unlock(TfsLock* self) {
 
 		default:
 		case TfsKindNone: {
+			break;
 		}
 	}
 }
