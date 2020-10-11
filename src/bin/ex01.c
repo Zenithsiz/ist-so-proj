@@ -7,6 +7,7 @@
 #include <string.h>			   // strerror
 #include <tfs/command/table.h> // TfsCommandTable
 #include <tfs/fs.h>
+#include <unistd.h> // TODO: Remove
 
 /// @brief Data received by each worker
 typedef struct WorkerData {
@@ -22,6 +23,8 @@ static void* worker_thread_fn(void* arg) {
 	WorkerData* data = arg;
 
 	while (1) {
+		// TODO: Fix commands not being executed sequentially
+		//nanosleep(&(struct timespec){.tv_sec = 0, .tv_nsec = 500000000}, NULL);
 		TfsCommandTablePopResult pop_res = tfs_command_table_pop(data->command_table);
 		if (!pop_res.is_some) {
 			break;
