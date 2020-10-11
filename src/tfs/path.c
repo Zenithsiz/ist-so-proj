@@ -61,7 +61,7 @@ bool tfs_path_eq(TfsPath lhs, TfsPath rhs) {
 
 void tfs_path_split_last(TfsPath self, TfsPath* parent, TfsPath* child) {
 	// Remove any trailing slashes from `path`.
-	if (self.len > 0 && self.chars[self.len - 1] == '/') {
+	while (self.len > 0 && self.chars[self.len - 1] == '/') {
 		self.len--;
 	}
 

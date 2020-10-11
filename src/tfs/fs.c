@@ -113,15 +113,15 @@ TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path) {
 	tfs_path_split_last(path, &parent_path, &entry_name);
 
 	// If we can't find the parent directory, return Err
-	TfsFsFindResult find_result = tfs_fs_find(self, parent_path);
-	if (find_result.kind != TfsFsFindResultSuccess) {
+	TfsFsFindResult parent_find_result = tfs_fs_find(self, parent_path);
+	if (parent_find_result.kind != TfsFsFindResultSuccess) {
 		return (TfsFsCreateResult){
 			.kind = TfsFsCreateResultErrorInexistentParentDir,
-			.data = {.inexistent_parent_dir = {.err = find_result, .parent = parent_path}}};
+			.data = {.inexistent_parent_dir = {.err = parent_find_result, .parent = parent_path}}};
 	}
 
 	// If the parent isn't a directory, return Err
-	if (find_result.data.success.type != TfsInodeTypeDir) {
+	if (parent_find_result.data.success.type != TfsInodeTypeDir) {
 		return (TfsFsCreateResult){.kind = TfsFsCreateResultErrorParentNotDir, .data = {.parent_not_dir = {.parent = parent_path}}};
 	}
 
@@ -131,9 +131,10 @@ TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsInodeType type, TfsPath path) {
 
 	// Get the parent's data
 	// Note: We only do this here, instead of at the previous `find` because
-	//       it's possible that `tfs_inode_table_create` invalidates references
-	//       when it expands.
-	TfsInodeData* parent_data = tfs_fs_find(self, parent_path).data.success.data;
+	//       it's possible that `tfs_inode_table_create` invalidates pointers
+	//       when it expands the inode table.
+	TfsInodeData* parent_data;
+	assert(tfs_inode_table_get(&self->inode_table, parent_find_result.data.success.idx, NULL, &parent_data));
 
 	// And add it to the directory
 	TfsInodeDirAddEntryResult add_entry_res = tfs_inode_dir_add_entry(&parent_data->dir, idx, entry_name.chars, entry_name.len);
@@ -189,7 +190,7 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 	// And delete it from the inode table
 	assert(tfs_inode_table_remove(&self->inode_table, idx));
 
-	return (TfsFsRemoveResult){.kind = TfsFsRemoveResultSuccess, .data = {.success = {.idx = idx}}};
+	return (TfsFsRemoveResult){.kind = TfsFsRemoveResultSuccess};
 }
 
 TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path) {
@@ -202,6 +203,7 @@ TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path) {
 	// Current path and index
 	TfsInodeIdx cur_idx = 0;
 	TfsPath cur_path	= path;
+	TfsPath cur_dir		= tfs_path_from_cstr("");
 
 	do {
 		// Get the current inode's type and data
@@ -214,16 +216,15 @@ TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path) {
 			return (TfsFsFindResult){.kind = TfsFsFindResultSuccess, .data = {.success = {.idx = cur_idx, .type = cur_type, .data = cur_data}}};
 		}
 
-		// Get the name of the current inode we're in and skip it.
-		TfsPath cur_dir;
-		tfs_path_split_first(cur_path, &cur_dir, &cur_path);
-
 		// Else, if this isn't a directory, return Err
 		if (cur_type != TfsInodeTypeDir) {
 			TfsPath bad_dir_path = path;
 			bad_dir_path.len	 = (size_t)(cur_dir.chars - path.chars);
 			return (TfsFsFindResult){.kind = TfsFsFindResultErrorParentsNotDir, .data = {.parents_not_dir = {.path = bad_dir_path}}};
 		}
+
+		// Get the name of the current inode we're in and skip it.
+		tfs_path_split_first(cur_path, &cur_dir, &cur_path);
 
 		// Try to get the node
 		cur_idx = tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len);

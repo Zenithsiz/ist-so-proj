@@ -41,7 +41,7 @@ static void* worker_thread_fn(void* arg) {
 					tfs_fs_create_result_print(&res, stderr);
 				}
 				else {
-					fprintf(stderr, "Successfully created %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
+					fprintf(stderr, "Successfully created %s %.*s (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, res.data.success.idx);
 				}
 
 				break;

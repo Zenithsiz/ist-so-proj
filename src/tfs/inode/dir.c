@@ -114,7 +114,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx
 	// If we didn't find any empty entries, reallocate and retry
 	if (empty_idx == (size_t)-1) {
 		// Double the current capacity so we don't allocate often
-		// Note: We allocate at least 4 because `2 + 0 == 0`.
+		// Note: We allocate at least 4 because `2 * 0 == 0`.
 		size_t new_capacity = tfs_max_size_t(4, 2 * self->capacity);
 
 		// Try to allocate

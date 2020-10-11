@@ -149,12 +149,6 @@ typedef struct TfsFsRemoveResult {
 
 	/// @brief Result data
 	union {
-		/// @brief Data for `Success`
-		struct {
-			/// @brief Inode index of the removed inode
-			TfsInodeIdx idx;
-		} success;
-
 		/// @brief Data for `ErrorInexistentParentDir`
 		struct {
 			/// @brief Underlying error
