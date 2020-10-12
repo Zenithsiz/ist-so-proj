@@ -24,8 +24,11 @@ void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, F
 }
 
 TfsInodeDirEntry tfs_inode_dir_entry_new(TfsInodeIdx idx, const char* name, size_t name_len) {
-	char* entry_name = malloc(name_len * sizeof(char));
-	strncpy(entry_name, name, name_len);
+	char* entry_name = NULL;
+	if (name != NULL && name_len != 0) {
+		entry_name = malloc(name_len * sizeof(char));
+		strncpy(entry_name, name, name_len);
+	}
 
 	return (TfsInodeDirEntry){
 		.inode_idx = idx,
@@ -160,7 +163,7 @@ bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* nam
 		// Set all new entries as empty
 		// Note: We skip the first, as we'll initialize it after this.
 		for (size_t n = self->capacity + 1; n < new_capacity; n++) {
-			new_entries[n] = tfs_inode_dir_entry_new(TFS_INODE_IDX_NONE, "", 0);
+			new_entries[n] = tfs_inode_dir_entry_new(TFS_INODE_IDX_NONE, NULL, 0);
 		}
 
 		// Set the index as the first new index and continue
