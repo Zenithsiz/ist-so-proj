@@ -1,13 +1,14 @@
-#include <ctype.h>
-#include <errno.h> // errno
-#include <getopt.h>
-#include <pthread.h> // pthread_create, pthread_join
-#include <stdio.h>
-#include <stdlib.h>
+#include <assert.h>			   // assert
+#include <ctype.h>			   // isspace
+#include <errno.h>			   // errno
+#include <pthread.h>		   // pthread_create, pthread_join
+#include <stddef.h>			   // size_t
+#include <stdio.h>			   // fprintf, stderr, stdout, stdin
 #include <string.h>			   // strerror
 #include <tfs/command/table.h> // TfsCommandTable
-#include <tfs/fs.h>
-#include <tfs/lock.h> // TfsLock
+#include <tfs/fs.h>			   // TfsFs
+#include <tfs/lock.h>		   // TfsLock
+#include <time.h>			   // timespec, clock_gettime
 
 /// @brief Data received by each worker
 typedef struct WorkerData {
@@ -161,6 +162,10 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
+	// Get the start time of the execution
+	struct timespec start_time;
+	assert(clock_gettime(CLOCK_REALTIME, &start_time) == 0);
+
 	// Create the file system
 	TfsFs fs = tfs_fs_new(lock_kind);
 
@@ -168,7 +173,9 @@ int main(int argc, char** argv) {
 	TfsCommandTable* command_table = tfs_command_table_new();
 
 	// Create the command table lock
-	TfsLock command_table_lock = tfs_lock_new(lock_kind);
+	// Note: The command table lock is always a mutex, regardless of
+	//       the sync strategy.
+	TfsLock command_table_lock = tfs_lock_new(TfsLockKindMutex);
 
 	// Fill the comand table
 	for (size_t cur_line = 0;; cur_line++) {
@@ -235,6 +242,12 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 	}
+
+	// Print how long we took
+	struct timespec end_time;
+	assert(clock_gettime(CLOCK_REALTIME, &end_time) == 0);
+	double diff_secs = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 10.0e9;
+	fprintf(out, "TecnicoFS completed in %.4f seconds", diff_secs);
 
 	// Print the tree before exiting
 	tfs_fs_print(&fs, out);
