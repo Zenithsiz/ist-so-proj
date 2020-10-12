@@ -199,6 +199,8 @@ void tfs_fs_destroy(TfsFs* self);
 ///             ready to execute more commands.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the created inode. Or @ref TFS_INODE_IDX_NONE if an error occurred.
+/// @details
+/// The returned inode will be locked, and _must_ be unlocked.
 TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock* lock, TfsFsCreateError* err);
 
 /// @brief Removes an inode with path @p path
@@ -218,8 +220,7 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 /// @param access Access type to lock te result with.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the inode, if found. Otherwise @ref TFS_INODE_IDX_NONE
-/// @details
-/// The returned inode must be unlocked.
+/// @warning The returned inode _must_ be unlocked.
 TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsFsFindError* err);
 
 /// @brief Unlocks an inode index
@@ -227,6 +228,15 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess 
 /// @param idx The index to unlock
 /// @return If successfully unlocked.
 bool tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx);
+
+/// @brief Accesses a locked inode.
+/// @param self
+/// @param idx The index of the inode to access.
+/// @param[out] type The type of the inode.
+/// @param[out] data The data of the inode.
+/// @return If successfully found.
+/// @warning The inode _must_ be locked either for shared or unique access.
+bool tfs_fs_get_inode(TfsFs* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
 
 /// @brief Prints the contents of @p self to @p out
 /// @param self

@@ -42,12 +42,16 @@ static void* worker_thread_fn(void* arg) {
 			break;
 		}
 
+		// Execute each command on the file system
+		// Note: We pass the command table lock to unlock once it's ready
+		//       for more commands.
+		// Note: On error we print the error backtrace and simply continue
+		//       on to the next command
 		switch (command.kind) {
 			case TfsCommandCreate: {
 				TfsInodeType inode_type = command.data.create.type;
 				TfsPath path			= tfs_path_from_owned(command.data.create.path);
 
-				fprintf(stderr, "Creating %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 				TfsFsCreateError err;
 				TfsInodeIdx idx = tfs_fs_create(data->fs, path, inode_type, data->command_table_lock, &err);
 				if (idx == TFS_INODE_IDX_NONE) {
@@ -55,9 +59,26 @@ static void* worker_thread_fn(void* arg) {
 					tfs_fs_create_error_print(&err, stderr);
 				}
 				else {
+					// SAFETY: We received it locked from `tfs_fs_create`
 					fprintf(stderr, "Successfully created %s %.*s (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, idx);
+					assert(tfs_fs_unlock_inode(data->fs, idx));
 				}
+				break;
+			}
 
+			// Delete path
+			case TfsCommandRemove: {
+				TfsPath path = tfs_path_from_owned(command.data.remove.path);
+
+				TfsFsRemoveError err;
+				if (!tfs_fs_remove(data->fs, path, data->command_table_lock, &err)) {
+					fprintf(stderr, "Unable to remove %.*s\n", (int)path.len, path.chars);
+					tfs_fs_remove_error_print(&err, stderr);
+				}
+				else {
+					// Note: No need to unlock anything, as we just remove the inode
+					fprintf(stderr, "Successfully removed %.*s\n", (int)path.len, path.chars);
+				}
 				break;
 			}
 
@@ -71,27 +92,17 @@ static void* worker_thread_fn(void* arg) {
 					tfs_fs_find_error_print(&err, stderr);
 				}
 				else {
-					fprintf(stderr, "Found %.*s\n", (int)path.len, path.chars);
-					tfs_fs_unlock_inode(data->fs, idx);
+					// SAFETY: `tfs_fs_find` locks it and we're only getting the type
+					TfsInodeType inode_type;
+					assert(tfs_fs_get_inode(data->fs, idx, &inode_type, NULL));
+
+					// SAFETY: We received it locked from `tfs_fs_find`.
+					fprintf(stderr, "Found %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
+					assert(tfs_fs_unlock_inode(data->fs, idx));
 				}
 				break;
 			}
 
-			// Delete path
-			case TfsCommandRemove: {
-				TfsPath path = tfs_path_from_owned(command.data.remove.path);
-
-				fprintf(stderr, "Deleting %.*s\n", (int)path.len, path.chars);
-				TfsFsRemoveError err;
-				if (!tfs_fs_remove(data->fs, path, data->command_table_lock, &err)) {
-					fprintf(stderr, "Unable to delete %.*s\n", (int)path.len, path.chars);
-					tfs_fs_remove_error_print(&err, stderr);
-				}
-				else {
-					fprintf(stderr, "Successfully deleted %.*s\n", (int)path.len, path.chars);
-				}
-				break;
-			}
 			default: {
 			}
 		}
@@ -103,6 +114,7 @@ static void* worker_thread_fn(void* arg) {
 	return NULL;
 }
 
+// TODO: Check why this _sometimes_ segfaults in malloc and in other places due to memory corruption.
 int main(int argc, char** argv) {
 	if (argc != 5) {
 		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>\n");

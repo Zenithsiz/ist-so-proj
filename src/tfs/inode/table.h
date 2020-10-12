@@ -19,7 +19,6 @@
 /// Stores all inodes on the heap, expanding when required.
 /// Although all inodes have a separate lock, they will all share
 /// the same lock kind as this table.
-// TODO: Check guarantees on empty/non-empty nodes when working with locks.
 typedef struct TfsInodeTable {
 	/// @brief All the inodes
 	TfsInode* inodes;
@@ -27,8 +26,8 @@ typedef struct TfsInodeTable {
 	/// @brief Allocated inodes
 	size_t capacity;
 
-	/// @brief Lock for synchronizing table access
-	TfsLock lock;
+	/// @brief Lock kind used for all inodes
+	TfsLockKind lock_kind;
 } TfsInodeTable;
 
 /// @brief Creates a new empty inode table
@@ -46,13 +45,7 @@ void tfs_inode_table_destroy(TfsInodeTable* self);
 /// @details
 /// This operation might cause the table to reallocate, invalidating all
 /// pointers to any inode.
-TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type);
-
-/// @brief Removes an inode from this table
-/// @param self
-/// @param idx The index of the inode to remove
-/// @return If successfully removed.
-bool tfs_inode_table_remove(TfsInodeTable* self, TfsInodeIdx idx);
+TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockAccess access);
 
 /// @brief Locks an inode for
 /// @param self
@@ -76,6 +69,15 @@ bool tfs_inode_table_unlock_inode(TfsInodeTable* self, TfsInodeIdx idx);
 /// @return If successfully found.
 /// @warning The inode _must_ be locked either for shared or unique access.
 bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
+
+/// @brief Removes a locked inode
+/// @param self
+/// @param idx The index of the inode to delete
+/// @return If successfully removed
+/// @warning The inode _must_ be locked for unique access.
+/// @details
+/// This will also unlock the inode
+bool tfs_inode_table_remove_inode(TfsInodeTable* self, TfsInodeIdx idx);
 
 /// @brief Prints an inode's path, along with all of it's children's.
 /// @param self
