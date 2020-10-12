@@ -12,6 +12,7 @@
 #include <tfs/inode/data.h> // TfsInodeData
 #include <tfs/inode/idx.h>	// TfsInodeIdx
 #include <tfs/inode/type.h> // TfsInodeType
+#include <tfs/lock.h>		// TfsLock
 
 /// @brief An inode
 /// @details
@@ -25,13 +26,20 @@ typedef struct TfsInode {
 
 	/// @brief Data this inode holds.
 	TfsInodeData data;
+
+	/// @brief Lock for synchronizing this inode
+	TfsLock lock;
 } TfsInode;
 
 /// @brief Creates a new inode
 /// @param type The type of inode to create
-TfsInode tfs_inode_new(TfsInodeType type);
+/// @param lock_kind The kind of lock to use for this inode
+TfsInode tfs_inode_new(TfsInodeType type, TfsLockKind lock_kind);
 
 /// @brief Destroys an inode
 void tfs_inode_destroy(TfsInode* self);
+
+/// @brief Sets an inode to be empty
+void tfs_inode_empty(TfsInode* self);
 
 #endif

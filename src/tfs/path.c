@@ -38,32 +38,15 @@ void tfs_path_owned_destroy(TfsPathOwned* self) {
 }
 
 bool tfs_path_eq(TfsPath lhs, TfsPath rhs) {
-	// Remove any leading whitespace
-	while (lhs.len > 0 && isspace(lhs.chars[0])) {
-		lhs.chars++;
-		lhs.len--;
-	}
-	while (rhs.len > 0 && isspace(rhs.chars[0])) {
-		rhs.chars++;
-		rhs.len--;
-	}
-
-	// Remove any trailing slashes and whitespace
-	while (lhs.len > 0 && (lhs.chars[lhs.len - 1] == '/' || isspace(lhs.chars[lhs.len - 1]))) {
-		lhs.len--;
-	}
-	while (rhs.len > 0 && (rhs.chars[rhs.len - 1] == '/' || isspace(rhs.chars[rhs.len - 1]))) {
-		rhs.len--;
-	}
+	tfs_path_trim(&lhs);
+	tfs_path_trim(&rhs);
 
 	return lhs.len == rhs.len && strncmp(lhs.chars, rhs.chars, lhs.len) == 0;
 }
 
 void tfs_path_split_last(TfsPath self, TfsPath* parent, TfsPath* child) {
-	// Remove any trailing slashes from `path`.
-	while (self.len > 0 && self.chars[self.len - 1] == '/') {
-		self.len--;
-	}
+	// Trim `self`
+	tfs_path_trim(&self);
 
 	// Find the position of the last separator
 	size_t sep_pos = (size_t)-1;
@@ -94,6 +77,9 @@ void tfs_path_split_last(TfsPath self, TfsPath* parent, TfsPath* child) {
 }
 
 void tfs_path_split_first(TfsPath self, TfsPath* parent, TfsPath* child) {
+	// Trim `self`
+	tfs_path_trim(&self);
+
 	// Find the first separator
 	size_t sep_pos = (size_t)-1;
 	for (size_t n = 0; n < self.len; ++n) {
@@ -129,5 +115,17 @@ void tfs_path_split_first(TfsPath self, TfsPath* parent, TfsPath* child) {
 			child->chars = self.chars + sep_pos + 1;
 			child->len	 = self.len - sep_pos - 1;
 		}
+	}
+}
+
+void tfs_path_trim(TfsPath* self) {
+	while (self->len > 0 && isspace(self->chars[0])) {
+		self->chars++;
+		self->len--;
+	}
+
+	// Remove any trailing slashes and whitespace
+	while (self->len > 0 && (self->chars[self->len - 1] == '/' || isspace(self->chars[self->len - 1]))) {
+		self->len--;
 	}
 }

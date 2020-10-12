@@ -4,21 +4,21 @@
 #include <string.h>	  // strcmp
 #include <tfs/util.h> // tfs_min_size_t
 
-void tfs_inode_dir_add_entry_result_print(const TfsInodeDirAddEntryResult* self, FILE* out) {
+void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, FILE* out) {
 	switch (self->kind) {
-		case TfsInodeDirAddEntryResultErrorEmptyName: {
+		case TfsInodeDirAddEntryErrorEmptyName: {
 			fprintf(out, "Cannot add an entry with an empty name\n");
 			break;
 		}
 
-		case TfsInodeDirAddEntryResultErrorDuplicateName:
+		case TfsInodeDirAddEntryErrorDuplicateName: {
 			fprintf(out, "A path with the same name, with inode index %zu, already exists\n", self->data.duplicate_name.idx);
 			break;
+		}
 
-		case TfsInodeDirAddEntryResultSuccess:
-		default:
-			fprintf(out, "Success\n");
+		default: {
 			break;
+		}
 	}
 }
 
@@ -84,10 +84,13 @@ bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx) {
 	return false;
 }
 
-TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* name, size_t name_len) {
+bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* name, size_t name_len, TfsInodeDirAddEntryError* err) {
 	// If the name is empty, return Err
 	if (name_len == 0) {
-		return (TfsInodeDirAddEntryResult){.kind = TfsInodeDirAddEntryResultErrorEmptyName};
+		if (err != NULL) {
+			*err = (TfsInodeDirAddEntryError){.kind = TfsInodeDirAddEntryErrorEmptyName};
+		}
+		return false;
 	}
 
 	// Search for both an empty entry and any duplicates
@@ -104,9 +107,12 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx
 		else {
 			size_t entry_len = strlen(self->entries[n].name);
 			if (entry_len == name_len && strncmp(self->entries[n].name, name, tfs_min_size_t(entry_len, name_len)) == 0) {
-				return (TfsInodeDirAddEntryResult){
-					.kind = TfsInodeDirAddEntryResultErrorDuplicateName,
-					.data = {.duplicate_name = {.idx = self->entries[n].inode_idx}}};
+				if (err != NULL) {
+					*err = (TfsInodeDirAddEntryError){
+						.kind = TfsInodeDirAddEntryErrorDuplicateName,
+						.data = {.duplicate_name = {.idx = self->entries[n].inode_idx}}};
+				}
+				return false;
 			}
 		}
 	}
@@ -147,5 +153,5 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx
 	strncpy(self->entries[empty_idx].name, name, min_len);
 	self->entries[empty_idx].name[min_len] = '\0';
 
-	return (TfsInodeDirAddEntryResult){.kind = TfsInodeDirAddEntryResultSuccess};
+	return true;
 }

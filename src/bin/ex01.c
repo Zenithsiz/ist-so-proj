@@ -34,7 +34,7 @@ static void* worker_thread_fn(void* arg) {
 
 	while (1) {
 		// Lock and pop a command from the table
-		tfs_lock_write_lock(data->command_table_lock);
+		tfs_lock_lock(data->command_table_lock, TfsLockAccessUnique);
 		TfsCommandTablePopResult pop_res = tfs_command_table_pop(data->command_table);
 		if (!pop_res.is_some) {
 			tfs_lock_unlock(data->command_table_lock);
@@ -48,13 +48,14 @@ static void* worker_thread_fn(void* arg) {
 				TfsPath path			= tfs_path_from_owned(command.data.create.path);
 
 				fprintf(stderr, "Creating %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
-				TfsFsCreateResult res = tfs_fs_create(data->fs, inode_type, path, data->command_table_lock);
-				if (res.kind != TfsFsCreateResultSuccess) {
+				TfsFsCreateError err;
+				TfsInodeIdx idx = tfs_fs_create(data->fs, path, inode_type, data->command_table_lock, &err);
+				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to create %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
-					tfs_fs_create_result_print(&res, stderr);
+					tfs_fs_create_error_print(&err, stderr);
 				}
 				else {
-					fprintf(stderr, "Successfully created %s %.*s (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, res.data.success.idx);
+					fprintf(stderr, "Successfully created %s %.*s (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, idx);
 				}
 
 				break;
@@ -63,10 +64,11 @@ static void* worker_thread_fn(void* arg) {
 			case TfsCommandSearch: {
 				TfsPath path = tfs_path_from_owned(command.data.search.path);
 
-				TfsFsFindResult res = tfs_fs_find(data->fs, path, data->command_table_lock);
-				if (res.kind != TfsFsFindResultSuccess) {
+				TfsFsFindError err;
+				TfsInodeIdx idx = tfs_fs_find(data->fs, path, data->command_table_lock, TfsLockAccessShared, &err);
+				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to find %.*s\n", (int)path.len, path.chars);
-					tfs_fs_find_result_print(&res, stderr);
+					tfs_fs_find_error_print(&err, stderr);
 				}
 				else {
 					fprintf(stderr, "Found %.*s\n", (int)path.len, path.chars);
@@ -79,10 +81,10 @@ static void* worker_thread_fn(void* arg) {
 				TfsPath path = tfs_path_from_owned(command.data.remove.path);
 
 				fprintf(stderr, "Deleting %.*s\n", (int)path.len, path.chars);
-				TfsFsRemoveResult res = tfs_fs_remove(data->fs, path, data->command_table_lock);
-				if (res.kind != TfsFsRemoveResultSuccess) {
+				TfsFsRemoveError err;
+				if (!tfs_fs_remove(data->fs, path, data->command_table_lock, &err)) {
 					fprintf(stderr, "Unable to delete %.*s\n", (int)path.len, path.chars);
-					tfs_fs_remove_result_print(&res, stderr);
+					tfs_fs_remove_error_print(&err, stderr);
 				}
 				else {
 					fprintf(stderr, "Successfully deleted %.*s\n", (int)path.len, path.chars);
@@ -161,7 +163,7 @@ int main(int argc, char** argv) {
 	}
 
 	// Create the file system
-	TfsFs fs = tfs_fs_new();
+	TfsFs fs = tfs_fs_new(lock_kind);
 
 	// Create the command table
 	TfsCommandTable* command_table = tfs_command_table_new();

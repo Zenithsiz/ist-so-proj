@@ -1,11 +1,22 @@
 #include "lock.h"
 
+#include <assert.h> // assert
+
 TfsLock tfs_lock_new(TfsLockKind kind) {
 	switch (kind) {
 		case TfsLockKindMutex: {
+			// Create a recursive mutex
+			// Note: We require recursive due to our algorithms
+			//       that use rwlocks as their base.
+			pthread_mutex_t mutex;
+			pthread_mutexattr_t mutex_attr;
+			assert(pthread_mutexattr_init(&mutex_attr) == 0);
+			assert(pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE) == 0);
+			assert(pthread_mutex_init(&mutex, &mutex_attr) == 0);
+
 			return (TfsLock){
 				.kind = kind,
-				.data = {.mutex = PTHREAD_MUTEX_INITIALIZER},
+				.data = {.mutex = mutex},
 			};
 		}
 
@@ -26,18 +37,14 @@ TfsLock tfs_lock_new(TfsLockKind kind) {
 }
 
 void tfs_lock_destroy(TfsLock* self) {
-	// Note: `pthread_*_destroy` can only fail if it's
-	//       argument is not a valid mutex/rwlock.
-	//       We ensure that those are correct and so the
-	//       function call cannot fail.
 	switch (self->kind) {
 		case TfsLockKindMutex: {
-			pthread_mutex_destroy(&self->data.mutex);
+			assert(pthread_mutex_destroy(&self->data.mutex) == 0);
 			break;
 		}
 
 		case TfsLockKindRWLock: {
-			pthread_rwlock_destroy(&self->data.rw_lock);
+			assert(pthread_rwlock_destroy(&self->data.rw_lock) == 0);
 			break;
 		}
 
@@ -48,7 +55,7 @@ void tfs_lock_destroy(TfsLock* self) {
 	}
 }
 
-void tfs_lock_read_lock(TfsLock* self) {
+void tfs_lock_lock(TfsLock* self, TfsLockAccess access) {
 	switch (self->kind) {
 		case TfsLockKindMutex: {
 			pthread_mutex_lock(&self->data.mutex);
@@ -56,26 +63,20 @@ void tfs_lock_read_lock(TfsLock* self) {
 		}
 
 		case TfsLockKindRWLock: {
-			pthread_rwlock_rdlock(&self->data.rw_lock);
-			break;
-		}
+			switch (access) {
+				case TfsLockAccessShared: {
+					pthread_rwlock_rdlock(&self->data.rw_lock);
+					break;
+				}
+				case TfsLockAccessUnique: {
+					pthread_rwlock_wrlock(&self->data.rw_lock);
+					break;
+				}
 
-		default:
-		case TfsLockKindNone: {
-			break;
-		}
-	}
-}
-
-void tfs_lock_write_lock(TfsLock* self) {
-	switch (self->kind) {
-		case TfsLockKindMutex: {
-			pthread_mutex_lock(&self->data.mutex);
-			break;
-		}
-
-		case TfsLockKindRWLock: {
-			pthread_rwlock_wrlock(&self->data.rw_lock);
+				default: {
+					break;
+				}
+			}
 			break;
 		}
 

@@ -23,6 +23,15 @@ typedef enum TfsLockKind {
 	TfsLockKindNone,
 } TfsLockKind;
 
+/// @brief Lock access
+typedef enum TfsLockAccess {
+	/// @brief Shared access.
+	TfsLockAccessShared,
+
+	/// @brief Unique access.
+	TfsLockAccessUnique,
+} TfsLockAccess;
+
 /// @brief Synchronization lock
 typedef struct TfsLock {
 	/// @brief Lock kind
@@ -44,11 +53,10 @@ TfsLock tfs_lock_new(TfsLockKind kind);
 /// @brief Destroys a lock
 void tfs_lock_destroy(TfsLock* self);
 
-/// @brief Locks this lock for reading
-void tfs_lock_read_lock(TfsLock* self);
-
-/// @brief Locks this lock for writing
-void tfs_lock_write_lock(TfsLock* self);
+/// @brief Locks this lock.
+/// @param self
+/// @param access Access type to lock the lock with
+void tfs_lock_lock(TfsLock* self, TfsLockAccess access);
 
 /// @brief Unlocks this lock
 void tfs_lock_unlock(TfsLock* self);

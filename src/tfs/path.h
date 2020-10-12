@@ -103,4 +103,7 @@ void tfs_path_split_last(TfsPath self, TfsPath* parent, TfsPath* child);
 /// @param child Pointer to place the child at. May be null
 void tfs_path_split_first(TfsPath self, TfsPath* parent, TfsPath* child);
 
+/// @brief Trims whitespace and trailing slashes from this path
+void tfs_path_trim(TfsPath* self);
+
 #endif
