@@ -169,13 +169,13 @@ void tfs_inode_table_print_tree(const TfsInodeTable* self, TfsInodeIdx idx, FILE
 			// Else build the path
 			// Note: This checks how big we need to make the buffer to fit the
 			//       current path and the child's name
-			int path_size = snprintf(NULL, 0, "%s/%s", path, dir->entries[n].name);
+			int path_size = snprintf(NULL, 0, "%s/%.*s", path, (int)dir->entries[n].name_len, dir->entries[n].name);
 			if (path_size < 0) {
 				fprintf(stderr, "Unable to get child path buffer size\n");
 				exit(EXIT_FAILURE);
 			}
 			char child_path[path_size + 1];
-			if (snprintf(child_path, sizeof(child_path), "%s/%s", path, dir->entries[n].name) < 0) {
+			if (snprintf(child_path, sizeof(child_path), "%s/%.*s", path, (int)dir->entries[n].name_len, dir->entries[n].name) < 0) {
 				fprintf(stderr, "Unable to format child path buffer\n");
 				exit(EXIT_FAILURE);
 			}

@@ -9,7 +9,7 @@
 
 // Imports
 #include <stdbool.h> // bool
-#include <stdlib.h>	 // size_t
+#include <stddef.h>	 // size_t
 
 /// @brief A file system path
 /// @details

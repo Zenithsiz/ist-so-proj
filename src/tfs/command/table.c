@@ -3,20 +3,6 @@
 // Imports
 #include <stdlib.h> // malloc, free
 
-void tfs_command_table_push_result_print(const TfsCommandTablePushResult* self, FILE* out) {
-	switch (*self) {
-		case TfsCommandTablePushResultErrorFull: {
-			fprintf(out, "Command table is full\n");
-			break;
-		}
-
-		case TfsCommandTablePushResultSuccess:
-		default:
-			fprintf(out, "Success\n");
-			break;
-	}
-}
-
 TfsCommandTable* tfs_command_table_new(void) {
 	TfsCommandTable* table = malloc(1 * sizeof(TfsCommandTable));
 	table->first_idx	   = 0;
@@ -33,28 +19,30 @@ void tfs_command_table_destroy(TfsCommandTable* self) {
 	free(self);
 }
 
-TfsCommandTablePushResult tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
+bool tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
 	// If we don't have enough capacity, return Err
 	if (self->last_idx == TFS_COMMAND_TABLE_MAX) {
-		return TfsCommandTablePushResultErrorFull;
+		return false;
 	}
 
 	// Add the command at the end
 	self->commands[self->last_idx] = command;
 	self->last_idx++;
 
-	return TfsCommandTablePushResultSuccess;
+	return true;
 }
 
-TfsCommandTablePopResult tfs_command_table_pop(TfsCommandTable* self) {
+bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command) {
 	// If we don't have any commands, return Err
 	if (self->first_idx == self->last_idx) {
-		return (TfsCommandTablePopResult){.is_some = false};
+		return false;
 	}
 
 	// Get our first command
-	TfsCommand command = self->commands[self->first_idx];
+	if (command != NULL) {
+		*command = self->commands[self->first_idx];
+	}
 	self->first_idx++;
 
-	return (TfsCommandTablePopResult){.is_some = true, .data = {.command = command}};
+	return true;
 }

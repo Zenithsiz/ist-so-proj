@@ -31,32 +31,6 @@ typedef struct TfsCommandTable {
 	size_t last_idx;
 } TfsCommandTable;
 
-/// @brief Result for @ref tfs_command_table_push
-typedef enum TfsCommandTablePushResult {
-	/// @brief Successfully pushed
-	TfsCommandTablePushResultSuccess,
-
-	/// @brief Table was full
-	TfsCommandTablePushResultErrorFull,
-} TfsCommandTablePushResult;
-
-/// @brief Result for @ref tfs_command_table_pop
-typedef struct TfsCommandTablePopResult {
-	/// @brief If there is some command
-	bool is_some;
-
-	/// @brief Result data
-	union {
-		/// @brief Parsed command
-		TfsCommand command;
-	} data;
-} TfsCommandTablePopResult;
-
-/// @brief Prints a textual representation of an result
-/// @param self
-/// @param out File descriptor to output to
-void tfs_command_table_push_result_print(const TfsCommandTablePushResult* self, FILE* out);
-
 /// @brief Creates a new, empty, command table
 /// @details
 /// Result is allocated to prevent stack smashing
@@ -66,9 +40,15 @@ TfsCommandTable* tfs_command_table_new(void);
 void tfs_command_table_destroy(TfsCommandTable* self);
 
 /// @brief Pushes a command into this command table
-TfsCommandTablePushResult tfs_command_table_push(TfsCommandTable* self, TfsCommand command);
+/// @param self
+/// @param command The command to push
+/// @return If successfully pushed.
+bool tfs_command_table_push(TfsCommandTable* self, TfsCommand command);
 
 /// @brief Pops a command from this command table
-TfsCommandTablePopResult tfs_command_table_pop(TfsCommandTable* self);
+/// @param self
+/// @param[out] command The command popped
+/// @return If successfully popped.
+bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command);
 
 #endif

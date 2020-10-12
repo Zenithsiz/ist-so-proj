@@ -8,9 +8,7 @@
 #define TFS_INODE_INODE_H
 
 // Includes
-#include <stdlib.h>			// size_t
 #include <tfs/inode/data.h> // TfsInodeData
-#include <tfs/inode/idx.h>	// TfsInodeIdx
 #include <tfs/inode/type.h> // TfsInodeType
 #include <tfs/lock.h>		// TfsLock
 
@@ -19,7 +17,6 @@
 /// Each inode is a tagged union, containing a
 /// variant of @ref TfsInodeType, where `type`
 /// is the tag and `data` is the data associated.
-// TODO: Support multiple hard links by keeping a counter.
 typedef struct TfsInode {
 	/// @brief The type of this inode
 	TfsInodeType type;

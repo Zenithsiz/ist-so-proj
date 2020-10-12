@@ -1,7 +1,8 @@
 #include "dir.h"
 
 // Includes
-#include <string.h>	  // strcmp
+#include <stdlib.h>	  // malloc, free
+#include <string.h>	  // strncmp, strncpy
 #include <tfs/util.h> // tfs_min_size_t
 
 void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, FILE* out) {
@@ -22,6 +23,22 @@ void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, F
 	}
 }
 
+TfsInodeDirEntry tfs_inode_dir_entry_new(TfsInodeIdx idx, const char* name, size_t name_len) {
+	char* entry_name = malloc(name_len * sizeof(char));
+	strncpy(entry_name, name, name_len);
+
+	return (TfsInodeDirEntry){
+		.inode_idx = idx,
+		.name	   = entry_name,
+		.name_len  = name_len,
+	};
+}
+
+void tfs_inode_dir_entry_destroy(TfsInodeDirEntry* entry) {
+	// Free the name
+	free(entry->name);
+}
+
 TfsInodeDir tfs_inode_dir_new(void) {
 	return (TfsInodeDir){
 		// Note: `NULL` can be safely passed to both `free` and `realloc`.
@@ -31,6 +48,13 @@ TfsInodeDir tfs_inode_dir_new(void) {
 }
 
 void tfs_inode_dir_destroy(TfsInodeDir* self) {
+	// Destroy all entries
+	for (size_t n = 0; n < self->capacity; ++n) {
+		if (self->entries[n].inode_idx != TFS_INODE_IDX_NONE) {
+			tfs_inode_dir_entry_destroy(&self->entries[n]);
+		}
+	}
+
 	// Free our entries
 	// Note: This is fine even if it's `NULL`.
 	free(self->entries);
@@ -57,7 +81,8 @@ TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* na
 		}
 
 		// If the names are different, continue
-		if (strncmp(self->entries[n].name, name, tfs_min_size_t(name_len, TFS_DIR_MAX_FILE_NAME_LEN)) != 0) {
+		// TODO: Compare length first
+		if (name_len != self->entries[n].name_len || strncmp(self->entries[n].name, name, tfs_min_size_t(name_len, self->entries[n].name_len)) != 0) {
 			continue;
 		}
 
@@ -73,9 +98,10 @@ bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx) {
 	// Check each entry until we find the one with index `idx`
 	for (size_t n = 0; n < self->capacity; n++) {
 		if (self->entries[n].inode_idx == idx) {
-			// Then wipe it's index and name.
+			tfs_inode_dir_entry_destroy(&self->entries[n]);
 			self->entries[n].inode_idx = TFS_INODE_IDX_NONE;
-			self->entries[n].name[0]   = '\0';
+			self->entries[n].name	   = NULL;
+			self->entries[n].name_len  = 0;
 			return true;
 		}
 	}
@@ -105,12 +131,12 @@ bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* nam
 
 		// Else check if we're adding a duplicate
 		else {
-			size_t entry_len = strlen(self->entries[n].name);
-			if (entry_len == name_len && strncmp(self->entries[n].name, name, tfs_min_size_t(entry_len, name_len)) == 0) {
+			TfsInodeDirEntry* entry = &self->entries[n];
+			if (entry->name_len == name_len && strncmp(entry->name, name, tfs_min_size_t(entry->name_len, name_len)) == 0) {
 				if (err != NULL) {
 					*err = (TfsInodeDirAddEntryError){
 						.kind = TfsInodeDirAddEntryErrorDuplicateName,
-						.data = {.duplicate_name = {.idx = self->entries[n].inode_idx}}};
+						.data = {.duplicate_name = {.idx = entry->inode_idx}}};
 				}
 				return false;
 			}
@@ -125,7 +151,7 @@ bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* nam
 
 		// Try to allocate
 		// Note: It's fine even if `dir->entries` is `NULL`
-		TfsDirEntry* new_entries = realloc(self->entries, new_capacity * sizeof(TfsDirEntry));
+		TfsInodeDirEntry* new_entries = realloc(self->entries, new_capacity * sizeof(TfsInodeDirEntry));
 		if (new_entries == NULL) {
 			fprintf(stderr, "Unable to expand directory capacity to %zu\n", new_capacity);
 			exit(EXIT_FAILURE);
@@ -134,8 +160,7 @@ bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* nam
 		// Set all new entries as empty
 		// Note: We skip the first, as we'll initialize it after this.
 		for (size_t n = self->capacity + 1; n < new_capacity; n++) {
-			new_entries[n].name[0]	 = '\0';
-			new_entries[n].inode_idx = TFS_INODE_IDX_NONE;
+			new_entries[n] = tfs_inode_dir_entry_new(TFS_INODE_IDX_NONE, "", 0);
 		}
 
 		// Set the index as the first new index and continue
@@ -146,12 +171,8 @@ bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* nam
 		self->capacity = new_capacity;
 	}
 
-	// Else set it's node and copy the name
-	self->entries[empty_idx].inode_idx = idx;
-
-	size_t min_len = tfs_min_size_t(name_len, TFS_DIR_MAX_FILE_NAME_LEN);
-	strncpy(self->entries[empty_idx].name, name, min_len);
-	self->entries[empty_idx].name[min_len] = '\0';
+	// Else create the entry
+	self->entries[empty_idx] = tfs_inode_dir_entry_new(idx, name, name_len);
 
 	return true;
 }

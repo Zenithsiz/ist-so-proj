@@ -3,8 +3,7 @@
 // Includes
 #include <ctype.h>	// isspace
 #include <stdlib.h> // malloc, free
-#include <string.h> // strlen
-#include <string.h> // strncpy
+#include <string.h> // strlen, strncpy
 
 TfsPath tfs_path_from_cstr(const char* cstr) {
 	// Get the length, exclusing the null pointer

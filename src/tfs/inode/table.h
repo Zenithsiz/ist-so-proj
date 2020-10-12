@@ -9,6 +9,7 @@
 
 // Includes
 #include <stdbool.h>		 // bool
+#include <stddef.h>			 // size_t
 #include <stdio.h>			 // FILE
 #include <tfs/inode/inode.h> // TfsInode
 #include <tfs/lock.h>		 // TfsLock
@@ -79,9 +80,9 @@ bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* typ
 /// @param self
 /// @param idx The index of the inode to print.
 /// @param out File to output to.
-/// @param path Path of @param idx to print.
+/// @param path Path of @p idx to print.
 /// @details
-/// All children's paths will be preprended with this inode's path, @param name.
+/// All children's paths will be preprended with this inode's path, @p path
 void tfs_inode_table_print_tree(const TfsInodeTable* self, TfsInodeIdx idx, FILE* out, const char* path);
 
 #endif

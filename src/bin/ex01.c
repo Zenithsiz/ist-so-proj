@@ -35,12 +35,11 @@ static void* worker_thread_fn(void* arg) {
 	while (1) {
 		// Lock and pop a command from the table
 		tfs_lock_lock(data->command_table_lock, TfsLockAccessUnique);
-		TfsCommandTablePopResult pop_res = tfs_command_table_pop(data->command_table);
-		if (!pop_res.is_some) {
+		TfsCommand command;
+		if (!tfs_command_table_pop(data->command_table, &command)) {
 			tfs_lock_unlock(data->command_table_lock);
 			break;
 		}
-		TfsCommand command = pop_res.data.command;
 
 		switch (command.kind) {
 			case TfsCommandCreate: {
@@ -194,18 +193,17 @@ int main(int argc, char** argv) {
 		}
 
 		// Try to parse it
-		TfsCommandParseResult parse_res = tfs_command_parse(in);
-		if (parse_res.kind != TfsCommandParseResultSuccess) {
+		TfsCommandParseError parse_err;
+		TfsCommand command;
+		if (!tfs_command_parse(in, &command, &parse_err)) {
 			fprintf(stderr, "Unable to parse line %zu\n", cur_line);
-			tfs_command_parse_result_print(&parse_res, stderr);
+			tfs_command_parse_error_print(&parse_err, stderr);
 			return EXIT_FAILURE;
 		}
 
 		// Then push it
-		TfsCommandTablePushResult push_res = tfs_command_table_push(command_table, parse_res.data.success.command);
-		if (push_res != TfsCommandTablePushResultSuccess) {
+		if (!tfs_command_table_push(command_table, command)) {
 			fprintf(stderr, "Unable to push command onto table");
-			tfs_command_table_push_result_print(&push_res, stderr);
 			return EXIT_FAILURE;
 		}
 	}

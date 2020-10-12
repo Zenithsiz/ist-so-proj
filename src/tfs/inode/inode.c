@@ -1,5 +1,8 @@
 #include "inode.h"
 
+// Imports
+#include <stdlib.h> // free
+
 TfsInode tfs_inode_new(TfsInodeType type, TfsLockKind lock_kind) {
 	switch (type) {
 		// Set initial data to `NULL`

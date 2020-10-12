@@ -4,7 +4,7 @@
 /// This file contains 2 types that define how directories are defined
 /// and used with inodes.
 ///
-/// The @ref TfsDirEntry type is responsible for representing how each
+/// The @ref TfsInodeDirEntry type is responsible for representing how each
 /// entry in a directory is represented, while @ref TfsInodeDir is
 /// responsible for holding the data that is stored into the inode itself
 /// to manage the directory.
@@ -14,27 +14,25 @@
 
 // Includes
 #include <stdbool.h>	   // Bool
+#include <stddef.h>		   // size_t
 #include <stdio.h>		   // FILE
-#include <stdlib.h>		   // size_t
 #include <tfs/inode/idx.h> // TfsInodeIdx
-
-/// @brief Maximum file name length
-/// @details
-/// This does not include the null terminator.
-#define TFS_DIR_MAX_FILE_NAME_LEN ((size_t)100)
 
 /// @brief A directory entry.
 /// @details
 /// Each entry only stores it's name, and the inode it
 /// represents. It is nothing more than a named 'link'
 /// to the original inode.
-typedef struct TfsDirEntry {
+typedef struct TfsInodeDirEntry {
 	/// @brief Name of the entry.
-	char name[TFS_DIR_MAX_FILE_NAME_LEN + 1];
+	char* name;
+
+	/// @brief Length of `name`
+	size_t name_len;
 
 	/// @brief Underlying inode index.
 	TfsInodeIdx inode_idx;
-} TfsDirEntry;
+} TfsInodeDirEntry;
 
 /// @brief An inode directory
 /// @details
@@ -44,7 +42,7 @@ typedef struct TfsInodeDir {
 	/// @brief All entries
 	/// @details
 	/// Heap pointer to all of the entries
-	TfsDirEntry* entries;
+	TfsInodeDirEntry* entries;
 
 	/// @brief Allocated entries
 	/// @details
@@ -77,6 +75,15 @@ typedef struct TfsInodeDirAddEntryError {
 /// @param self
 /// @param out File descriptor to output to
 void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, FILE* out);
+
+/// @brief Creates a new directory entry
+/// @param idx Index of the new entry
+/// @param name Name of the new entry
+/// @param name_len Length of @p name
+TfsInodeDirEntry tfs_inode_dir_entry_new(TfsInodeIdx idx, const char* name, size_t name_len);
+
+/// @brief Destroys a directory entry
+void tfs_inode_dir_entry_destroy(TfsInodeDirEntry* entry);
 
 /// @brief Creates a new, empty, inode directory
 TfsInodeDir tfs_inode_dir_new(void);

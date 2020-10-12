@@ -10,7 +10,7 @@
 #define TFS_INODE_IDX_H
 
 // Includes
-#include <stdlib.h> // size_t
+#include <stddef.h> // size_t
 
 /// @brief An inode index
 typedef size_t TfsInodeIdx;

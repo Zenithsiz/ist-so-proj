@@ -59,37 +59,28 @@ typedef struct TfsCommand {
 	} data;
 } TfsCommand;
 
-/// @brief Result type for `tfs_command_parse`
-typedef struct TfsCommandParseResult {
-	/// @brief Result kind
+/// @brief Error type for `tfs_command_parse`
+typedef struct TfsCommandParseError {
+	/// @brief Error kind
 	enum {
-		/// @brief No error
-		TfsCommandParseResultSuccess,
-
 		/// @brief Missing command argument
-		TfsCommandParseResultErrorNoCommand,
+		TfsCommandParseErrorNoCommand,
 
 		/// @brief Missing path argument
-		TfsCommandParseResultErrorNoPath,
+		TfsCommandParseErrorNoPath,
 
 		/// @brief Missing type argument
-		TfsCommandParseResultErrorNoType,
+		TfsCommandParseErrorNoType,
 
 		/// @brief Invalid command
-		TfsCommandParseResultErrorInvalidCommand,
+		TfsCommandParseErrorInvalidCommand,
 
 		/// @brief Invalid type
-		TfsCommandParseResultErrorInvalidType,
+		TfsCommandParseErrorInvalidType,
 	} kind;
 
-	/// @brief Result data
+	/// @brief Error data
 	union {
-		/// @brief Data for `Success` variant.
-		struct {
-			/// @brief The parsed command
-			TfsCommand command;
-		} success;
-
 		/// @brief Data for `InvalidCommand`.
 		struct {
 			/// @brief Character received
@@ -102,15 +93,19 @@ typedef struct TfsCommandParseResult {
 			char type;
 		} invalid_type;
 	} data;
-} TfsCommandParseResult;
+} TfsCommandParseError;
 
-/// @brief Prints a textual representation of an result
+/// @brief Prints a textual representation of an error
 /// @param self
 /// @param out File descriptor to output to
-void tfs_command_parse_result_print(const TfsCommandParseResult* self, FILE* out);
+void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out);
 
 /// @brief Parses a command from a space-separated argument list
-TfsCommandParseResult tfs_command_parse(FILE* in);
+/// @param in The file to read from
+/// @param[out] command Parsed command
+/// @param[out] command Set if an error occurs
+/// @return If successfully parsed.
+bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err);
 
 /// @brief Destroys a command
 void tfs_command_destroy(TfsCommand* command);
