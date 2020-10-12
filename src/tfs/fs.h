@@ -222,6 +222,12 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 /// The returned inode must be unlocked.
 TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsFsFindError* err);
 
+/// @brief Unlocks an inode index
+/// @param self
+/// @param idx The index to unlock
+/// @return If successfully unlocked.
+bool tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx);
+
 /// @brief Prints the contents of @p self to @p out
 /// @param self
 /// @param out File to output to.

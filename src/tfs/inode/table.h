@@ -19,6 +19,7 @@
 /// Stores all inodes on the heap, expanding when required.
 /// Although all inodes have a separate lock, they will all share
 /// the same lock kind as this table.
+// TODO: Check guarantees on empty/non-empty nodes when working with locks.
 typedef struct TfsInodeTable {
 	/// @brief All the inodes
 	TfsInode* inodes;

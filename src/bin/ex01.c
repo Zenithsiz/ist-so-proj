@@ -72,6 +72,7 @@ static void* worker_thread_fn(void* arg) {
 				}
 				else {
 					fprintf(stderr, "Found %.*s\n", (int)path.len, path.chars);
+					tfs_fs_unlock_inode(data->fs, idx);
 				}
 				break;
 			}
