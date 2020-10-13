@@ -27,6 +27,12 @@ typedef struct WorkerData {
 	/// execution of the command and unlocks the command
 	/// table lock, allowing other commands to be executed.
 	TfsLock* command_table_lock;
+
+	/// @brief File system lock
+	/// @details
+	/// This lock is used to synchronize the file system
+	/// globally, for the first exercice.
+	TfsLock* fs_lock;
 } WorkerData;
 
 /// @brief Worker function
@@ -52,8 +58,11 @@ static void* worker_thread_fn(void* arg) {
 				TfsInodeType inode_type = command.data.create.type;
 				TfsPath path			= tfs_path_from_owned(command.data.create.path);
 
+				// Lock the filesystem and create the file
 				TfsFsCreateError err;
+				tfs_lock_lock(data->fs_lock, TfsLockAccessUnique);
 				TfsInodeIdx idx = tfs_fs_create(data->fs, path, inode_type, data->command_table_lock, &err);
+				tfs_lock_unlock(data->fs_lock);
 				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to create %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 					tfs_fs_create_error_print(&err, stderr);
@@ -71,6 +80,7 @@ static void* worker_thread_fn(void* arg) {
 				TfsPath path = tfs_path_from_owned(command.data.remove.path);
 
 				TfsFsRemoveError err;
+				tfs_lock_lock(data->fs_lock, TfsLockAccessUnique);
 				if (!tfs_fs_remove(data->fs, path, data->command_table_lock, &err)) {
 					fprintf(stderr, "Unable to remove %.*s\n", (int)path.len, path.chars);
 					tfs_fs_remove_error_print(&err, stderr);
@@ -79,6 +89,7 @@ static void* worker_thread_fn(void* arg) {
 					// Note: No need to unlock anything, as we just remove the inode
 					fprintf(stderr, "Successfully removed %.*s\n", (int)path.len, path.chars);
 				}
+				tfs_lock_unlock(data->fs_lock);
 				break;
 			}
 
@@ -86,7 +97,9 @@ static void* worker_thread_fn(void* arg) {
 				TfsPath path = tfs_path_from_owned(command.data.search.path);
 
 				TfsFsFindError err;
+				tfs_lock_lock(data->fs_lock, TfsLockAccessShared);
 				TfsInodeIdx idx = tfs_fs_find(data->fs, path, data->command_table_lock, TfsLockAccessShared, &err);
+				tfs_lock_unlock(data->fs_lock);
 				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to find %.*s\n", (int)path.len, path.chars);
 					tfs_fs_find_error_print(&err, stderr);
@@ -175,10 +188,6 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	// Get the start time of the execution
-	struct timespec start_time;
-	assert(clock_gettime(CLOCK_REALTIME, &start_time) == 0);
-
 	// Create the file system
 	TfsFs fs = tfs_fs_new(lock_kind);
 
@@ -189,6 +198,9 @@ int main(int argc, char** argv) {
 	// Note: The command table lock is always a mutex, regardless of
 	//       the sync strategy.
 	TfsLock command_table_lock = tfs_lock_new(TfsLockKindMutex);
+
+	// Create the filesystem lock
+	TfsLock fs_lock = tfs_lock_new(lock_kind);
 
 	// Fill the comand table
 	for (size_t cur_line = 0;; cur_line++) {
@@ -233,10 +245,15 @@ int main(int argc, char** argv) {
 		.command_table		= command_table,
 		.fs					= &fs,
 		.command_table_lock = &command_table_lock,
+		.fs_lock			= &fs_lock,
 	};
 
 	// VLA with all worker threads
 	pthread_t worker_threads[num_threads];
+
+	// Get the start time of the execution
+	struct timespec start_time;
+	assert(clock_gettime(CLOCK_REALTIME, &start_time) == 0);
 
 	// Create all threads
 	for (size_t n = 0; n < num_threads; n++) {
@@ -265,7 +282,8 @@ int main(int argc, char** argv) {
 	// Print the tree before exiting
 	tfs_fs_print(&fs, out);
 
-	// Destroy the lock
+	// Destroy the locks
+	tfs_lock_destroy(&fs_lock);
 	tfs_lock_destroy(&command_table_lock);
 
 	// Destroy the command table
