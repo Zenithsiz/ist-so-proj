@@ -58,9 +58,10 @@ void tfs_inode_dir_destroy(TfsInodeDir* self) {
 		}
 	}
 
-	// Free our entries
+	// Free our entries and set them to NULL
 	// Note: This is fine even if it's `NULL`.
 	free(self->entries);
+	self->entries = NULL;
 }
 
 bool tfs_inode_dir_is_empty(const TfsInodeDir* self) {

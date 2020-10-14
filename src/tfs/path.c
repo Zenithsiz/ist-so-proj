@@ -32,8 +32,9 @@ TfsPath tfs_path_from_owned(TfsPathOwned path) {
 }
 
 void tfs_path_owned_destroy(TfsPathOwned* self) {
-	// Free the string
+	// Free the string and set it to `NULL`.
 	free(self->chars);
+	self->chars = NULL;
 }
 
 bool tfs_path_eq(TfsPath lhs, TfsPath rhs) {

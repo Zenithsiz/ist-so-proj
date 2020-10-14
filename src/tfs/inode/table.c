@@ -56,9 +56,10 @@ void tfs_inode_table_destroy(TfsInodeTable* self) {
 		tfs_inode_destroy(&self->inodes[n]);
 	}
 
-	// And free the inode table
+	// Free the inode table and set it to NULL
 	// Note: We can pass `NULL` here safely.
 	free(self->inodes);
+	self->inodes = NULL;
 }
 
 TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockAccess access) {

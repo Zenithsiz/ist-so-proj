@@ -40,11 +40,13 @@ void tfs_lock_destroy(TfsLock* self) {
 	switch (self->kind) {
 		case TfsLockKindMutex: {
 			assert(pthread_mutex_destroy(&self->data.mutex) == 0);
+			self->kind = TfsLockKindNone;
 			break;
 		}
 
 		case TfsLockKindRWLock: {
 			assert(pthread_rwlock_destroy(&self->data.rw_lock) == 0);
+			self->kind = TfsLockKindNone;
 			break;
 		}
 

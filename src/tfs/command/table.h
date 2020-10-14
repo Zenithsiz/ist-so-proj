@@ -20,6 +20,7 @@
 /// This table is specifically designed to be
 /// filled once and then emptied, with no further
 /// pushes.
+// TODO: Make this a vector with a maximum allocation size.
 typedef struct TfsCommandTable {
 	/// @brief All of the commands
 	TfsCommand commands[TFS_COMMAND_TABLE_MAX];
