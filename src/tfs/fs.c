@@ -261,7 +261,6 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 	return true;
 }
 
-// TODO: Check if we can only lock the last inode with `access` and others with `Shared` until we get there.
 TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsFsFindError* err) {
 	// Trim `path`
 	tfs_path_trim(&path);
@@ -278,25 +277,24 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess 
 	if (lock != NULL) { tfs_lock_unlock(lock); }
 
 	do {
+		// If there's no more path to split, return the current inode
+		// Note: We leave `cur_idx` locked for when we return.
+		if (cur_path.len == 0) {
+			return cur_idx;
+		}
+
 		// Get the current inode's type and data
 		// SAFETY: We have the inode with index `cur_idx` locked.
 		TfsInodeData* cur_data;
 		TfsInodeType cur_type;
 		assert(tfs_inode_table_get(&self->inode_table, cur_idx, &cur_type, &cur_data));
 
-		// If there's no more path to split, return the current inode
-		// Note: We leave `cur_idx` locked for when we return.
-		// TODO: Put this before the get
-		if (cur_path.len == 0) {
-			return cur_idx;
-		}
-
 		// Get the name of the current inode we're in and set
 		// the current path to the remaining children.
 		TfsPath cur_dir;
 		tfs_path_split_first(cur_path, &cur_dir, &cur_path);
 
-		// If we're nota  directory, return Err
+		// If we're not a directory, return Err
 		if (cur_type != TfsInodeTypeDir) {
 			assert(tfs_inode_table_unlock_inode(&self->inode_table, cur_idx));
 			TfsPath bad_dir_path = path;
@@ -308,10 +306,6 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess 
 		}
 
 		// Else try to get the child node's index
-		// Note: We have exclusive access to this directory,
-		//       so even without locking, we know this index exists,
-		//       as `remove` needs to lock the parent of the inode to
-		//       be able to delete it.
 		// Note: If we can't find it, we just return Err.
 		TfsInodeIdx child_idx = tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len, NULL);
 		if (child_idx == TFS_INODE_IDX_NONE) {
