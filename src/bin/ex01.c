@@ -1,3 +1,12 @@
+/// @file
+/// @brief Exercice 1 binary
+/// @details
+/// This file implements exercice 1 of the project
+/// using the tfs library.
+/// All static functions here, when encountering an error,
+/// will simply report it and exit the program, as opposed
+/// to returning an error.
+
 #include <assert.h>			   // assert
 #include <ctype.h>			   // isspace
 #include <errno.h>			   // errno
@@ -35,7 +44,121 @@ typedef struct WorkerData {
 	TfsLock* fs_lock;
 } WorkerData;
 
-/// @brief Worker function
+/// @brief Filesystem worker to run in each thread.
+static void* worker_thread_fn(void* arg);
+
+/// @brief Fills the command table from a file
+static void fill_command_table(TfsCommandTable* table, FILE* in);
+
+/// @brief Opens the input and output files
+/// @param in_filename Filename of the file to open in `in`. Or '-' for stdin.
+/// @param out_filename Filename of the file to open in `out`. Or '-' for stdout.
+/// @param[out] in Opened input file.
+/// @param[out] out Opened output file.
+static void open_io(const char* in_filename, const char* out_filename, FILE** in, FILE** out);
+
+/// @brief Closes the input and output files
+/// @param in The input file.
+/// @param out The output file.
+static void close_io(FILE** in, FILE** out);
+
+// TODO: Check why this _sometimes_ segfaults in malloc and in other places due to memory corruption.
+int main(int argc, char** argv) {
+	if (argc != 5) {
+		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>\n");
+		return EXIT_FAILURE;
+	}
+
+	// Open the input and output files
+	FILE* in;
+	FILE* out;
+	open_io(argv[1], argv[2], &in, &out);
+
+	// Get number of threads
+	char* argv_3_end;
+	size_t num_threads = strtoul(argv[3], &argv_3_end, 0);
+	if (argv_3_end == NULL || argv_3_end[0] != '\0') {
+		fprintf(stderr, "Unable to parse number of threads");
+		return EXIT_FAILURE;
+	}
+
+	// Get sync strategy
+	TfsLockKind lock_kind;
+	if (strcmp(argv[4], "mutex") == 0) {
+		lock_kind = TfsLockKindMutex;
+	}
+	else if (strcmp(argv[4], "rwlock") == 0) {
+		lock_kind = TfsLockKindRWLock;
+	}
+	else if (strcmp(argv[4], "nosync") == 0) {
+		lock_kind = TfsLockKindNone;
+	}
+	else {
+		fprintf(stderr, "Invalid sync strategy '%s'", argv[4]);
+		return EXIT_FAILURE;
+	}
+
+	// Create the command table and it's lock, then fill it from the input file.
+	// Note: The command table lock is always a mutex, regardless of
+	//       the sync strategy.
+	TfsCommandTable* command_table = tfs_command_table_new();
+	TfsLock command_table_lock	   = tfs_lock_new(TfsLockKindMutex);
+	fill_command_table(command_table, in);
+
+	// Create the file system and it's lock
+	TfsFs fs		= tfs_fs_new(lock_kind);
+	TfsLock fs_lock = tfs_lock_new(lock_kind);
+
+	// Bundle all data together for the workers
+	WorkerData data = (WorkerData){
+		.command_table		= command_table,
+		.fs					= &fs,
+		.command_table_lock = &command_table_lock,
+		.fs_lock			= &fs_lock,
+	};
+
+	// Get the start time of the execution
+	struct timespec start_time;
+	assert(clock_gettime(CLOCK_REALTIME, &start_time) == 0);
+
+	// Create all threads
+	pthread_t worker_threads[num_threads];
+	for (size_t n = 0; n < num_threads; n++) {
+		int res = pthread_create(&worker_threads[n], NULL, worker_thread_fn, &data);
+		if (res != 0) {
+			fprintf(stderr, "Unable to create thread #%zu: %d\n", n, res);
+			return EXIT_FAILURE;
+		}
+	}
+
+	// Then join them
+	for (size_t n = 0; n < num_threads; n++) {
+		int res = pthread_join(worker_threads[n], NULL);
+		if (res != 0) {
+			fprintf(stderr, "Unable to join thread #%zu: %d\n", n, res);
+			return EXIT_FAILURE;
+		}
+	}
+
+	// Print how long we took
+	struct timespec end_time;
+	assert(clock_gettime(CLOCK_REALTIME, &end_time) == 0);
+	double diff_secs = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 10.0e9;
+	fprintf(out, "TecnicoFS completed in %.4f seconds", diff_secs);
+
+	// Print the tree before exiting
+	tfs_fs_print(&fs, out);
+
+	// Destroy all resources in reverse order of creation.
+	tfs_lock_destroy(&fs_lock);
+	tfs_lock_destroy(&command_table_lock);
+	tfs_command_table_destroy(command_table);
+	tfs_fs_destroy(&fs);
+	close_io(&in, &out);
+
+	return EXIT_SUCCESS;
+}
+
 static void* worker_thread_fn(void* arg) {
 	WorkerData* data = arg;
 
@@ -127,81 +250,7 @@ static void* worker_thread_fn(void* arg) {
 	return NULL;
 }
 
-// TODO: Check why this _sometimes_ segfaults in malloc and in other places due to memory corruption.
-int main(int argc, char** argv) {
-	if (argc != 5) {
-		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>\n");
-		return EXIT_FAILURE;
-	}
-
-	// Open the input file
-	// Note: If we receive '-', use stdin
-	FILE* in;
-	if (strcmp(argv[1], "-") == 0) {
-		in = stdin;
-	}
-	else {
-		in = fopen(argv[1], "r");
-		if (in == NULL) {
-			fprintf(stderr, "Unable to open input file '%s'\n", argv[1]);
-			fprintf(stderr, "%s\n", strerror(errno));
-			return EXIT_FAILURE;
-		}
-	}
-
-	// Open the output file
-	// Note: If we receive '-', use stdout
-	FILE* out;
-	if (strcmp(argv[2], "-") == 0) {
-		out = stdout;
-	}
-	else {
-		out = fopen(argv[2], "r");
-		if (out == NULL) {
-			fprintf(stderr, "Unable to open output file '%s'\n", argv[2]);
-			fprintf(stderr, "%s\n", strerror(errno));
-			return EXIT_FAILURE;
-		}
-	}
-
-	// Get number of threads
-	char* argv_3_end;
-	size_t num_threads = strtoul(argv[3], &argv_3_end, 0);
-	if (argv_3_end == NULL || argv_3_end[0] != '\0') {
-		fprintf(stderr, "Unable to parse number of threads");
-		return EXIT_FAILURE;
-	}
-
-	// Get sync strategy
-	TfsLockKind lock_kind;
-	if (strcmp(argv[4], "mutex") == 0) {
-		lock_kind = TfsLockKindMutex;
-	}
-	else if (strcmp(argv[4], "rwlock") == 0) {
-		lock_kind = TfsLockKindRWLock;
-	}
-	else if (strcmp(argv[4], "nosync") == 0) {
-		lock_kind = TfsLockKindNone;
-	}
-	else {
-		fprintf(stderr, "Invalid sync strategy '%s'", argv[4]);
-		return EXIT_FAILURE;
-	}
-
-	// Create the file system
-	TfsFs fs = tfs_fs_new(lock_kind);
-
-	// Create the command table
-	TfsCommandTable* command_table = tfs_command_table_new();
-
-	// Create the command table lock
-	// Note: The command table lock is always a mutex, regardless of
-	//       the sync strategy.
-	TfsLock command_table_lock = tfs_lock_new(TfsLockKindMutex);
-
-	// Create the filesystem lock
-	TfsLock fs_lock = tfs_lock_new(lock_kind);
-
+static void fill_command_table(TfsCommandTable* table, FILE* in) {
 	// Fill the comand table
 	for (size_t cur_line = 0;; cur_line++) {
 		// Skip any whitespace
@@ -230,77 +279,59 @@ int main(int argc, char** argv) {
 		if (!tfs_command_parse(in, &command, &parse_err)) {
 			fprintf(stderr, "Unable to parse line %zu\n", cur_line);
 			tfs_command_parse_error_print(&parse_err, stderr);
-			return EXIT_FAILURE;
+			exit(EXIT_FAILURE);
 		}
 
 		// Then push it
-		if (!tfs_command_table_push(command_table, command)) {
+		if (!tfs_command_table_push(table, command)) {
 			fprintf(stderr, "Unable to push command onto table");
-			return EXIT_FAILURE;
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
+static void open_io(const char* in_filename, const char* out_filename, FILE** in, FILE** out) {
+	// Open the input file
+	// Note: If we receive '-', use stdin
+	if (strcmp(in_filename, "-") == 0) {
+		*in = stdin;
+	}
+	else {
+		*in = fopen(in_filename, "r");
+		if (*in == NULL) {
+			fprintf(stderr, "Unable to open input file '%s'\n", in_filename);
+			fprintf(stderr, "%s\n", strerror(errno));
+			exit(EXIT_FAILURE);
 		}
 	}
 
-	// Bundle all data together for the workers
-	WorkerData data = (WorkerData){
-		.command_table		= command_table,
-		.fs					= &fs,
-		.command_table_lock = &command_table_lock,
-		.fs_lock			= &fs_lock,
-	};
-
-	// VLA with all worker threads
-	pthread_t worker_threads[num_threads];
-
-	// Get the start time of the execution
-	struct timespec start_time;
-	assert(clock_gettime(CLOCK_REALTIME, &start_time) == 0);
-
-	// Create all threads
-	for (size_t n = 0; n < num_threads; n++) {
-		int res = pthread_create(&worker_threads[n], NULL, worker_thread_fn, &data);
-		if (res != 0) {
-			fprintf(stderr, "Unable to create thread #%zu: %d\n", n, res);
-			return EXIT_FAILURE;
+	// Open the output file
+	// Note: If we receive '-', use stdout
+	if (strcmp(out_filename, "-") == 0) {
+		*out = stdout;
+	}
+	else {
+		*out = fopen(out_filename, "w");
+		if (*out == NULL) {
+			fprintf(stderr, "Unable to open output file '%s'\n", out_filename);
+			fprintf(stderr, "%s\n", strerror(errno));
+			exit(EXIT_FAILURE);
 		}
 	}
+}
 
-	// Then join them
-	for (size_t n = 0; n < num_threads; n++) {
-		int res = pthread_join(worker_threads[n], NULL);
-		if (res != 0) {
-			fprintf(stderr, "Unable to join thread #%zu: %d\n", n, res);
-			return EXIT_FAILURE;
-		}
-	}
-
-	// Print how long we took
-	struct timespec end_time;
-	assert(clock_gettime(CLOCK_REALTIME, &end_time) == 0);
-	double diff_secs = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 10.0e9;
-	fprintf(out, "TecnicoFS completed in %.4f seconds", diff_secs);
-
-	// Print the tree before exiting
-	tfs_fs_print(&fs, out);
-
-	// Destroy the locks
-	tfs_lock_destroy(&fs_lock);
-	tfs_lock_destroy(&command_table_lock);
-
-	// Destroy the command table
-	tfs_command_table_destroy(command_table);
-
-	// And destroy the file system.
-	tfs_fs_destroy(&fs);
-
+static void close_io(FILE** in, FILE** out) {
 	// If `in` isn't stdin, close it
-	if (in != stdin) {
-		fclose(in);
+	if (*in != stdin) {
+		fclose(*in);
 	}
 
 	// If `out` isn't stdout, close it
-	if (out != stdout) {
-		fclose(out);
+	if (*out != stdout) {
+		fclose(*out);
 	}
 
-	return EXIT_SUCCESS;
+	// Then set both to `NULL`
+	*in	 = NULL;
+	*out = NULL;
 }
