@@ -338,5 +338,6 @@ bool tfs_fs_get_inode(TfsFs* self, TfsInodeIdx idx, TfsInodeType* type, TfsInode
 
 void tfs_fs_print(const TfsFs* self, FILE* out) {
 	// Print the root inode and all it's children
+	// Note: We start off with '' as the root, instead of '/'.
 	tfs_inode_table_print_tree(&self->inode_table, 0, out, "");
 }
