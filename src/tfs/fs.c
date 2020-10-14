@@ -110,16 +110,18 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 	tfs_path_split_last(path, &parent_path, &entry_name);
 
 	// Create the new inode
+	// SAFETY: We haven't unlocked `lock` yet, so we have exclusive access to the inode table.
 	TfsInodeIdx idx = tfs_inode_table_add(&self->inode_table, type, TfsLockAccessUnique);
 
 	// Try to find the parent directory, if we can't, return Err.
-	// Note: We don't want to let go of `lock` yet, we need to write lock the parent inode.
+	// Note: As soon as we get the parent node, we unlock `lock`, as all we
+	//       need to create the file is the parent's lock.
 	TfsFsFindError parent_find_err;
-	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, NULL, TfsLockAccessUnique, &parent_find_err);
+	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, lock, TfsLockAccessUnique, &parent_find_err);
 	if (parent_idx == TFS_INODE_IDX_NONE) {
-		// SAFETY: We locked the when we created it
+		// SAFETY: We locked the child inode when we created it
+		// Note: `tfs_fs_find` unlocks `lock` even on error
 		assert(tfs_inode_table_remove_inode(&self->inode_table, idx));
-		if (lock != NULL) { tfs_lock_unlock(lock); }
 		if (err != NULL) {
 			*err = (TfsFsCreateError){
 				.kind = TfsFsCreateErrorInexistentParentDir,
@@ -128,20 +130,15 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 		return TFS_INODE_IDX_NONE;
 	}
 
-	// Unlock the caller's lock
-	// Note: We already have the parent locked, so any further
-	//       changed to our tree will only happen after we unlock
-	//       the parent.
-	if (lock != NULL) { tfs_lock_unlock(lock); }
-
 	// If the parent isn't a directory, return Err
 	// SAFETY: `tfs_fs_find` locked the parent for unique access.
 	TfsInodeType parent_type;
 	TfsInodeData* parent_data;
 	assert(tfs_inode_table_get(&self->inode_table, parent_idx, &parent_type, &parent_data));
 	if (parent_type != TfsInodeTypeDir) {
-		// SAFETY: We locked the when we created it
+		// SAFETY: We locked the child inode when we created it
 		assert(tfs_inode_table_remove_inode(&self->inode_table, idx));
+		// SAFETY: We locked the parent with `tfs_fs_find`.
 		assert(tfs_inode_table_unlock_inode(&self->inode_table, parent_idx));
 		if (err != NULL) {
 			*err = (TfsFsCreateError){
@@ -155,8 +152,9 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 	// Else try to add it to the directory, if we can't, return Err.
 	TfsInodeDirAddEntryError add_entry_err;
 	if (!tfs_inode_dir_add_entry(&parent_data->dir, idx, entry_name.chars, entry_name.len, &add_entry_err)) {
-		// SAFETY: We locked the when we created it
+		// SAFETY: We locked the child inode when we created it
 		assert(tfs_inode_table_remove_inode(&self->inode_table, idx));
+		// SAFETY: We locked the parent with `tfs_fs_find`.
 		assert(tfs_inode_table_unlock_inode(&self->inode_table, parent_idx));
 		if (err != NULL) {
 			*err = (TfsFsCreateError){.kind = TfsFsCreateErrorAddEntry, .data = {.add_entry = {.err = add_entry_err}}};
@@ -165,6 +163,7 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 	}
 
 	// If we added it, unlock the parent and return the new inode locked.
+	// SAFETY: We locked the parent with `tfs_fs_find`.
 	assert(tfs_inode_table_unlock_inode(&self->inode_table, parent_idx));
 	return idx;
 }
@@ -176,9 +175,11 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 	tfs_path_split_last(path, &parent_path, &entry_name);
 
 	// Try to find the parent directory, if we can't, return Err.
-	// Note: We don't want to let go of `lock` yet, we need to write lock the parent inode.
+	// Note: As soon as we get the parent node, we unlock `lock`, as all we
+	//       need to delete the file is the parent's lock (and the child's,
+	//       but we can lock it later without ownership of `lock`).
 	TfsFsFindError parent_find_err;
-	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, NULL, TfsLockAccessUnique, &parent_find_err);
+	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, lock, TfsLockAccessUnique, &parent_find_err);
 	if (parent_idx == TFS_INODE_IDX_NONE) {
 		if (lock != NULL) { tfs_lock_unlock(lock); }
 		if (err != NULL) {
@@ -189,18 +190,13 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 		return false;
 	}
 
-	// Unlock the caller's lock
-	// Note: We already have the parent locked, so any further
-	//       changed to our tree will only happen after we unlock
-	//       the parent.
-	if (lock != NULL) { tfs_lock_unlock(lock); }
-
 	// If the parent isn't a directory, return Err
 	// SAFETY: `tfs_fs_find` locks the node for us with unique access.
 	TfsInodeType parent_type;
 	TfsInodeData* parent_data;
 	assert(tfs_inode_table_get(&self->inode_table, parent_idx, &parent_type, &parent_data));
 	if (parent_type != TfsInodeTypeDir) {
+		// SAFETY: We locked the parent with `tfs_fs_find`.
 		assert(tfs_inode_table_unlock_inode(&self->inode_table, parent_idx));
 		if (err != NULL) {
 			*err = (TfsFsRemoveError){
@@ -212,8 +208,10 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 	}
 
 	// Try to find the inode index we need to delete, if we can't, return Err.
-	TfsInodeIdx idx = tfs_inode_dir_search_by_name(&parent_data->dir, entry_name.chars, entry_name.len);
+	size_t dir_idx;
+	TfsInodeIdx idx = tfs_inode_dir_search_by_name(&parent_data->dir, entry_name.chars, entry_name.len, &dir_idx);
 	if (idx == TFS_INODE_IDX_NONE) {
+		// SAFETY: We locked the parent with `tfs_fs_find`.
 		assert(tfs_inode_table_unlock_inode(&self->inode_table, parent_idx));
 		if (err != NULL) {
 			*err = (TfsFsRemoveError){.kind = TfsFsRemoveErrorNameNotFound, .data = {.name_not_found = {.entry_name = entry_name}}};
@@ -221,11 +219,9 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 		return false;
 	}
 
-	// Lock the inode we're deleting
-	// Note: This is required, as someone might be working on it
-	//       before we accessed it, but we also know that, since
-	//       we have the parent locked, it will not be deleted
-	//       until it is unloked.
+	// Lock the inode we're deleting with unique access to ensure no one else is using it.
+	// SAFETY: As we have the parent locked, we guarantee `idx` will
+	//         stay alive until we can lock it for deletion.
 	assert(tfs_inode_table_lock(&self->inode_table, idx, TfsLockAccessUnique));
 
 	// Get the type and data of the inode to delete
@@ -236,7 +232,9 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 
 	// If it's a directory but it's not empty, return Err
 	if (type == TfsInodeTypeDir && !tfs_inode_dir_is_empty(&data->dir)) {
+		// SAFETY: We just locked it.
 		assert(tfs_inode_table_unlock_inode(&self->inode_table, idx));
+		// SAFETY: We locked the parent with `tfs_fs_find`.
 		assert(tfs_inode_table_unlock_inode(&self->inode_table, parent_idx));
 		if (err != NULL) {
 			*err = (TfsFsRemoveError){.kind = TfsFsRemoveErrorRemoveNonEmptyDir};
@@ -244,13 +242,15 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 		return false;
 	}
 
-	// Else remove it frmo the directory
-	assert(tfs_inode_dir_remove_entry(&parent_data->dir, idx));
+	// Else remove it from the directory
+	// SAFETY: We got `dir_idx` from `search_by_name`.
+	assert(tfs_inode_dir_remove_entry_by_dir_idx(&parent_data->dir, dir_idx));
 
 	// Remove it from the table and unlock the parent.
 	// Note: This also unlocks it
 	// SAFETY: We have the inode locked.
 	assert(tfs_inode_table_remove_inode(&self->inode_table, idx));
+	// SAFETY: We locked the parent with `tfs_fs_find`.
 	assert(tfs_inode_table_unlock_inode(&self->inode_table, parent_idx));
 
 	return true;
@@ -306,7 +306,7 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess 
 		//       as `remove` needs to lock the parent of the inode to
 		//       be able to delete it.
 		// Note: If we can't find it, we just return Err.
-		TfsInodeIdx child_idx = tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len);
+		TfsInodeIdx child_idx = tfs_inode_dir_search_by_name(&cur_data->dir, cur_dir.chars, cur_dir.len, NULL);
 		if (child_idx == TFS_INODE_IDX_NONE) {
 			assert(tfs_inode_table_unlock_inode(&self->inode_table, cur_idx));
 			TfsPath bad_dir_path = path;

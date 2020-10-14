@@ -63,6 +63,12 @@ void tfs_inode_table_destroy(TfsInodeTable* self) {
 }
 
 TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockAccess access) {
+	// Note: Although it's be possible to make this function thread-safe
+	//       by locking all inodes with unique access in this loop, this
+	//       would involve waiting for every other thread to stop using the nodes.
+	//       Instead we force the caller to have unique ownership of the inode table
+	//       to ensure we can do this faster.
+
 	// Find the first non-empty node
 	TfsInodeIdx empty_idx = TFS_INODE_IDX_NONE;
 	for (TfsInodeIdx n = 0; n < self->capacity; n++) {

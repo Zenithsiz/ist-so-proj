@@ -195,8 +195,11 @@ void tfs_fs_destroy(TfsFs* self);
 /// @param self
 /// @param path The path of the inode to create
 /// @param type The type of inode to create.
-/// @param lock Lock unlocked when @p self is
-///             ready to execute more commands.
+/// @param lock
+/// Lock holding exclusive access to @p self .
+/// Will be unlocked once this command has been
+/// fully queued and the filesystem is ready for
+/// more commands.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the created inode. Or @ref TFS_INODE_IDX_NONE if an error occurred.
 /// @details
@@ -206,8 +209,11 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 /// @brief Removes an inode with path @p path
 /// @param self
 /// @param path The path of the inode to remove
-/// @param lock Lock unlocked when @p self is
-///             ready to execute more commands.
+/// @param lock
+/// Lock holding exclusive access to @p self .
+/// Will be unlocked once this command has been
+/// fully queued and the filesystem is ready for
+/// more commands.
 /// @param[out] err Set if any errors occur.
 /// @return If successfully removed.
 bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* err);
@@ -215,8 +221,11 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 /// @brief Locks and retrives an inode with path @p path for unique access.
 /// @param self
 /// @param path The path of the inode to get.
-/// @param lock Lock unlocked when @p self is
-///             ready to execute more commands.
+/// @param lock
+/// Lock holding exclusive access to @p self .
+/// Will be unlocked once this command has been
+/// fully queued and the filesystem is ready for
+/// more commands.
 /// @param access Access type to lock te result with.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the inode, if found. Otherwise @ref TFS_INODE_IDX_NONE

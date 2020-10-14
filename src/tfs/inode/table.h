@@ -43,15 +43,18 @@ void tfs_inode_table_destroy(TfsInodeTable* self);
 /// @param type The type of node to add
 /// @return The index of the created inode.
 /// @details
-/// This operation might cause the table to reallocate, invalidating all
-/// pointers to any inode.
+/// This operation invalidates all pointers to inodes and their data.
+/// This function is _not_ thread-safe, no other function may be called
+/// while this function is executing.
 TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockAccess access);
 
-/// @brief Locks an inode for
+/// @brief Locks an inode
 /// @param self
 /// @param idx The index of the inode to lock.
 /// @param access Access type to use for the lock.
 /// @return If successfully locked.
+/// @details
+/// This function is thread-safe.
 bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess access);
 
 /// @brief Unlocks an inode.
@@ -59,6 +62,8 @@ bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess ac
 /// @param idx The index of the inode to unlock
 /// @return If successfully unlocked.
 /// @warning The inode _must_ be locked for either shared or unique access.
+/// @details
+/// This function is thread-safe.
 bool tfs_inode_table_unlock_inode(TfsInodeTable* self, TfsInodeIdx idx);
 
 /// @brief Accesses a locked inode.
@@ -68,6 +73,8 @@ bool tfs_inode_table_unlock_inode(TfsInodeTable* self, TfsInodeIdx idx);
 /// @param[out] data The data of the inode.
 /// @return If successfully found.
 /// @warning The inode _must_ be locked either for shared or unique access.
+/// @details
+/// This function is thread-safe.
 bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
 
 /// @brief Removes a locked inode
@@ -76,7 +83,8 @@ bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* typ
 /// @return If successfully removed
 /// @warning The inode _must_ be locked for unique access.
 /// @details
-/// This will also unlock the inode
+/// This function is thread-safe.
+/// This will also unlock the inode.
 bool tfs_inode_table_remove_inode(TfsInodeTable* self, TfsInodeIdx idx);
 
 /// @brief Prints an inode's path, along with all of it's children's.
@@ -86,6 +94,8 @@ bool tfs_inode_table_remove_inode(TfsInodeTable* self, TfsInodeIdx idx);
 /// @param path Path of @p idx to print.
 /// @details
 /// All children's paths will be preprended with this inode's path, @p path
+/// This function is _not_ thread-safe, no other function may be called
+/// while this function is executing.
 void tfs_inode_table_print_tree(const TfsInodeTable* self, TfsInodeIdx idx, FILE* out, const char* path);
 
 #endif

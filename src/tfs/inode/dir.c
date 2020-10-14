@@ -37,9 +37,15 @@ TfsInodeDirEntry tfs_inode_dir_entry_new(TfsInodeIdx idx, const char* name, size
 	};
 }
 
-void tfs_inode_dir_entry_destroy(TfsInodeDirEntry* entry) {
+void tfs_inode_dir_entry_destroy(TfsInodeDirEntry* self) {
 	// Free the name
-	free(entry->name);
+	// Note: Fine even if it's `NULL`.
+	free(self->name);
+
+	// Then set all it's parameters to be empty.
+	self->inode_idx = TFS_INODE_IDX_NONE;
+	self->name		= NULL;
+	self->name_len	= 0;
 }
 
 TfsInodeDir tfs_inode_dir_new(void) {
@@ -76,7 +82,7 @@ bool tfs_inode_dir_is_empty(const TfsInodeDir* self) {
 	return true;
 }
 
-TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len) {
+TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len, size_t* dir_idx) {
 	// If the name matches on any entry and it's not empty, return it
 	for (size_t n = 0; n < self->capacity; n++) {
 		// If we're empty, skip
@@ -85,12 +91,14 @@ TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* na
 		}
 
 		// If the names are different, continue
-		// TODO: Compare length first
 		if (name_len != self->entries[n].name_len || strncmp(self->entries[n].name, name, tfs_min_size_t(name_len, self->entries[n].name_len)) != 0) {
 			continue;
 		}
 
-		// Else return the index
+		// Else set the dir idx and return the index
+		if (dir_idx != NULL) {
+			*dir_idx = n;
+		}
 		return self->entries[n].inode_idx;
 	}
 
@@ -103,15 +111,24 @@ bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx) {
 	for (size_t n = 0; n < self->capacity; n++) {
 		if (self->entries[n].inode_idx == idx) {
 			tfs_inode_dir_entry_destroy(&self->entries[n]);
-			self->entries[n].inode_idx = TFS_INODE_IDX_NONE;
-			self->entries[n].name	   = NULL;
-			self->entries[n].name_len  = 0;
 			return true;
 		}
 	}
 
 	// If we got here, there was no entry with the index, so return Err
 	return false;
+}
+
+bool tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, size_t dir_idx) {
+	// If `dir_idx` is out of range, return Err
+	if (dir_idx >= self->capacity) {
+		return false;
+	}
+
+	// Else destroy the entry
+	tfs_inode_dir_entry_destroy(&self->entries[dir_idx]);
+
+	return true;
 }
 
 bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* name, size_t name_len, TfsInodeDirAddEntryError* err) {

@@ -83,7 +83,7 @@ void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, F
 TfsInodeDirEntry tfs_inode_dir_entry_new(TfsInodeIdx idx, const char* name, size_t name_len);
 
 /// @brief Destroys a directory entry
-void tfs_inode_dir_entry_destroy(TfsInodeDirEntry* entry);
+void tfs_inode_dir_entry_destroy(TfsInodeDirEntry* self);
 
 /// @brief Creates a new, empty, inode directory
 TfsInodeDir tfs_inode_dir_new(void);
@@ -98,14 +98,21 @@ bool tfs_inode_dir_is_empty(const TfsInodeDir* self);
 /// @param self
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
+/// @param[out] dir_idx Directory index of the inode found.
 /// @return The inode index if found. Otherwise @ref TFS_INODE_IDX_NONE.
-TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len);
+TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len, size_t* dir_idx);
 
-/// @brief Removes an entry given it's index.
+/// @brief Removes an entry given it's inode index.
 /// @param self
 /// @param idx The index of the entry to remove.
 /// @return If successfully removed. If `false`, `idx` was not an entry within this directory.
 bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx);
+
+/// @brief Removes an entry given it's directory index
+/// @param self
+/// @param dir_idx The directory index of the entry to remove.
+/// @return If successfully removed.
+bool tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, size_t dir_idx);
 
 /// @brief Adds an entry given it's index and name.
 /// @param self
