@@ -27,7 +27,9 @@ TfsInodeDirEntry tfs_inode_dir_entry_new(TfsInodeIdx idx, const char* name, size
 	char* entry_name = NULL;
 	if (name != NULL && name_len != 0) {
 		entry_name = malloc(name_len * sizeof(char));
-		strncpy(entry_name, name, name_len);
+		// Note: We use `memcpy` instead of `strncpy`, as we
+		//       don't care about the null terminator.
+		memcpy(entry_name, name, name_len);
 	}
 
 	return (TfsInodeDirEntry){

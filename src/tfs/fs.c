@@ -110,18 +110,21 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 	tfs_path_split_last(path, &parent_path, &entry_name);
 
 	// Create the new inode
-	// SAFETY: We haven't unlocked `lock` yet, so we have exclusive access to the inode table.
+	// Note: We need to do this before finding the parent because the inode table requires
+	//       unique access to add a new inode.
 	TfsInodeIdx idx = tfs_inode_table_add(&self->inode_table, type, TfsLockAccessUnique);
 
 	// Try to find the parent directory, if we can't, return Err.
-	// Note: As soon as we get the parent node, we unlock `lock`, as all we
-	//       need to create the file is the parent's lock.
+	// Note: We don't pass `lock` to unlock here, since if this fails, we'll need
+	//       to remove the newly created inode, which requires that we have
+	//       unique ownership to the inode table.
 	TfsFsFindError parent_find_err;
-	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, lock, TfsLockAccessUnique, &parent_find_err);
+	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, NULL, TfsLockAccessUnique, &parent_find_err);
 	if (parent_idx == TFS_INODE_IDX_NONE) {
 		// SAFETY: We locked the child inode when we created it
 		// Note: `tfs_fs_find` unlocks `lock` even on error
 		assert(tfs_inode_table_remove_inode(&self->inode_table, idx));
+		if (lock != NULL) { tfs_lock_unlock(lock); }
 		if (err != NULL) {
 			*err = (TfsFsCreateError){
 				.kind = TfsFsCreateErrorInexistentParentDir,
@@ -129,6 +132,9 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 		}
 		return TFS_INODE_IDX_NONE;
 	}
+
+	// Unlock the filesystem lock, since we have the parent locked
+	if (lock != NULL) { tfs_lock_unlock(lock); }
 
 	// If the parent isn't a directory, return Err
 	// SAFETY: `tfs_fs_find` locked the parent for unique access.
@@ -181,7 +187,6 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 	TfsFsFindError parent_find_err;
 	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, lock, TfsLockAccessUnique, &parent_find_err);
 	if (parent_idx == TFS_INODE_IDX_NONE) {
-		if (lock != NULL) { tfs_lock_unlock(lock); }
 		if (err != NULL) {
 			*err = (TfsFsRemoveError){
 				.kind = TfsFsRemoveErrorInexistentParentDir,
@@ -256,6 +261,7 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 	return true;
 }
 
+// TODO: Check if we can only lock the last inode with `access` and others with `Shared` until we get there.
 TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsFsFindError* err) {
 	// Trim `path`
 	tfs_path_trim(&path);
@@ -280,6 +286,7 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess 
 
 		// If there's no more path to split, return the current inode
 		// Note: We leave `cur_idx` locked for when we return.
+		// TODO: Put this before the get
 		if (cur_path.len == 0) {
 			return cur_idx;
 		}

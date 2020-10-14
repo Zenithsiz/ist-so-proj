@@ -26,6 +26,10 @@ typedef struct TfsInodeTable {
 	/// @brief Allocated inodes
 	size_t capacity;
 
+	/// @brief Rwlock to synchronize inode borrowing
+	///        and table grown
+	TfsLock rw_lock;
+
 	/// @brief Lock kind used for all inodes
 	TfsLockKind lock_kind;
 } TfsInodeTable;
@@ -38,14 +42,15 @@ TfsInodeTable tfs_inode_table_new(TfsLockKind lock_kind);
 /// @brief Destroys an inode table
 void tfs_inode_table_destroy(TfsInodeTable* self);
 
-/// @brief Adds an inode to this table
+/// @brief Adds an inode to this table, locking it with @p access
 /// @param self
 /// @param type The type of node to add
 /// @return The index of the created inode.
 /// @details
 /// This operation invalidates all pointers to inodes and their data.
-/// This function is _not_ thread-safe, no other function may be called
-/// while this function is executing.
+/// This function is thread-safe and will wait for all borrowed inodes
+/// to be returned before moving the table.
+/// The returned inode must be unlocked.
 TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockAccess access);
 
 /// @brief Locks an inode
