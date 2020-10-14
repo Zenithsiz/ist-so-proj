@@ -117,9 +117,7 @@ bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess ac
 	// Then lock the inode for shared access.
 	// Note: We keep our lock locked for shared access until
 	//       the user returns it to `unlock_inode`.
-	fprintf(stderr, "%lu: Locking inode %zu (%s)\n", pthread_self(), idx, access == TfsLockAccessUnique ? "Unique" : "Shared");
 	tfs_lock_lock(&self->inodes[idx].lock, access);
-	fprintf(stderr, "%lu: Locked inode %zu\n", pthread_self(), idx);
 	return true;
 }
 
@@ -130,7 +128,6 @@ bool tfs_inode_table_unlock_inode(TfsInodeTable* self, TfsInodeIdx idx) {
 	}
 
 	// Else unlock the inode and unlock our rwlock
-	fprintf(stderr, "%lu: Unlocking inode %zu\n", pthread_self(), idx);
 	tfs_lock_unlock(&self->inodes[idx].lock);
 	tfs_lock_unlock(&self->rw_lock);
 	return true;
