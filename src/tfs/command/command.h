@@ -103,7 +103,7 @@ void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out);
 /// @brief Parses a command from a space-separated argument list
 /// @param in The file to read from
 /// @param[out] command Parsed command
-/// @param[out] command Set if an error occurs
+/// @param[out] err Set if an error occurs
 /// @return If successfully parsed.
 bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err);
 
