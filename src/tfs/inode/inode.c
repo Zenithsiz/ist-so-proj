@@ -30,29 +30,34 @@ TfsInode tfs_inode_new(TfsInodeType type, TfsLockKind lock_kind) {
 }
 
 void tfs_inode_destroy(TfsInode* self) {
-	// Deallocate the lock
-	tfs_lock_destroy(&self->lock);
+	// Lock our lock for unique access
+	tfs_lock_lock(&self->lock, TfsLockAccessUnique);
 
-	// And empty this node
+	// Empty this node
 	tfs_inode_empty(self);
+
+	// Then unlock and destroy the lock.
+	tfs_lock_unlock(&self->lock);
+	tfs_lock_destroy(&self->lock);
 }
 
 void tfs_inode_empty(TfsInode* self) {
 	switch (self->type) {
-		// Deallocate a file's contents
-		// Note: Fine to pass `NULL` here.
-		case TfsInodeTypeFile:
+		case TfsInodeTypeFile: {
+			// Note: Fine to pass `NULL` here.
 			free(self->data.file.contents);
 			break;
+		}
 
-		// Deallocate a directory's children
-		case TfsInodeTypeDir:
+		case TfsInodeTypeDir: {
 			tfs_inode_dir_destroy(&self->data.dir);
 			break;
+		}
 
-		case TfsInodeTypeNone:
 		default:
+		case TfsInodeTypeNone: {
 			break;
+		}
 	}
 
 	self->type = TfsInodeTypeNone;

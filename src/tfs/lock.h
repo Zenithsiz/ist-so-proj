@@ -10,6 +10,8 @@
 
 // Imports
 #include <pthread.h> // pthread
+#include <stdbool.h> // bool
+#include <stddef.h>	 // size_t
 
 /// @brief Lock kinds
 typedef enum TfsLockKind {
@@ -44,6 +46,15 @@ typedef struct TfsLock {
 
 		/// @brief RWLock for `RWLock` kind.
 		pthread_rwlock_t rw_lock;
+
+		/// @brief Lock for `None` kind
+		struct {
+			/// @brief Number of readers
+			size_t readers;
+
+			/// @brief If locked for writing
+			bool writing;
+		} none;
 	} data;
 } TfsLock;
 

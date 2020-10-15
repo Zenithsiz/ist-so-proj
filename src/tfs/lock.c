@@ -5,18 +5,9 @@
 TfsLock tfs_lock_new(TfsLockKind kind) {
 	switch (kind) {
 		case TfsLockKindMutex: {
-			// Create a recursive mutex
-			// Note: We require recursive due to our algorithms
-			//       that use rwlocks as their base.
-			pthread_mutex_t mutex;
-			pthread_mutexattr_t mutex_attr;
-			assert(pthread_mutexattr_init(&mutex_attr) == 0);
-			assert(pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE) == 0);
-			assert(pthread_mutex_init(&mutex, &mutex_attr) == 0);
-
 			return (TfsLock){
 				.kind = kind,
-				.data = {.mutex = mutex},
+				.data = {.mutex = PTHREAD_MUTEX_INITIALIZER},
 			};
 		}
 
@@ -31,6 +22,7 @@ TfsLock tfs_lock_new(TfsLockKind kind) {
 		case TfsLockKindNone: {
 			return (TfsLock){
 				.kind = kind,
+				.data = {.none = {.readers = 0, .writing = false}},
 			};
 		}
 	}
@@ -52,6 +44,7 @@ void tfs_lock_destroy(TfsLock* self) {
 
 		default:
 		case TfsLockKindNone: {
+			assert(self->data.none.readers == 0 && !self->data.none.writing);
 			break;
 		}
 	}
@@ -84,6 +77,21 @@ void tfs_lock_lock(TfsLock* self, TfsLockAccess access) {
 
 		default:
 		case TfsLockKindNone: {
+			assert(!self->data.none.writing);
+			switch (access) {
+				case TfsLockAccessShared: {
+					self->data.none.readers++;
+					break;
+				}
+				case TfsLockAccessUnique: {
+					self->data.none.writing = true;
+					break;
+				}
+
+				default: {
+					break;
+				}
+			}
 			break;
 		}
 	}
@@ -103,6 +111,14 @@ void tfs_lock_unlock(TfsLock* self) {
 
 		default:
 		case TfsLockKindNone: {
+			if (self->data.none.readers != 0) {
+				assert(!self->data.none.writing);
+				self->data.none.readers--;
+			}
+			else {
+				assert(self->data.none.writing);
+				self->data.none.writing = false;
+			}
 			break;
 		}
 	}

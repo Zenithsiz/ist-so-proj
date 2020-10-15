@@ -1,8 +1,8 @@
 /// @file
 /// @brief Inodes
 /// @details
-/// This file contains the @ref TfsInode type, the building block
-/// for the file system.
+/// This file defines the @ref TfsInode type, which fully describes
+/// each inode within the file system.
 
 #ifndef TFS_INODE_INODE_H
 #define TFS_INODE_INODE_H
@@ -14,17 +14,18 @@
 
 /// @brief An inode
 /// @details
-/// Each inode is a tagged union, containing a
-/// variant of @ref TfsInodeType, where `type`
-/// is the tag and `data` is the data associated.
+/// Each inode is a tagged union, containing
+/// one of the variants described in @ref TfsInodeType
+/// Each inode also contains a lock to ensure
+/// synchronization during operations
 typedef struct TfsInode {
-	/// @brief The type of this inode
+	/// @brief Type of inode
 	TfsInodeType type;
 
-	/// @brief Data this inode holds.
+	/// @brief Inode data
 	TfsInodeData data;
 
-	/// @brief Lock for synchronizing this inode
+	/// @brief Lock for this inode.
 	TfsLock lock;
 } TfsInode;
 
@@ -34,9 +35,14 @@ typedef struct TfsInode {
 TfsInode tfs_inode_new(TfsInodeType type, TfsLockKind lock_kind);
 
 /// @brief Destroys an inode
+/// @details
+/// This function will wait until @p self is unlocked, but
+/// the inode must _not_ be locked after a call to this
+/// function is executed.
 void tfs_inode_destroy(TfsInode* self);
 
 /// @brief Sets an inode to be empty
+/// @warning @p self _must_ be locked for unique access.
 void tfs_inode_empty(TfsInode* self);
 
 #endif
