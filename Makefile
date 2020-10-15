@@ -26,38 +26,22 @@ CFLAGS =\
 # Linker flags
 LDFLAGS=-lm
 
-# Library sources
+# Library sources, object files and dependencies
 LIB_SRCS := $(shell find 'src/tfs/' -name '*.c')
-
-# Library object files
 LIB_OBJS := $(patsubst src/%.c,obj/%.o,$(LIB_SRCS))
-
-# Library dependencies
 LIB_DEPS := $(patsubst src/%.c,obj/%.d,$(LIB_SRCS))
 
-# Test sources
+# Test sources, object files, binaries and dependencies
 TEST_SRCS := $(shell find 'src/tests' -name '*.c')
-
-# Test objects
 TEST_OBJS := $(patsubst src/%.c,obj/%.o,$(TEST_SRCS))
-
-# Test dependencies
+TEST_BINS := $(patsubst src/%.c,build/%,$(TEST_SRCS))
 TEST_DEPS := $(patsubst src/%.c,obj/%.d,$(TEST_SRCS))
 
-# Test binaries
-TEST_BINS := $(patsubst src/%.c,build/%,$(TEST_SRCS))
-
-# Program sources
+# Program sources, objects, binaries and dependencies
 PROG_SRCS := $(shell find 'src/bin' -name '*.c')
-
-# Program objects
 PROG_OBJS := $(patsubst src/%.c,obj/%.o,$(PROG_SRCS))
-
-# Program dependencies
-PROG_DEPS := $(patsubst src/%.c,obj/%.d,$(PROG_SRCS))
-
-# Program binaries
 PROG_BINS := $(patsubst src/%.c,build/%,$(PROG_SRCS))
+PROG_DEPS := $(patsubst src/%.c,obj/%.d,$(PROG_SRCS))
 
 # Phony targets
 .PHONY: all clean test
@@ -88,7 +72,9 @@ $(LIB_OBJS) $(PROG_OBJS) $(TEST_OBJS): obj/%.o: src/%.c
 $(LIB_DEPS) $(PROG_DEPS) $(TEST_DEPS): obj/%.d: src/%.c
 	@echo $<: Generating dependencies
 	@mkdir -p $(dir $@)
-	@$(CC) -M $(CFLAGS) $< | sed -e 's|$(patsubst %.d,%.o,$(notdir $@))|$(patsubst %.d,%.o,$@)|' > '$@'
+# Note: The `sed` makes sure the rule that's built is relative to the build directory,
+#       as otherwise we'd simply have `filename.o: ...` instead of `tfs/obj/.../filename.o: ...`
+	@$(CC) -M $(CFLAGS) '$<' | sed -e 's|$(patsubst %.d,%.o,$(notdir $@))|$(patsubst %.d,%.o,$@)|' > '$@'
 
 # Include all `.d` dependencies
 include $(LIB_DEPS) $(PROG_DEPS) $(TEST_DEPS)
