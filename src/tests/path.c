@@ -3,11 +3,11 @@
 
 // Imports
 #include <stdio.h>			 // printf
-#include <stdlib.h>			 // size_t, TfsTestResultSuccess
-#include <string.h>			 // strncmp
+#include <stdlib.h>			 // size_t, EXIT_SUCCESS, EXIT_FAILURE
 #include <tfs/path.h>		 // TfsPath
 #include <tfs/test/assert.h> // TFS_ASSERT_OR_RETURN
 #include <tfs/test/test.h>	 // TfsTest, TfsTestFn, TfsTestResult
+#include <tfs/util.h>		 // tfs_str_eq
 
 // Helper typedefs to define arrays of arrays of strings
 typedef const char* String;
@@ -18,8 +18,8 @@ static TfsTestResult from_c_str(void) {
 	size_t path_cstr_len  = strlen(path_cstr);
 	TfsPath path		  = tfs_path_from_cstr(path_cstr);
 
-	TFS_ASSERT_EQ_OR_RETURN(path.len, path_cstr_len);
-	TFS_ASSERT_EQ_OR_RETURN(strncmp(path.chars, path_cstr, path_cstr_len), 0);
+	// Make sure the path and the original cstring are equal
+	TFS_ASSERT_OR_RETURN(tfs_str_eq(path.chars, path.len, path_cstr, path_cstr_len));
 
 	return TfsTestResultSuccess;
 }

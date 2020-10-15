@@ -1,11 +1,11 @@
 /// @file
 /// @brief Inode indexes
 /// @details
-/// This file contains the @ref TfsInodeIdx type, which is a typedef
-/// used to work with indices of inodes.
+/// This file defines the @ref TfsInodeIdx type, used as an alias to
+/// refer to an inode's index.
 ///
-/// It also provides the @ref TFS_INODE_IDX_NONE value, which should be
-/// used when an index does not exist.
+/// It also defines the @ref TFS_INODE_IDX_NONE value, which can be
+/// used as a sentinel value to indicate an inode doesn't exist.
 #ifndef TFS_INODE_IDX_H
 #define TFS_INODE_IDX_H
 
@@ -17,8 +17,8 @@ typedef size_t TfsInodeIdx;
 
 /// @brief A nonexistant index
 /// @details
-/// This type is useful, for example, in functions returning
-/// an index that may fail.
+/// This type is used as a sentinel value indicating
+/// that an operation involving inodes failed.
 #define TFS_INODE_IDX_NONE ((TfsInodeIdx)-1)
 
 #endif

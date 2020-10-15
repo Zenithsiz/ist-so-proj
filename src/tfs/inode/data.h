@@ -1,8 +1,8 @@
 /// @file
 /// @brief Inode data
 /// @details
-/// This file contains the @ref TfsInodeData type, which
-/// is responsible for holding any inode type.
+/// This file defines the @ref TfsInodeData type, responsible
+/// for holding the data of each inode.
 
 #ifndef TFS_INODE_DATA_H
 #define TFS_INODE_DATA_H
@@ -10,18 +10,15 @@
 // Imports
 #include <tfs/inode/dir.h>	// TfsInodeDir
 #include <tfs/inode/file.h> // TfsInodeFile
-#include <tfs/inode/type.h> // TfsInodeType
 
 /// @brief Inode data
 /// @details
-/// This type contains all the possible data an inode may store.
-/// If the inode has no data, i.e. it has type `None`, then none
-/// of the variants are initialized.
+/// An untagged union containing any data an inode may store.
 typedef union TfsInodeData {
-	/// @brief Data for `IfsNodeTypeFile`
+	/// @brief Data for @ref TfsInodeTypeFile
 	TfsInodeFile file;
 
-	/// @brief Data for `IfsNodeTypeDir`
+	/// @brief Data for @ref TfsInodeTypeDir
 	TfsInodeDir dir;
 } TfsInodeData;
 

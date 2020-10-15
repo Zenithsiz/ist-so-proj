@@ -1,19 +1,15 @@
 /// @file
 /// @brief Inode directories.
 /// @details
-/// This file contains 2 types that define how directories are defined
-/// and used with inodes.
-///
-/// The @ref TfsInodeDirEntry type is responsible for representing how each
-/// entry in a directory is represented, while @ref TfsInodeDir is
-/// responsible for holding the data that is stored into the inode itself
-/// to manage the directory.
+/// This file defines the @ref TfsInodeDirEntry type, responsible for
+/// holding the entry of a directory, and the @ref TfsInodeDir type,
+/// responsible for holding a directory itself.
 
 #ifndef TFS_INODE_DIR_H
 #define TFS_INODE_DIR_H
 
 // Includes
-#include <stdbool.h>	   // Bool
+#include <stdbool.h>	   // bool
 #include <stddef.h>		   // size_t
 #include <stdio.h>		   // FILE
 #include <tfs/inode/idx.h> // TfsInodeIdx
@@ -40,8 +36,9 @@ typedef struct TfsInodeDirEntry {
 /// with an unique name.
 typedef struct TfsInodeDir {
 	/// @brief All entries
-	/// @details
-	/// Heap pointer to all of the entries
+	/// @invariant
+	/// All entries shall have different filenames,
+	/// and none shall have an empty filename.
 	TfsInodeDirEntry* entries;
 
 	/// @brief Allocated entries
@@ -54,10 +51,13 @@ typedef struct TfsInodeDir {
 typedef struct TfsInodeDirAddEntryError {
 	/// @brief Error kind
 	enum {
-		/// @brief Entry name was empty
+		/// @brief The entry name was empty
 		TfsInodeDirAddEntryErrorEmptyName = -1,
 
-		/// @brief An entry with the same name already exists.
+		/// @brief An entry with the same filename already exists
+		/// @details
+		/// See @ref TfsInodeDirAddEntryError.data.duplicate_name.idx for
+		/// the index of the inode which had this filename.
 		TfsInodeDirAddEntryErrorDuplicateName = -2,
 	} kind;
 
@@ -67,13 +67,16 @@ typedef struct TfsInodeDirAddEntryError {
 		struct {
 			/// @brief Index of the entry with the same name
 			TfsInodeIdx idx;
+
+			/// @brief Directory index of the entry with the same name
+			size_t dir_idx;
 		} duplicate_name;
 	} data;
 } TfsInodeDirAddEntryError;
 
-/// @brief Prints a textual representation of a result
+/// @brief Prints a textual representation of @p self to @p out
 /// @param self
-/// @param out File descriptor to output to
+/// @param out File to output to.
 void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, FILE* out);
 
 /// @brief Creates a new directory entry
@@ -99,13 +102,13 @@ bool tfs_inode_dir_is_empty(const TfsInodeDir* self);
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
 /// @param[out] dir_idx Directory index of the inode found.
-/// @return The inode index if found. Otherwise @ref TFS_INODE_IDX_NONE.
+/// @return The inode index, if found, otherwise @ref TFS_INODE_IDX_NONE.
 TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len, size_t* dir_idx);
 
 /// @brief Removes an entry given it's inode index.
 /// @param self
 /// @param idx The index of the entry to remove.
-/// @return If successfully removed. If `false`, `idx` was not an entry within this directory.
+/// @return If successfully removed.
 bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx);
 
 /// @brief Removes an entry given it's directory index

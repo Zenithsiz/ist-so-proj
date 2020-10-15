@@ -1,19 +1,19 @@
 #include "dir.h"
 
 // Includes
-#include <stdlib.h>	  // malloc, free
-#include <string.h>	  // strncmp, strncpy
-#include <tfs/util.h> // tfs_min_size_t
+#include <stdlib.h>	  // malloc, realloc, free
+#include <string.h>	  // memcpy
+#include <tfs/util.h> // tfs_str_eq
 
 void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, FILE* out) {
 	switch (self->kind) {
 		case TfsInodeDirAddEntryErrorEmptyName: {
-			fprintf(out, "Cannot add an entry with an empty name\n");
+			fprintf(out, "Entry name must not be empty\n");
 			break;
 		}
 
 		case TfsInodeDirAddEntryErrorDuplicateName: {
-			fprintf(out, "A path with the same name, with inode index %zu, already exists\n", self->data.duplicate_name.idx);
+			fprintf(out, "An entry with the same name (Inode %zu) already exists\n", self->data.duplicate_name.idx);
 			break;
 		}
 
@@ -24,6 +24,7 @@ void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, F
 }
 
 TfsInodeDirEntry tfs_inode_dir_entry_new(TfsInodeIdx idx, const char* name, size_t name_len) {
+	// Copy the name if it isn't null or empty.
 	char* entry_name = NULL;
 	if (name != NULL && name_len != 0) {
 		entry_name = malloc(name_len * sizeof(char));
@@ -93,7 +94,8 @@ TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* na
 		}
 
 		// If the names are different, continue
-		if (name_len != self->entries[n].name_len || strncmp(self->entries[n].name, name, tfs_min_size_t(name_len, self->entries[n].name_len)) != 0) {
+		TfsInodeDirEntry* entry = &self->entries[n];
+		if (!tfs_str_eq(name, name_len, entry->name, entry->name_len)) {
 			continue;
 		}
 
@@ -155,11 +157,11 @@ bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* nam
 		// Else check if we're adding a duplicate
 		else {
 			TfsInodeDirEntry* entry = &self->entries[n];
-			if (entry->name_len == name_len && strncmp(entry->name, name, tfs_min_size_t(entry->name_len, name_len)) == 0) {
+			if (tfs_str_eq(name, name_len, entry->name, entry->name_len)) {
 				if (err != NULL) {
 					*err = (TfsInodeDirAddEntryError){
 						.kind = TfsInodeDirAddEntryErrorDuplicateName,
-						.data = {.duplicate_name = {.idx = entry->inode_idx}}};
+						.data = {.duplicate_name = {.idx = entry->inode_idx, .dir_idx = n}}};
 				}
 				return false;
 			}

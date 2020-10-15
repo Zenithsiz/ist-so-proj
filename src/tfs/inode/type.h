@@ -1,5 +1,8 @@
 /// @file
-/// Inode types
+/// @brief Inode types
+/// @details
+/// This file defines the @ref TfsInodeType type, used
+/// as the tag for all inodes.
 
 #ifndef TFS_INODE_TYPE_H
 #define TFS_INODE_TYPE_H
@@ -16,8 +19,7 @@ typedef enum TfsInodeType {
 	TfsInodeTypeDir,
 } TfsInodeType;
 
-/// @brief Returns a string with the textual representation of `type`
-/// @param type The inode type
-const char* tfs_inode_type_str(TfsInodeType type);
+/// @brief Returns a string representing @p self
+const char* tfs_inode_type_str(TfsInodeType self);
 
 #endif
