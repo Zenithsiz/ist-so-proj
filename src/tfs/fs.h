@@ -39,16 +39,13 @@ typedef struct TfsFsFindError {
 		/// @brief One of the path's parents was not a directory
 		/// @details
 		/// Given a path 'a/b/c', either 'a' or 'a/b'
-		/// were not directories. The path that was not
-		/// a directory is specified by @ref TfsFsFindError.data.parents_not_dir.path
+		/// were not directories.
 		TfsFsFindErrorParentsNotDir,
 
 		/// @brief One of the path's components did not exist
 		/// @details
 		/// Given a path 'a/b/c', either 'b' did not exist
 		/// within 'a', or 'c' did not exist within 'a/b'.
-		/// The path not found is specied by
-		/// @ref TfsFsFindError.data.name_not_found.path
 		TfsFsFindErrorNameNotFound,
 	} kind;
 
@@ -75,8 +72,6 @@ typedef struct TfsFsCreateError {
 		/// @brief Unable to find the given path's parent directory.
 		/// @details
 		/// Given a path 'a/b/c', the path 'a/b' was not found.
-		/// The underlying error is specified by
-		/// @ref TfsFsCreateError.data.inexistent_parent_dir.err
 		TfsFsCreateErrorInexistentParentDir,
 
 		/// @brief Parent of the given path was not a directory.
@@ -88,8 +83,6 @@ typedef struct TfsFsCreateError {
 		/// @details
 		/// Given a path 'a/b/c', 'c' was not able to be added
 		/// to 'a/b'.
-		/// The underlying error is specified by
-		/// @ref TfsFsCreateError.data.add_entry.err
 		TfsFsCreateErrorAddEntry,
 	} kind;
 
@@ -116,8 +109,6 @@ typedef struct TfsFsRemoveError {
 		/// @brief Unable to find the given path's parent directory.
 		/// @details
 		/// Given a path 'a/b/c', the path 'a/b' was not found.
-		/// The underlying error is specified by
-		/// @ref TfsFsCreateError.data.inexistent_parent_dir.err
 		TfsFsRemoveErrorInexistentParentDir,
 
 		/// @brief Parent of the given path was not a directory.

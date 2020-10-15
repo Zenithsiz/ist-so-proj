@@ -55,15 +55,12 @@ typedef struct TfsInodeDirAddEntryError {
 		TfsInodeDirAddEntryErrorEmptyName = -1,
 
 		/// @brief An entry with the same filename already exists
-		/// @details
-		/// See @ref TfsInodeDirAddEntryError.data.duplicate_name.idx for
-		/// the index of the inode which had this filename.
 		TfsInodeDirAddEntryErrorDuplicateName = -2,
 	} kind;
 
 	/// @brief Result data
 	union {
-		/// @brief Data for `ErrorDuplicateName`
+		/// @brief Data for variant @ref TfsInodeDirAddEntryErrorDuplicateName
 		struct {
 			/// @brief Index of the entry with the same name
 			TfsInodeIdx idx;
