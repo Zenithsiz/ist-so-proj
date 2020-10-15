@@ -1,9 +1,8 @@
 /// @file
-/// @brief Locking mechanisms for this library
+/// @brief Thread synchronization locks.
 /// @details
-/// This file contains the @ref TfsLock type,
-/// which describes the locking mechanisms used
-/// by the whole library
+/// This file defines the @ref TfsLock type, used
+/// as a general lock, capable of being several variants.
 
 #ifndef TFS_LOCK_H
 #define TFS_LOCK_H
@@ -28,13 +27,26 @@ typedef enum TfsLockKind {
 /// @brief Lock access
 typedef enum TfsLockAccess {
 	/// @brief Shared access.
+	/// @details
+	/// This corresponds to a 'reader' lock.
 	TfsLockAccessShared,
 
 	/// @brief Unique access.
+	/// @details
+	/// This corresponds to a 'writer' lock.
 	TfsLockAccessUnique,
 } TfsLockAccess;
 
 /// @brief Synchronization lock
+/// @details
+/// This lock is a tagged union of one of
+/// the locks specified by @ref TfsLockKind .
+///
+/// With a lock type @ref TfsLockKindNone ,
+/// this lock will verify all locks and unlocks
+/// are correct, but as the lock may only be used
+/// in a single-thread, it aborts if it would need
+/// to wait for someone to release the lock.
 typedef struct TfsLock {
 	/// @brief Lock kind
 	TfsLockKind kind;
