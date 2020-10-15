@@ -193,8 +193,8 @@ static void* worker_thread_fn(void* arg) {
 					tfs_fs_create_error_print(&err, stderr);
 				}
 				else {
-					// SAFETY: We received it locked from `tfs_fs_create`
 					fprintf(stderr, "Successfully created %s %.*s (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, idx);
+					// SAFETY: We received it locked from `tfs_fs_create`
 					assert(tfs_fs_unlock_inode(data->fs, idx));
 				}
 				break;
@@ -225,21 +225,18 @@ static void* worker_thread_fn(void* arg) {
 
 				fprintf(stderr, "Searching %.*s\n", (int)path.len, path.chars);
 
+				TfsInodeType inode_type;
 				TfsFsFindError err;
 				tfs_lock_lock(data->fs_lock, TfsLockAccessShared);
-				TfsInodeIdx idx = tfs_fs_find(data->fs, path, data->command_table_lock, TfsLockAccessShared, &err);
+				TfsInodeIdx idx = tfs_fs_find(data->fs, path, data->command_table_lock, TfsLockAccessShared, &inode_type, NULL, &err);
 				tfs_lock_unlock(data->fs_lock);
 				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to find %.*s\n", (int)path.len, path.chars);
 					tfs_fs_find_error_print(&err, stderr);
 				}
 				else {
-					// SAFETY: `tfs_fs_find` locks it and we're only getting the type
-					TfsInodeType inode_type;
-					assert(tfs_fs_get_inode(data->fs, idx, &inode_type, NULL));
-
-					// SAFETY: We received it locked from `tfs_fs_find`.
 					fprintf(stderr, "Found %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
+					// SAFETY: We received it locked from `tfs_fs_find`.
 					assert(tfs_fs_unlock_inode(data->fs, idx));
 				}
 				break;

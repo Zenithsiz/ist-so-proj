@@ -104,20 +104,22 @@ TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockA
 	return empty_idx;
 }
 
-bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess access) {
-	// Lock our table for shared access
-	tfs_lock_lock(&self->rw_lock, TfsLockAccessShared);
-
+bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess access, TfsInodeType* type, TfsInodeData** data) {
 	// If the index is out of bounds, or empty, return error
 	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
-		tfs_lock_unlock(&self->rw_lock);
 		return false;
 	}
 
-	// Then lock the inode for shared access.
+	// The lock ourselves and the inode
 	// Note: We keep our lock locked for shared access until
 	//       the user returns it to `unlock_inode`.
+	tfs_lock_lock(&self->rw_lock, TfsLockAccessShared);
 	tfs_lock_lock(&self->inodes[idx].lock, access);
+
+	// Set it's data and return
+	// SAFETY: We and the inode are locked
+	if (type != NULL) { *type = self->inodes[idx].type; }
+	if (data != NULL) { *data = &self->inodes[idx].data; }
 	return true;
 }
 
@@ -133,23 +135,7 @@ bool tfs_inode_table_unlock_inode(TfsInodeTable* self, TfsInodeIdx idx) {
 	return true;
 }
 
-bool tfs_inode_table_get(TfsInodeTable* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data) {
-	// Note: Caller ensures that the inode we're accessing is locked by them.
-
-	// If the index is out of bounds, or empty, return error
-	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
-		return false;
-	}
-
-	// Else set the out parameters
-	if (type != NULL) { *type = self->inodes[idx].type; }
-	if (data != NULL) { *data = &self->inodes[idx].data; }
-	return true;
-}
-
 bool tfs_inode_table_remove_inode(TfsInodeTable* self, TfsInodeIdx idx) {
-	// Note: Caller ensures that the inode we're accessing is locked by them.
-
 	// If the index is out of bounds, or empty, return error
 	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
 		return false;

@@ -1,9 +1,8 @@
 /// @file
 /// @brief File system
 /// @details
-/// This file contains the type @ref TfsFs, which is responsible
-/// for managing the whole file system, as well as enforcing certain
-/// invariants on the inode table.
+/// This file defines the @ref TfsFs type, responsible for
+/// mantaining and operating the filesystem.
 
 #ifndef TFS_FS_H
 #define TFS_FS_H
@@ -16,15 +15,15 @@
 
 /// @brief The file system
 /// @details
-/// This type is a wrapper over the inode table that allows
-/// using @ref TfsPath paths to modify the inodes.
+/// As opposed to @ref TfsInodeTable , access to each inode
+/// is made by it's path.
 ///
-/// Although this type's methods aren't thread-safe, they provide
-/// threading capabilities by signaling an external lock once all
-/// relevant structures to the operation have been locked, and so
-/// other methods may now be called, which will only operate after
-/// the previous method completed if they depend on it, or else they
-/// are run in parallel.
+/// All methods of this type are _not_ thread-safe and must use
+/// an external lock to synchronize. However, a capability is
+/// offered by the filesystem to unlock the given lock once it
+/// determines it is ready for another concurrent call, such
+/// that the current call is completed as-if sequentially in
+/// relation to any further calls.
 typedef struct TfsFs {
 	/// @brief The inode table
 	/// @invariant
@@ -35,30 +34,33 @@ typedef struct TfsFs {
 
 /// @brief Error type for @ref tfs_fs_find
 typedef struct TfsFsFindError {
-	/// @brief Result kind
+	/// @brief Error kind
 	enum {
-		/// @brief One of the parents was not a directory
+		/// @brief One of the path's parents was not a directory
 		/// @details
 		/// Given a path 'a/b/c', either 'a' or 'a/b'
-		/// were not directories.
-		TfsFsFindErrorParentsNotDir = -1,
+		/// were not directories. The path that was not
+		/// a directory is specified by @ref TfsFsFindError.data.parents_not_dir.path
+		TfsFsFindErrorParentsNotDir,
 
-		/// @brief Unable to find entry with name
+		/// @brief One of the path's components did not exist
 		/// @details
-		/// Given a path 'a/b/c', either 'b' didn't
-		/// exist within 'a', or 'c' didn't exist within 'a/b'.
-		TfsFsFindErrorNameNotFound = -2,
+		/// Given a path 'a/b/c', either 'b' did not exist
+		/// within 'a', or 'c' did not exist within 'a/b'.
+		/// The path not found is specied by
+		/// @ref TfsFsFindError.data.name_not_found.path
+		TfsFsFindErrorNameNotFound,
 	} kind;
 
-	/// @brief Result data
+	/// @brief Error data
 	union {
-		/// @brief Data for `ErrorParentsNotDir`
+		/// @brief Data for variant @ref TfsFsFindErrorParentsNotDir
 		struct {
 			/// @brief Path of the entry that wasn't a directory
 			TfsPath path;
 		} parents_not_dir;
 
-		/// @brief Data for `ErrorNameNotFound`
+		/// @brief Data for variant @ref TfsFsFindErrorNameNotFound
 		struct {
 			/// @brief Path of the entry not found
 			TfsPath path;
@@ -70,45 +72,38 @@ typedef struct TfsFsFindError {
 typedef struct TfsFsCreateError {
 	/// @brief Error kind
 	enum {
-		/// @brief No directory found for the given path's parent.
+		/// @brief Unable to find the given path's parent directory.
 		/// @details
 		/// Given a path 'a/b/c', the path 'a/b' was not found.
-		TfsFsCreateErrorInexistentParentDir = -1,
+		/// The underlying error is specified by
+		/// @ref TfsFsCreateError.data.inexistent_parent_dir.err
+		TfsFsCreateErrorInexistentParentDir,
 
-		/// @brief Parent was not a directory
+		/// @brief Parent of the given path was not a directory.
 		/// @details
-		/// Given a path 'a/b/c', although 'a' was a directory,
-		/// 'b', the parent of the entry to create, was not
-		/// a directory.
-		TfsFsCreateErrorParentNotDir = -2,
+		/// Given a path 'a/b/c', the path 'a/b' was not a directory.
+		TfsFsCreateErrorParentNotDir,
 
-		/// @brief Unable to add entry to directory
+		/// @brief Unable to add the new entry to the parent directory
 		/// @details
-		/// This is an inode directory specific error,
-		/// see the underlying `add_entry` data.
-		TfsFsCreateErrorAddEntry = -3,
+		/// Given a path 'a/b/c', 'c' was not able to be added
+		/// to 'a/b'.
+		/// The underlying error is specified by
+		/// @ref TfsFsCreateError.data.add_entry.err
+		TfsFsCreateErrorAddEntry,
 	} kind;
 
 	/// @brief Error data
 	union {
-		/// @brief Data for `InexistentParentDir`
+		/// @brief Data for variant @ref TfsFsCreateErrorInexistentParentDir
 		struct {
 			/// @brief Underlying error
 			TfsFsFindError err;
-
-			/// @brief Path of the parent
-			TfsPath parent;
 		} inexistent_parent_dir;
 
-		/// @brief Data for `ParentNotDir`.
+		/// @brief Data for variant @ref TfsFsCreateErrorAddEntry
 		struct {
-			/// @brief Path of the parent
-			TfsPath parent;
-		} parent_not_dir;
-
-		/// @brief Data for `AddEntry`.
-		struct {
-			/// @brief Underlying error.
+			/// @brief Underlying error
 			TfsInodeDirAddEntryError err;
 		} add_entry;
 	} data;
@@ -118,53 +113,35 @@ typedef struct TfsFsCreateError {
 typedef struct TfsFsRemoveError {
 	/// @brief Error kind
 	enum {
-		/// @brief No directory found for the given path's parent.
+		/// @brief Unable to find the given path's parent directory.
 		/// @details
 		/// Given a path 'a/b/c', the path 'a/b' was not found.
-		TfsFsRemoveErrorInexistentParentDir = -1,
+		/// The underlying error is specified by
+		/// @ref TfsFsCreateError.data.inexistent_parent_dir.err
+		TfsFsRemoveErrorInexistentParentDir,
 
-		/// @brief Parent was not a directory
+		/// @brief Parent of the given path was not a directory.
 		/// @details
-		/// Given a path 'a/b/c', although 'a' was a directory,
-		/// 'b', the parent of the entry to create, was not
-		/// a directory.
-		TfsFsRemoveErrorParentNotDir = -2,
+		/// Given a path 'a/b/c', the path 'a/b' was not a directory.
+		TfsFsRemoveErrorParentNotDir,
 
-		/// @brief Unable to find inode with filename
+		/// @brief Unable to find given path
 		/// @details
-		/// Given a path 'a/b/c', the directory 'a/b' did
-		/// not contain any file with the name 'c'.
-		TfsFsRemoveErrorNameNotFound = -3,
+		/// Given a path 'a/b/c', the entry 'c' was not fond
+		/// within the directory 'a/b'.
+		TfsFsRemoveErrorNameNotFound,
 
-		/// @brief Unable to remove non-empty directory
-		/// @details
-		/// Given a path 'a/b', the directory 'a/b' was
-		/// not empty.
-		TfsFsRemoveErrorRemoveNonEmptyDir = -4,
+		/// @brief The given path was a non-empty directory
+		TfsFsRemoveErrorRemoveNonEmptyDir,
 	} kind;
 
 	/// @brief Error data
 	union {
-		/// @brief Data for `InexistentParentDir`
+		/// @brief Data for variant TfsFsRemoveErrorInexistentParentDir
 		struct {
 			/// @brief Underlying error
 			TfsFsFindError err;
-
-			/// @brief Path of the parent
-			TfsPath parent;
 		} inexistent_parent_dir;
-
-		/// @brief Data for `ParentNotDir`.
-		struct {
-			/// @brief Path of the parent
-			TfsPath parent;
-		} parent_not_dir;
-
-		/// @brief Data for `NameNotFound`.
-		struct {
-			/// @brief Entry name
-			TfsPath entry_name;
-		} name_not_found;
 	} data;
 } TfsFsRemoveError;
 
@@ -184,22 +161,17 @@ void tfs_fs_create_error_print(const TfsFsCreateError* self, FILE* out);
 void tfs_fs_remove_error_print(const TfsFsRemoveError* self, FILE* out);
 
 /// @brief Creates a new file system
-/// @param lock_kind Kind of lock to use for the file system
+/// @param lock_kind Lock kind used by all inodes.
 TfsFs tfs_fs_new(TfsLockKind lock_kind);
 
 /// @brief Destroys a file system
-/// @param self
 void tfs_fs_destroy(TfsFs* self);
 
 /// @brief Creates a new inode with path @p path
 /// @param self
 /// @param path The path of the inode to create
 /// @param type The type of inode to create.
-/// @param lock
-/// Lock holding exclusive access to @p self .
-/// Will be unlocked once this command has been
-/// fully queued and the filesystem is ready for
-/// more commands.
+/// @param lock Lock to unlock once operation is atomic.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the created inode. Or @ref TFS_INODE_IDX_NONE if an error occurred.
 /// @details
@@ -209,45 +181,34 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 /// @brief Removes an inode with path @p path
 /// @param self
 /// @param path The path of the inode to remove
-/// @param lock
-/// Lock holding exclusive access to @p self .
-/// Will be unlocked once this command has been
-/// fully queued and the filesystem is ready for
-/// more commands.
+/// @param lock Lock to unlock once operation is atomic.
 /// @param[out] err Set if any errors occur.
 /// @return If successfully removed.
 bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* err);
 
-/// @brief Locks and retrives an inode with path @p path for unique access.
+/// @brief Locks and retrives an inode's data
 /// @param self
 /// @param path The path of the inode to get.
-/// @param lock
-/// Lock holding exclusive access to @p self .
-/// Will be unlocked once this command has been
-/// fully queued and the filesystem is ready for
-/// more commands.
+/// @param lock Lock to unlock once operation is atomic.
 /// @param access Access type to lock te result with.
+/// @param[out] type The type of the inode.
+/// @param[out] data The data of the inode.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the inode, if found. Otherwise @ref TFS_INODE_IDX_NONE
 /// @warning The returned inode _must_ be unlocked.
-TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsFsFindError* err);
+/// @details
+/// If @p access is `Unique`, it is guaranteed, once @p lock is released,
+/// that no other calls to this function will lock the inode at @p path
+/// before the caller unlocks the returned inode.
+TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsFindError* err);
 
-/// @brief Unlocks an inode index
+/// @brief Unlocks an inode
 /// @param self
-/// @param idx The index to unlock
+/// @param idx The index of the inode to unlock
 /// @return If successfully unlocked.
 bool tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx);
 
-/// @brief Accesses a locked inode.
-/// @param self
-/// @param idx The index of the inode to access.
-/// @param[out] type The type of the inode.
-/// @param[out] data The data of the inode.
-/// @return If successfully found.
-/// @warning The inode _must_ be locked either for shared or unique access.
-bool tfs_fs_get_inode(TfsFs* self, TfsInodeIdx idx, TfsInodeType* type, TfsInodeData** data);
-
-/// @brief Prints the contents of @p self to @p out
+/// @brief Prints the contents of the filesystem
 /// @param self
 /// @param out File to output to.
 void tfs_fs_print(const TfsFs* self, FILE* out);
