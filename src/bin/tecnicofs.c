@@ -103,10 +103,11 @@ int main(int argc, char** argv) {
 	}
 
 	// Create the command table and it's lock, then fill it from the input file.
-	// Note: The command table lock is always a mutex, regardless of
-	//       the sync strategy.
+	// Note: The command table lock is always a mutex (unless the sync strategy
+	//       is None, where we don't have any lock), as we'll never use shared
+	//       access with it.
 	TfsCommandTable command_table = tfs_command_table_new();
-	TfsLock command_table_lock	  = tfs_lock_new(TfsLockKindMutex);
+	TfsLock command_table_lock	  = tfs_lock_new(lock_kind == TfsLockKindNone ? TfsLockKindNone : TfsLockKindMutex);
 	fill_command_table(&command_table, in);
 
 	// Create the file system and it's lock
