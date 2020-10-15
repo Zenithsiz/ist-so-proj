@@ -1,7 +1,7 @@
 /// @file
 /// @brief File system paths
 /// @details
-/// This file contains the @ref TfsPath type, which
+/// This file contains the #TfsPath type, which
 /// is used to refer to all paths within the file system.
 
 #ifndef TFS_PATH_H
@@ -25,7 +25,7 @@ typedef struct TfsPath {
 	size_t len;
 } TfsPath;
 
-/// @brief Owned version of @ref TfsPath
+/// @brief Owned version of #TfsPath
 typedef struct TfsPathOwned {
 	/// @brief All characters
 	char* chars;
@@ -44,7 +44,7 @@ TfsPathOwned tfs_path_to_owned(TfsPath path);
 /// @param path The path to borrow from.
 TfsPath tfs_path_from_owned(TfsPathOwned path);
 
-/// @brief Destroys a @ref TfsPathOwned
+/// @brief Destroys a #TfsPathOwned
 /// @param self
 void tfs_path_owned_destroy(TfsPathOwned* self);
 

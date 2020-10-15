@@ -1,7 +1,7 @@
 /// @file
 /// @brief Inodes
 /// @details
-/// This file defines the @ref TfsInode type, which fully describes
+/// This file defines the #TfsInode type, which fully describes
 /// each inode within the file system.
 
 #ifndef TFS_INODE_INODE_H
@@ -15,7 +15,7 @@
 /// @brief An inode
 /// @details
 /// Each inode is a tagged union, containing
-/// one of the variants described in @ref TfsInodeType
+/// one of the variants described in #TfsInodeType
 /// Each inode also contains a lock to ensure
 /// synchronization during operations
 typedef struct TfsInode {

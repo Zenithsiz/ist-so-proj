@@ -1,7 +1,7 @@
 /// @file
 /// @brief Inode data
 /// @details
-/// This file defines the @ref TfsInodeData type, responsible
+/// This file defines the #TfsInodeData type, responsible
 /// for holding the data of each inode.
 
 #ifndef TFS_INODE_DATA_H
@@ -15,10 +15,10 @@
 /// @details
 /// An untagged union containing any data an inode may store.
 typedef union TfsInodeData {
-	/// @brief Data for @ref TfsInodeTypeFile
+	/// @brief Data for #TfsInodeTypeFile
 	TfsInodeFile file;
 
-	/// @brief Data for @ref TfsInodeTypeDir
+	/// @brief Data for #TfsInodeTypeDir
 	TfsInodeDir dir;
 } TfsInodeData;
 

@@ -1,7 +1,7 @@
 /// @file
 /// @brief File system
 /// @details
-/// This file defines the @ref TfsFs type, responsible for
+/// This file defines the #TfsFs type, responsible for
 /// mantaining and operating the filesystem.
 
 #ifndef TFS_FS_H
@@ -15,7 +15,7 @@
 
 /// @brief The file system
 /// @details
-/// As opposed to @ref TfsInodeTable , access to each inode
+/// As opposed to #TfsInodeTable , access to each inode
 /// is made by it's path.
 ///
 /// All methods of this type are _not_ thread-safe and must use
@@ -32,7 +32,7 @@ typedef struct TfsFs {
 	TfsInodeTable inode_table;
 } TfsFs;
 
-/// @brief Error type for @ref tfs_fs_find
+/// @brief Error type for #tfs_fs_find
 typedef struct TfsFsFindError {
 	/// @brief Error kind
 	enum {
@@ -51,13 +51,13 @@ typedef struct TfsFsFindError {
 
 	/// @brief Error data
 	union {
-		/// @brief Data for variant @ref TfsFsFindErrorParentsNotDir
+		/// @brief Data for variant #TfsFsFindErrorParentsNotDir
 		struct {
 			/// @brief Path of the entry that wasn't a directory
 			TfsPath path;
 		} parents_not_dir;
 
-		/// @brief Data for variant @ref TfsFsFindErrorNameNotFound
+		/// @brief Data for variant #TfsFsFindErrorNameNotFound
 		struct {
 			/// @brief Path of the entry not found
 			TfsPath path;
@@ -65,7 +65,7 @@ typedef struct TfsFsFindError {
 	} data;
 } TfsFsFindError;
 
-/// @brief Error type for @ref tfs_fs_create
+/// @brief Error type for #tfs_fs_create
 typedef struct TfsFsCreateError {
 	/// @brief Error kind
 	enum {
@@ -88,13 +88,13 @@ typedef struct TfsFsCreateError {
 
 	/// @brief Error data
 	union {
-		/// @brief Data for variant @ref TfsFsCreateErrorInexistentParentDir
+		/// @brief Data for variant #TfsFsCreateErrorInexistentParentDir
 		struct {
 			/// @brief Underlying error
 			TfsFsFindError err;
 		} inexistent_parent_dir;
 
-		/// @brief Data for variant @ref TfsFsCreateErrorAddEntry
+		/// @brief Data for variant #TfsFsCreateErrorAddEntry
 		struct {
 			/// @brief Underlying error
 			TfsInodeDirAddEntryError err;
@@ -102,7 +102,7 @@ typedef struct TfsFsCreateError {
 	} data;
 } TfsFsCreateError;
 
-/// @brief Error type for @ref tfs_fs_remove
+/// @brief Error type for #tfs_fs_remove
 typedef struct TfsFsRemoveError {
 	/// @brief Error kind
 	enum {
@@ -164,7 +164,7 @@ void tfs_fs_destroy(TfsFs* self);
 /// @param type The type of inode to create.
 /// @param lock Lock to unlock once operation is atomic.
 /// @param[out] err Set if any errors occur.
-/// @return Index of the created inode. Or @ref TFS_INODE_IDX_NONE if an error occurred.
+/// @return Index of the created inode. Or #TFS_INODE_IDX_NONE if an error occurred.
 /// @details
 /// The returned inode will be locked, and _must_ be unlocked.
 TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock* lock, TfsFsCreateError* err);
@@ -185,7 +185,7 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 /// @param[out] type The type of the inode.
 /// @param[out] data The data of the inode.
 /// @param[out] err Set if any errors occur.
-/// @return Index of the inode, if found. Otherwise @ref TFS_INODE_IDX_NONE
+/// @return Index of the inode, if found. Otherwise #TFS_INODE_IDX_NONE
 /// @warning The returned inode _must_ be unlocked.
 /// @details
 /// If @p access is `Unique`, it is guaranteed, once @p lock is released,

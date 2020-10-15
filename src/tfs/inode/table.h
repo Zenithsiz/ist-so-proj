@@ -1,7 +1,7 @@
 /// @file
 /// @brief Inode tables
 /// @details
-/// This file defines the @ref TfsInodeTable type, responsible for
+/// This file defines the #TfsInodeTable type, responsible for
 /// storing and managing all inodes of the file system.
 
 #ifndef TFS_INODE_TABLE_H

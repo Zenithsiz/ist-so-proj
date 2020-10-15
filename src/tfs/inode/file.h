@@ -1,7 +1,7 @@
 /// @file
 /// @brief File inodes
 /// @details
-/// This file defines the @ref TfsInodeFile type, responsible
+/// This file defines the #TfsInodeFile type, responsible
 /// for representing files within an inode.
 
 #ifndef TFS_INODE_FILE_H

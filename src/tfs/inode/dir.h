@@ -1,8 +1,8 @@
 /// @file
 /// @brief Inode directories.
 /// @details
-/// This file defines the @ref TfsInodeDirEntry type, responsible for
-/// holding the entry of a directory, and the @ref TfsInodeDir type,
+/// This file defines the #TfsInodeDirEntry type, responsible for
+/// holding the entry of a directory, and the #TfsInodeDir type,
 /// responsible for holding a directory itself.
 
 #ifndef TFS_INODE_DIR_H
@@ -47,7 +47,7 @@ typedef struct TfsInodeDir {
 	size_t capacity;
 } TfsInodeDir;
 
-/// @brief Error type for @ref tfs_inode_dir_add_entry
+/// @brief Error type for #tfs_inode_dir_add_entry
 typedef struct TfsInodeDirAddEntryError {
 	/// @brief Error kind
 	enum {
@@ -60,7 +60,7 @@ typedef struct TfsInodeDirAddEntryError {
 
 	/// @brief Result data
 	union {
-		/// @brief Data for variant @ref TfsInodeDirAddEntryErrorDuplicateName
+		/// @brief Data for variant #TfsInodeDirAddEntryErrorDuplicateName
 		struct {
 			/// @brief Index of the entry with the same name
 			TfsInodeIdx idx;
@@ -99,7 +99,7 @@ bool tfs_inode_dir_is_empty(const TfsInodeDir* self);
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
 /// @param[out] dir_idx Directory index of the inode found.
-/// @return The inode index, if found, otherwise @ref TFS_INODE_IDX_NONE.
+/// @return The inode index, if found, otherwise #TFS_INODE_IDX_NONE.
 TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len, size_t* dir_idx);
 
 /// @brief Removes an entry given it's inode index.

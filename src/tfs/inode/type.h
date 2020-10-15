@@ -1,7 +1,7 @@
 /// @file
 /// @brief Inode types
 /// @details
-/// This file defines the @ref TfsInodeType type, used
+/// This file defines the #TfsInodeType type, used
 /// as the tag for all inodes.
 
 #ifndef TFS_INODE_TYPE_H

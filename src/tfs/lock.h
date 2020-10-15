@@ -1,7 +1,7 @@
 /// @file
 /// @brief Thread synchronization locks.
 /// @details
-/// This file defines the @ref TfsLock type, used
+/// This file defines the #TfsLock type, used
 /// as a general lock, capable of being several variants.
 
 #ifndef TFS_LOCK_H
@@ -40,9 +40,9 @@ typedef enum TfsLockAccess {
 /// @brief Synchronization lock
 /// @details
 /// This lock is a tagged union of one of
-/// the locks specified by @ref TfsLockKind .
+/// the locks specified by #TfsLockKind .
 ///
-/// With a lock type @ref TfsLockKindNone ,
+/// With a lock type #TfsLockKindNone ,
 /// this lock will verify all locks and unlocks
 /// are correct, but as the lock may only be used
 /// in a single-thread, it aborts if it would need

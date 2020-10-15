@@ -1,7 +1,7 @@
 /// @file
 /// @brief Command table
 /// @details
-/// This file defines the @ref TfsCommandTable type,
+/// This file defines the #TfsCommandTable type,
 /// which is responsible for holding all commands
 /// for the filesystem to execute.
 

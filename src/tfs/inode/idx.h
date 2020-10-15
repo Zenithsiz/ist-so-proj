@@ -1,10 +1,10 @@
 /// @file
 /// @brief Inode indexes
 /// @details
-/// This file defines the @ref TfsInodeIdx type, used as an alias to
+/// This file defines the #TfsInodeIdx type, used as an alias to
 /// refer to an inode's index.
 ///
-/// It also defines the @ref TFS_INODE_IDX_NONE value, which can be
+/// It also defines the #TFS_INODE_IDX_NONE value, which can be
 /// used as a sentinel value to indicate an inode doesn't exist.
 #ifndef TFS_INODE_IDX_H
 #define TFS_INODE_IDX_H

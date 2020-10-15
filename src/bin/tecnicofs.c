@@ -41,7 +41,7 @@ typedef struct WorkerData {
 	/// @brief File system lock
 	/// @details
 	/// This lock is used to synchronize the file system
-	/// globally, for the first exercice.
+	/// globally, for the first exercise.
 	TfsLock* fs_lock;
 } WorkerData;
 

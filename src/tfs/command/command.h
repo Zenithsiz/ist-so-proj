@@ -1,7 +1,7 @@
 /// @file
 /// @brief Executable commands in the file system.
 /// @details
-/// This file defines the type @ref TfsCommand that fully describes
+/// This file defines the type #TfsCommand that fully describes
 /// all commands executable by the tfs server.
 
 #ifndef TFS_COMMAND_COMMAND_H
