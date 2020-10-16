@@ -63,7 +63,6 @@ static void open_io(const char* in_filename, const char* out_filename, FILE** in
 /// @param out The output file.
 static void close_io(FILE** in, FILE** out);
 
-// TODO: Check why this _sometimes_ segfaults in malloc and in other places due to memory corruption.
 int main(int argc, char** argv) {
 	if (argc != 5) {
 		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>\n");

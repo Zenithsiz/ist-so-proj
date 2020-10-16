@@ -4,7 +4,7 @@ LD   = gcc
 
 # Compiler flags
 # Note: `-posix` is required to have a conforming C99 stdlib on windows MINGW (from `_mingw.h:407`)
-# Note: We need `_GNU_SOURCE` for `pthread_rwlock_*`, due to it not being standard (TODO: Verify)
+# Note: We need `_GNU_SOURCE` for `pthread_rwlock_*`
 CFLAGS =\
 	-posix -pthread -std=gnu99 -g\
 	-Isrc/\
