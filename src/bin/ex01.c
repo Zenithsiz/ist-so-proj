@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
 	char* argv_3_end;
 	size_t num_threads = strtoul(argv[3], &argv_3_end, 0);
 	if (argv_3_end == NULL || argv_3_end[0] != '\0') {
-		fprintf(stderr, "Unable to parse number of threads");
+		fprintf(stderr, "Unable to parse number of threads\n");
 		return EXIT_FAILURE;
 	}
 
@@ -91,10 +91,14 @@ int main(int argc, char** argv) {
 		lock_kind = TfsLockKindRWLock;
 	}
 	else if (strcmp(argv[4], "nosync") == 0) {
+		if (num_threads != 1) {
+			fprintf(stderr, "`nosync` sync strategy can only be used with a single thread\n");
+			return EXIT_FAILURE;
+		}
 		lock_kind = TfsLockKindNone;
 	}
 	else {
-		fprintf(stderr, "Invalid sync strategy '%s'", argv[4]);
+		fprintf(stderr, "Invalid sync strategy '%s'\n", argv[4]);
 		return EXIT_FAILURE;
 	}
 
@@ -144,7 +148,7 @@ int main(int argc, char** argv) {
 	struct timespec end_time;
 	assert(clock_gettime(CLOCK_REALTIME, &end_time) == 0);
 	double diff_secs = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 10.0e9;
-	fprintf(out, "TecnicoFS completed in %.4f seconds", diff_secs);
+	fprintf(out, "TecnicoFS completed in %.4f seconds\n", diff_secs);
 
 	// Print the tree before exiting
 	tfs_fs_print(&fs, out);
@@ -287,7 +291,7 @@ static void fill_command_table(TfsCommandTable* table, FILE* in) {
 
 		// Then push it
 		if (!tfs_command_table_push(table, command)) {
-			fprintf(stderr, "Unable to push command onto table");
+			fprintf(stderr, "Unable to push command onto table, table is full\n");
 			exit(EXIT_FAILURE);
 		}
 	}
