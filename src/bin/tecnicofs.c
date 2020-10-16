@@ -65,7 +65,7 @@ static void close_io(FILE** in, FILE** out);
 
 int main(int argc, char** argv) {
 	if (argc != 5) {
-		fprintf(stderr, "Usage: ./ex01 <input> <out> <num-threads> <sync>\n");
+		fprintf(stderr, "Usage: ./tecnicofs <input> <out> <num-threads> <sync>\n");
 		return EXIT_FAILURE;
 	}
 
