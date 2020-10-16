@@ -120,8 +120,6 @@ void tfs_path_split_first(TfsPath self, TfsPath* parent, TfsPath* child) {
 }
 
 void tfs_path_trim(TfsPath* self) {
-	// TODO: Remove whitespace-only files too, like '...//...' -> '.../...', '.../  \t\t\n\n / ...' -> '.../...'
-
 	while (self->len > 0 && isspace(self->chars[0])) {
 		self->chars++;
 		self->len--;
