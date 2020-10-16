@@ -1,8 +1,9 @@
 /// @file
-/// @brief Exercice 1 binary
+/// @brief Filesystem binary
 /// @details
-/// This file implements exercice 1 of the project
-/// using the tfs library.
+/// This file serves as the binary to interact with the
+/// filesystem described in exercise 1 of the project.
+/// @note
 /// All static functions here, when encountering an error,
 /// will simply report it and exit the program, as opposed
 /// to returning an error.
