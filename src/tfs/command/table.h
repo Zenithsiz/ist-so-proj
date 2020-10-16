@@ -1,8 +1,9 @@
 /// @file
 /// @brief Command table
 /// @details
-/// This file provides the @ref TfsCommandTable type,
-/// which is a multi-threaded vector of commands.
+/// This file defines the @ref TfsCommandTable type,
+/// which is responsible for holding all commands
+/// for the filesystem to execute.
 
 #ifndef TFS_COMMAND_TABLE_H
 #define TFS_COMMAND_TABLE_H
@@ -17,13 +18,22 @@
 
 /// @brief The command table
 /// @details
-/// This table is specifically designed to be
-/// filled once and then emptied, with no further
-/// pushes.
-// TODO: Make this a vector with a maximum allocation size.
+/// An expandable ring-buffer of commands.
+/// @warning
+/// All methods of this type are _not_ thread-safe
+/// and should use an external lock for synchronization.
+/// @note
+/// For the first exercice, this has a limit of @ref TFS_COMMAND_TABLE_MAX
+/// commands, which, once reached, will stop accepting new commands. This
+/// makes the 'ring' part of the buffer currently useless, but for the second
+/// exercice the indices will wrap around back to the beginning of the buffer
+/// to fully implement the 'ring' part of the buffer.
 typedef struct TfsCommandTable {
 	/// @brief All of the commands
-	TfsCommand commands[TFS_COMMAND_TABLE_MAX];
+	TfsCommand* commands;
+
+	/// @brief Buffer capacity
+	size_t capacity;
 
 	/// @brief Index of first command
 	size_t first_idx;
@@ -33,9 +43,7 @@ typedef struct TfsCommandTable {
 } TfsCommandTable;
 
 /// @brief Creates a new, empty, command table
-/// @details
-/// Result is allocated to prevent stack smashing
-TfsCommandTable* tfs_command_table_new(void);
+TfsCommandTable tfs_command_table_new(void);
 
 /// @brief Destroys a command table
 void tfs_command_table_destroy(TfsCommandTable* self);

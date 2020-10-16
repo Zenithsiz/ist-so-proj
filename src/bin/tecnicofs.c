@@ -105,9 +105,9 @@ int main(int argc, char** argv) {
 	// Create the command table and it's lock, then fill it from the input file.
 	// Note: The command table lock is always a mutex, regardless of
 	//       the sync strategy.
-	TfsCommandTable* command_table = tfs_command_table_new();
-	TfsLock command_table_lock	   = tfs_lock_new(TfsLockKindMutex);
-	fill_command_table(command_table, in);
+	TfsCommandTable command_table = tfs_command_table_new();
+	TfsLock command_table_lock	  = tfs_lock_new(TfsLockKindMutex);
+	fill_command_table(&command_table, in);
 
 	// Create the file system and it's lock
 	TfsFs fs		= tfs_fs_new(lock_kind);
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
 
 	// Bundle all data together for the workers
 	WorkerData data = (WorkerData){
-		.command_table		= command_table,
+		.command_table		= &command_table,
 		.fs					= &fs,
 		.command_table_lock = &command_table_lock,
 		.fs_lock			= &fs_lock,
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
 	// Destroy all resources in reverse order of creation.
 	tfs_lock_destroy(&fs_lock);
 	tfs_lock_destroy(&command_table_lock);
-	tfs_command_table_destroy(command_table);
+	tfs_command_table_destroy(&command_table);
 	tfs_fs_destroy(&fs);
 	close_io(&in, &out);
 
