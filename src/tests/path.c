@@ -14,13 +14,20 @@ typedef const char* String;
 typedef String* StringArr;
 
 static TfsTestResult from_c_str(void) {
-	const char* path_cstr = "/my/path/";
-	size_t path_cstr_len  = strlen(path_cstr);
-	TfsPath path		  = tfs_path_from_cstr(path_cstr);
+	const char* cstrs[] = {
+		"/my/path/",
+		"",
+		NULL,
+	};
 
-	// Make sure the path and the original cstring are equal
-	TFS_ASSERT_OR_RETURN(tfs_str_eq(path.chars, path.len, path_cstr, path_cstr_len));
+	for (size_t n = 0; cstrs[n] != NULL; n++) {
+		const char* cstr = cstrs[n];
+		size_t cstr_len	 = strlen(cstr);
+		TfsPath path	 = tfs_path_from_cstr(cstr);
 
+		// Make sure the path and the original cstring are equal
+		TFS_ASSERT_OR_RETURN(tfs_str_eq(path.chars, path.len, cstr, cstr_len));
+	}
 	return TfsTestResultSuccess;
 }
 
@@ -150,15 +157,17 @@ static TfsTestResult split_first(void) {
 
 int main(void) {
 	// All tests
+	// clang-format off
 	TfsTest* tests = (TfsTest[]){
-		(TfsTest){.fn = from_c_str, .name = "from_c_str"},
-		(TfsTest){.fn = eq, .name = "eq"},
-		(TfsTest){.fn = diff, .name = "diff"},
-		(TfsTest){.fn = split_last, .name = "split_last"},
-		(TfsTest){.fn = split_first, .name = "split_first"},
+		(TfsTest){.fn = from_c_str , .name = "path/from_c_str" },
+		(TfsTest){.fn = eq         , .name = "path/eq"         },
+		(TfsTest){.fn = diff       , .name = "path/diff"       },
+		(TfsTest){.fn = split_last , .name = "path/split_last" },
+		(TfsTest){.fn = split_first, .name = "path/split_first"},
 		(TfsTest){.fn = NULL}};
+	// clang-format on
 
-	if (tfs_test_all(tests, "path") == TfsTestResultSuccess) {
+	if (tfs_test_all(tests, stdout) == TfsTestResultSuccess) {
 		return EXIT_SUCCESS;
 	}
 	else {

@@ -1,10 +1,9 @@
 #include "test.h"
 
 // Includes
-#include <stdio.h>	// printf
 #include <stdlib.h> // size_t
 
-TfsTestResult tfs_test_all(const TfsTest* tests, const char* module) {
+TfsTestResult tfs_test_all(const TfsTest* tests, FILE* out) {
 	// Current status
 	TfsTestResult status = TfsTestResultSuccess;
 
@@ -14,13 +13,13 @@ TfsTestResult tfs_test_all(const TfsTest* tests, const char* module) {
 			break;
 		}
 
-		printf("%s/%s: ..", module, tests[n].name);
+		fprintf(out, "%s:\t", tests[n].name);
 		if (tests[n].fn() == TfsTestResultSuccess) {
-			printf("Passed\n");
+			fprintf(out, "Passed\n");
 		}
 		else {
 			status = TfsTestResultFailure;
-			printf("Failed\n");
+			fprintf(out, "Failed\n");
 		}
 	}
 

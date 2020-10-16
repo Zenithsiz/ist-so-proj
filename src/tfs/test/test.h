@@ -1,8 +1,14 @@
 /// @file
-/// @brief Testing utilities for tfs
+/// @brief Testing utilities
+/// @details
+/// This file defines various testing utilities used by
+/// the tests in `src/tests`.
 
 #ifndef TFS_TEST_TEST_H
 #define TFS_TEST_TEST_H
+
+// Imports
+#include <stdio.h> // FILE
 
 /// @brief A test result
 typedef enum TfsTestResult {
@@ -27,10 +33,11 @@ typedef struct TfsTest {
 
 /// @brief Runs a series of tests
 /// @details
-/// If any test returns failure, this function returns a failure
-/// Prints to stdout the status of each function and it's name.
+/// If any test returns failure, this function will continue executing
+/// other tests, but will return @ref TfsTestResultFailure.
+/// Prints to @p out the result of each test along with it's name.
 /// @param tests A null terminated (via the `fn` member) list of functions.
-/// @param module The module name to append to the test names.
-TfsTestResult tfs_test_all(const TfsTest* tests, const char* module);
+/// @param out File to print test results to.
+TfsTestResult tfs_test_all(const TfsTest* tests, FILE* out);
 
 #endif
