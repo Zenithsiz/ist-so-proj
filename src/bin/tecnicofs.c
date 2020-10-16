@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 	struct timespec end_time;
 	assert(clock_gettime(CLOCK_REALTIME, &end_time) == 0);
 	double diff_secs = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 10.0e9;
-	fprintf(out, "TecnicoFS completed in %.4f seconds\n", diff_secs);
+	fprintf(stdout, "TecnicoFS completed in %.4f seconds\n", diff_secs);
 
 	// Print the tree before exiting
 	tfs_fs_print(&fs, out);
