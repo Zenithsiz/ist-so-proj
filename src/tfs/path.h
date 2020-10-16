@@ -1,7 +1,7 @@
 /// @file
 /// @brief File system paths
 /// @details
-/// This file contains the #TfsPath type, which
+/// This file defines the #TfsPath type, which
 /// is used to refer to all paths within the file system.
 
 #ifndef TFS_PATH_H
