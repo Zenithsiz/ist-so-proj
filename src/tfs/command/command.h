@@ -1,7 +1,7 @@
 /// @file
 /// @brief Executable commands in the file system.
 /// @details
-/// This file contains the type @ref TfsCommand that fully describes
+/// This file defines the type @ref TfsCommand that fully describes
 /// all commands executable by the tfs server.
 
 #ifndef TFS_COMMAND_COMMAND_H
@@ -95,9 +95,9 @@ typedef struct TfsCommandParseError {
 	} data;
 } TfsCommandParseError;
 
-/// @brief Prints a textual representation of an error
+/// @brief Prints a textual representation of @p self to @p out
 /// @param self
-/// @param out File descriptor to output to
+/// @param out File to output to.
 void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out);
 
 /// @brief Parses a command from a space-separated argument list
