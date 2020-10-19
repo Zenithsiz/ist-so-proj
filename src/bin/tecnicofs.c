@@ -331,12 +331,22 @@ static void open_io(const char* in_filename, const char* out_filename, FILE** in
 static void close_io(FILE** in, FILE** out) {
 	// If `in` isn't stdin, close it
 	if (*in != stdin) {
-		fclose(*in);
+		int res = fclose(*in);
+		if (res != 0) {
+			fprintf(stderr, "Unable to close input file\n");
+			fprintf(stderr, "%s\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	// If `out` isn't stdout, close it
 	if (*out != stdout) {
-		fclose(*out);
+		int res = fclose(*out);
+		if (res != 0) {
+			fprintf(stderr, "Unable to close output file\n");
+			fprintf(stderr, "%s\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	// Then set both to `NULL`
