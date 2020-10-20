@@ -184,7 +184,7 @@ static void* worker_thread_fn(void* arg) {
 		switch (command.kind) {
 			case TfsCommandCreate: {
 				TfsInodeType inode_type = command.data.create.type;
-				TfsPath path			= tfs_path_from_owned(command.data.create.path);
+				TfsPath path			= tfs_path_owned_borrow(command.data.create.path);
 
 				fprintf(stderr, "Creating %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 
@@ -207,7 +207,7 @@ static void* worker_thread_fn(void* arg) {
 
 			// Delete path
 			case TfsCommandRemove: {
-				TfsPath path = tfs_path_from_owned(command.data.remove.path);
+				TfsPath path = tfs_path_owned_borrow(command.data.remove.path);
 
 				fprintf(stderr, "Removing %.*s\n", (int)path.len, path.chars);
 
@@ -226,7 +226,7 @@ static void* worker_thread_fn(void* arg) {
 			}
 
 			case TfsCommandSearch: {
-				TfsPath path = tfs_path_from_owned(command.data.search.path);
+				TfsPath path = tfs_path_owned_borrow(command.data.search.path);
 
 				fprintf(stderr, "Searching %.*s\n", (int)path.len, path.chars);
 

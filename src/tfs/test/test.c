@@ -9,13 +9,12 @@ TfsTestResult tfs_test_all(const TfsTest* tests, FILE* out) {
 
 	// Run all tests
 	for (size_t n = 0; tests[n].fn != NULL; n++) {
-		fprintf(out, "%s:\t", tests[n].name);
 		if (tests[n].fn() == TfsTestResultSuccess) {
-			fprintf(out, "Passed\n");
+			fprintf(out, "%s:\tPassed\n", tests[n].name);
 		}
 		else {
 			status = TfsTestResultFailure;
-			fprintf(out, "Failed\n");
+			fprintf(out, "%s:\tFailed\n", tests[n].name);
 		}
 	}
 

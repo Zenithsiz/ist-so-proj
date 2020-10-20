@@ -99,8 +99,7 @@ void tfs_fs_destroy(TfsFs* self) {
 TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock* lock, TfsFsCreateError* err) {
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
-	TfsPath entry_name;
-	tfs_path_split_last(path, &parent_path, &entry_name);
+	TfsPath entry_name = tfs_path_pop_last(path, &parent_path);
 
 	// Create the new inode
 	// Note: We need to do this before finding the parent because the inode table requires
@@ -165,8 +164,7 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* err) {
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
-	TfsPath entry_name;
-	tfs_path_split_last(path, &parent_path, &entry_name);
+	TfsPath entry_name = tfs_path_pop_last(path, &parent_path);
 
 	// Try to find the parent directory, if we can't, return Err.
 	// Note: As soon as we get the parent node, we unlock `lock`, as all we
@@ -242,7 +240,7 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 
 TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsFindError* err) {
 	// Trim `path`
-	tfs_path_trim(&path);
+	path = tfs_path_trim(path);
 
 	// The current index we're checking
 	TfsInodeIdx cur_idx = 0;
@@ -268,8 +266,7 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess 
 
 		// Get the name of the current inode we're in and set
 		// the current path to the remaining children.
-		TfsPath cur_dir;
-		tfs_path_split_first(cur_path, &cur_dir, &cur_path);
+		TfsPath cur_dir = tfs_path_pop_first(cur_path, &cur_path);
 
 		// If we're not a directory, return Err
 		if (cur_type != TfsInodeTypeDir) {

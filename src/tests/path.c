@@ -32,18 +32,15 @@ static TfsTestResult eq(void) {
 	const char** eq_paths[] = {
 		(const char*[]){"a", "a"},
 		(const char*[]){"a", "a/"},
-		(const char*[]){"a", "a//"},
+		(const char*[]){"a", "/a/"},
+		(const char*[]){"a", "  //  a  //  "},
 		(const char*[]){"a/b", "a/b"},
-		(const char*[]){"a/b", "  a/b  "},
-		(const char*[]){"a/b", "a/b/"},
-		(const char*[]){"a/b", "  a/b/  "},
-		(const char*[]){"a/b", "a/b//"},
+		(const char*[]){"a/b", "/a/b"},
+		(const char*[]){"a/b", "/a/b/"},
+		(const char*[]){"a/b", " / a / b / "},
 		(const char*[]){"/", ""},
-		(const char*[]){"/", "  "},
-		(const char*[]){"//", ""},
-		(const char*[]){"//", "  "},
-		(const char*[]){"", ""},
-		(const char*[]){"", "  "},
+		(const char*[]){" ", ""},
+		(const char*[]){" / ", ""},
 		NULL,
 	};
 
@@ -75,65 +72,99 @@ static TfsTestResult diff(void) {
 	return TfsTestResultSuccess;
 }
 
-static TfsTestResult split_last(void) {
+static TfsTestResult pop_last(void) {
 	// All paths to test
-	// Order: Path, parent, child
+	// Order: Path, Result, Rest
 	const char** paths[] = {
-		(const char*[]){"a/b/c", "a/b", "c"},
-		(const char*[]){"a/b/c/", "a/b", "c"},
-		(const char*[]){"/a/b/c", "/a/b", "c"},
-		(const char*[]){"/a/b/c/", "/a/b", "c"},
-		(const char*[]){"/c", "", "c"},
-		(const char*[]){"/c/", "", "c"},
-		(const char*[]){"/", "", ""},
-		(const char*[]){"", "", ""},
+		// clang-format off
+		(const char*[]){"a/b/c"  , "c", "a/b" },
+		(const char*[]){"a/b/c/" , "c", "a/b" },
+		(const char*[]){"/a/b/c" , "c", "/a/b"},
+		(const char*[]){"/a/b/c/", "c", "/a/b"},
+		(const char*[]){"/c"     , "c", ""    },
+		(const char*[]){"/c/"    , "c", ""    },
+		(const char*[]){"/"      , "" , ""    },
+		(const char*[]){""       , "" , ""    },
+		// clang-format on
 		NULL,
 	};
 
 	for (size_t n = 0; paths[n] != NULL; n++) {
 		TfsPath path			= tfs_path_from_cstr(paths[n][0]);
-		TfsPath expected_parent = tfs_path_from_cstr(paths[n][1]);
-		TfsPath expected_child	= tfs_path_from_cstr(paths[n][2]);
+		TfsPath expected_result = tfs_path_from_cstr(paths[n][1]);
+		TfsPath expected_rest	= tfs_path_from_cstr(paths[n][2]);
 
-		TfsPath parent;
-		TfsPath child;
-		tfs_path_split_last(path, &parent, &child);
+		TfsPath rest;
+		TfsPath result = tfs_path_pop_last(path, &rest);
 
-		TFS_ASSERT_OR_RETURN(tfs_path_eq(parent, expected_parent));
-		TFS_ASSERT_OR_RETURN(tfs_path_eq(child, expected_child));
+		TFS_ASSERT_OR_RETURN(tfs_path_eq(result, expected_result));
+		TFS_ASSERT_OR_RETURN(tfs_path_eq(rest, expected_rest));
 	}
 
 	return TfsTestResultSuccess;
 }
 
-static TfsTestResult split_first(void) {
+static TfsTestResult pop_first(void) {
 	// All paths to test
-	// Order: Path, parent, child
+	// Order: Path, Result, Rest
 	const char** paths[] = {
-		(const char*[]){"a/b/c", "a", "b/c"},
-		(const char*[]){"a/b/c/", "a", "b/c/"},
-		(const char*[]){"a", "a", ""},
-		(const char*[]){"a/", "a", ""},
-		(const char*[]){"/a/b/c", "", "a/b/c"},
-		(const char*[]){"/a/b/c/", "", "a/b/c/"},
-		(const char*[]){"/c", "", "c"},
-		(const char*[]){"/c/", "", "c/"},
-		(const char*[]){"/", "", ""},
-		(const char*[]){"", "", ""},
+		// clang-format off
+		(const char*[]){"a/b/c"  , "a", "b/c"},
+		(const char*[]){"a/b/c/" , "a", "b/c"},
+		(const char*[]){"/a/b/c" , "a", "b/c"},
+		(const char*[]){"/a/b/c/", "a", "b/c"},
+		(const char*[]){"a"      , "a", ""   },
+		(const char*[]){"a/"     , "a", ""   },
+		(const char*[]){"/a/"    , "a", ""   },
+		(const char*[]){"/"      , "" , ""   },
+		(const char*[]){""       , "" , ""   },
+		// clang-format on
 		NULL,
 	};
 
 	for (size_t n = 0; paths[n] != NULL; n++) {
 		TfsPath path			= tfs_path_from_cstr(paths[n][0]);
-		TfsPath expected_parent = tfs_path_from_cstr(paths[n][1]);
-		TfsPath expected_child	= tfs_path_from_cstr(paths[n][2]);
+		TfsPath expected_result = tfs_path_from_cstr(paths[n][1]);
+		TfsPath expected_rest	= tfs_path_from_cstr(paths[n][2]);
 
-		TfsPath parent;
-		TfsPath child;
-		tfs_path_split_first(path, &parent, &child);
+		TfsPath rest;
+		TfsPath result = tfs_path_pop_first(path, &rest);
 
-		TFS_ASSERT_OR_RETURN(tfs_path_eq(parent, expected_parent));
-		TFS_ASSERT_OR_RETURN(tfs_path_eq(child, expected_child));
+		TFS_ASSERT_OR_RETURN(tfs_path_eq(result, expected_result));
+		TFS_ASSERT_OR_RETURN(tfs_path_eq(rest, expected_rest));
+	}
+
+	return TfsTestResultSuccess;
+}
+
+static TfsTestResult common_ancestor(void) {
+	// All paths to test
+	// Order: Lhs, Rhs, Parent, LhsRest, RhsRest
+	const char** paths[] = {
+		// clang-format off
+		(const char*[]){"a/b/c", "a/d", "a", "b/c"  , "d"},
+		(const char*[]){"a"    , "a"  , "a", ""     , "" },
+		(const char*[]){"a"    , "b"  , "" , "a"    , "b"},
+		(const char*[]){""     , ""   , "" , ""     , "" },
+		(const char*[]){"a/b/c", ""   , "" , "a/b/c", "" },
+		// clang-format on
+		NULL,
+	};
+
+	for (size_t n = 0; paths[n] != NULL; n++) {
+		TfsPath lhs				  = tfs_path_from_cstr(paths[n][0]);
+		TfsPath rhs				  = tfs_path_from_cstr(paths[n][1]);
+		TfsPath expected_result	  = tfs_path_from_cstr(paths[n][2]);
+		TfsPath expected_lhs_rest = tfs_path_from_cstr(paths[n][3]);
+		TfsPath expected_rhs_rest = tfs_path_from_cstr(paths[n][4]);
+
+		TfsPath lhs_rest;
+		TfsPath rhs_rest;
+		TfsPath result = tfs_path_common_ancestor(lhs, rhs, &lhs_rest, &rhs_rest);
+
+		TFS_ASSERT_OR_RETURN(tfs_path_eq(result, expected_result));
+		TFS_ASSERT_OR_RETURN(tfs_path_eq(lhs_rest, expected_lhs_rest));
+		TFS_ASSERT_OR_RETURN(tfs_path_eq(rhs_rest, expected_rhs_rest));
 	}
 
 	return TfsTestResultSuccess;
@@ -143,11 +174,12 @@ int main(void) {
 	// All tests
 	// clang-format off
 	TfsTest* tests = (TfsTest[]){
-		(TfsTest){.fn = from_c_str , .name = "path/from_c_str" },
-		(TfsTest){.fn = eq         , .name = "path/eq"         },
-		(TfsTest){.fn = diff       , .name = "path/diff"       },
-		(TfsTest){.fn = split_last , .name = "path/split_last" },
-		(TfsTest){.fn = split_first, .name = "path/split_first"},
+		(TfsTest){.fn = from_c_str     , .name = "path/from_c_str"     },
+		(TfsTest){.fn = eq             , .name = "path/eq"             },
+		(TfsTest){.fn = diff           , .name = "path/diff"           },
+		(TfsTest){.fn = pop_last       , .name = "path/pop_last"       },
+		(TfsTest){.fn = pop_first      , .name = "path/pop_first"      },
+		(TfsTest){.fn = common_ancestor, .name = "path/common_ancestor"},
 		(TfsTest){.fn = NULL},
 	};
 	// clang-format on
