@@ -37,12 +37,6 @@ typedef struct WorkerData {
 	/// execution of the command and unlocks the command
 	/// table lock, allowing other commands to be executed.
 	TfsLock* command_table_lock;
-
-	/// @brief File system lock
-	/// @details
-	/// This lock is used to synchronize the file system
-	/// globally, for the first exercise.
-	TfsLock* fs_lock;
 } WorkerData;
 
 /// @brief Filesystem worker to run in each thread.
@@ -110,16 +104,14 @@ int main(int argc, char** argv) {
 	TfsLock command_table_lock	  = tfs_lock_new(lock_kind == TfsLockKindNone ? TfsLockKindNone : TfsLockKindMutex);
 	fill_command_table(&command_table, in);
 
-	// Create the file system and it's lock
-	TfsFs fs		= tfs_fs_new(lock_kind);
-	TfsLock fs_lock = tfs_lock_new(lock_kind);
+	// Create the file system
+	TfsFs fs = tfs_fs_new(lock_kind);
 
 	// Bundle all data together for the workers
 	WorkerData data = (WorkerData){
 		.command_table		= &command_table,
 		.fs					= &fs,
 		.command_table_lock = &command_table_lock,
-		.fs_lock			= &fs_lock,
 	};
 
 	// Get the start time of the execution
@@ -155,7 +147,6 @@ int main(int argc, char** argv) {
 	tfs_fs_print(&fs, out);
 
 	// Destroy all resources in reverse order of creation.
-	tfs_lock_destroy(&fs_lock);
 	tfs_lock_destroy(&command_table_lock);
 	tfs_command_table_destroy(&command_table);
 	tfs_fs_destroy(&fs);
@@ -190,9 +181,7 @@ static void* worker_thread_fn(void* arg) {
 
 				// Lock the filesystem and create the file
 				TfsFsCreateError err;
-				tfs_lock_lock(data->fs_lock, TfsLockAccessUnique);
 				TfsInodeIdx idx = tfs_fs_create(data->fs, path, inode_type, data->command_table_lock, &err);
-				tfs_lock_unlock(data->fs_lock);
 				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to create %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 					tfs_fs_create_error_print(&err, stderr);
@@ -212,7 +201,6 @@ static void* worker_thread_fn(void* arg) {
 				fprintf(stderr, "Removing %.*s\n", (int)path.len, path.chars);
 
 				TfsFsRemoveError err;
-				tfs_lock_lock(data->fs_lock, TfsLockAccessUnique);
 				if (!tfs_fs_remove(data->fs, path, data->command_table_lock, &err)) {
 					fprintf(stderr, "Unable to remove %.*s\n", (int)path.len, path.chars);
 					tfs_fs_remove_error_print(&err, stderr);
@@ -221,7 +209,6 @@ static void* worker_thread_fn(void* arg) {
 					// Note: No need to unlock anything, as we just remove the inode
 					fprintf(stderr, "Successfully removed %.*s\n", (int)path.len, path.chars);
 				}
-				tfs_lock_unlock(data->fs_lock);
 				break;
 			}
 
@@ -232,9 +219,7 @@ static void* worker_thread_fn(void* arg) {
 
 				TfsInodeType inode_type;
 				TfsFsFindError err;
-				tfs_lock_lock(data->fs_lock, TfsLockAccessShared);
 				TfsInodeIdx idx = tfs_fs_find(data->fs, path, data->command_table_lock, TfsLockAccessShared, &inode_type, NULL, &err);
-				tfs_lock_unlock(data->fs_lock);
 				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to find %.*s\n", (int)path.len, path.chars);
 					tfs_fs_find_error_print(&err, stderr);
