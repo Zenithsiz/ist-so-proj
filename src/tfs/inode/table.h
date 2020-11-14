@@ -12,7 +12,7 @@
 #include <stddef.h>			 // size_t
 #include <stdio.h>			 // FILE
 #include <tfs/inode/inode.h> // TfsInode
-#include <tfs/lock.h>		 // TfsLock
+#include <tfs/rw_lock.h>	 // TfsRwLock
 
 /// @brief An inode table
 /// @details
@@ -34,15 +34,12 @@ typedef struct TfsInodeTable {
 	/// used instead, locking for shared each time an inode is locked,
 	/// unlocking when an inode is unlocked, and locking for unique
 	/// access in `add`
-	TfsLock rw_lock;
-
-	/// @brief Lock kind used for all inodes
-	TfsLockKind lock_kind;
+	TfsRwLock rw_lock;
 } TfsInodeTable;
 
 /// @brief Creates a new, empty, inode table
 /// @param lock_kind Lock kind used by all inodes.
-TfsInodeTable tfs_inode_table_new(TfsLockKind lock_kind);
+TfsInodeTable tfs_inode_table_new(void);
 
 /// @brief Destroys the inode table
 void tfs_inode_table_destroy(TfsInodeTable* self);
@@ -55,7 +52,7 @@ void tfs_inode_table_destroy(TfsInodeTable* self);
 /// This is thread-safe and will wait for all locked inodes
 /// to be unlocked before modifying the inode table.
 /// The returned inode _must_ be unlocked.
-TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockAccess access);
+TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsRwLockAccess access);
 
 /// @brief Locks an inode and retrives it's data.
 /// @param self
@@ -67,7 +64,7 @@ TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockA
 /// @details
 /// This function is thread-safe.
 /// The returned inode _must_ be unlocked.
-bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess access, TfsInodeType* type, TfsInodeData** data);
+bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data);
 
 /// @brief Unlocks an inode.
 /// @param self

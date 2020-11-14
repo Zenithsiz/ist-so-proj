@@ -4,6 +4,31 @@
 #include <assert.h> // assert
 #include <string.h> // strcpy
 
+/// @brief
+/// Similarly to #tfs_fs_find , locks and retrives an inode's data
+/// starting at @p cur_idx . This node must already be locked for `access`.
+/// @param self
+/// @param path The path of the inode to get.
+/// @param access Access type to lock te result with.
+/// @param cur_idx The inode to start at. _Must_ be locked.
+/// @param cur_type The start inode's type.
+/// @param cur_data The start inode's data.
+/// @param[out] type The type of the inode.
+/// @param[out] data The data of the inode.
+/// @param[out] err Set if any errors occur.
+/// @return Index of the inode, if found. Otherwise #TFS_INODE_IDX_NONE
+/// @warning The returned inode _must_ be unlocked.
+static TfsInodeIdx tfs_fs_find_from(
+	TfsFs* self,
+	TfsPath path,
+	TfsRwLockAccess access,
+	TfsInodeIdx cur_idx,
+	TfsInodeType cur_type,
+	TfsInodeData* cur_data,
+	TfsInodeType* type,
+	TfsInodeData** data,
+	TfsFsFindError* err);
+
 void tfs_fs_find_error_print(const TfsFsFindError* self, FILE* out) {
 	switch (self->kind) {
 		case TfsFsFindErrorParentsNotDir: {
@@ -78,13 +103,58 @@ void tfs_fs_remove_error_print(const TfsFsRemoveError* self, FILE* out) {
 	}
 }
 
-TfsFs tfs_fs_new(TfsLockKind lock_kind) {
+void tfs_fs_move_error_print(const TfsFsMoveError* self, FILE* out) {
+	switch (self->kind) {
+		case TfsFsMoveErrorInexistentCommonAncestor: {
+			fprintf(out, "The common ancestor of both paths was not found\n");
+			break;
+		}
+		case TfsFsMoveErrorOriginDestinationParent: {
+			fprintf(out, "The origin path was the destination path's parent\n");
+			break;
+		}
+		case TfsFsMoveErrorDestinationOriginParent: {
+			fprintf(out, "The destination path was the origin's path parent\n");
+			break;
+		}
+		case TfsFsMoveErrorInexistentOriginParentDir: {
+			fprintf(out, "The origin path's parent did not exist\n");
+			break;
+		}
+		case TfsFsMoveErrorInexistentDestinationParentDir: {
+			fprintf(out, "The destination path's parent did not exist\n");
+			break;
+		}
+		case TfsFsMoveErrorOriginParentNotDir: {
+			fprintf(out, "The origin path's parent was not a directory\n");
+			break;
+		}
+		case TfsFsMoveErrorDestinationParentNotDir: {
+			fprintf(out, "The destination path's parent was not a directory\n");
+			break;
+		}
+		case TfsFsMoveErrorOriginNotFound: {
+			fprintf(out, "The origin path was not found\n");
+			break;
+		}
+		case TfsFsMoveErrorAddEntry: {
+			fprintf(out, "Unable to add an entry to the destination path's parent\n");
+			tfs_inode_dir_add_entry_error_print(&self->data.add_entry.err, out);
+			break;
+		}
+		default: {
+			break;
+		}
+	}
+}
+
+TfsFs tfs_fs_new(void) {
 	// Create the inode table
-	TfsFs fs = {.inode_table = tfs_inode_table_new(lock_kind)};
+	TfsFs fs = {.inode_table = tfs_inode_table_new()};
 
 	// Create the root node at index `0` and unlock it
 	// SAFETY: We just created it, so we can unlock it
-	TfsInodeIdx idx = tfs_inode_table_add(&fs.inode_table, TfsInodeTypeDir, TfsLockAccessUnique);
+	TfsInodeIdx idx = tfs_inode_table_add(&fs.inode_table, TfsInodeTypeDir, TfsRwLockAccessUnique);
 	assert(idx == 0);
 	assert(tfs_inode_table_unlock_inode(&fs.inode_table, idx));
 
@@ -96,7 +166,7 @@ void tfs_fs_destroy(TfsFs* self) {
 	tfs_inode_table_destroy(&self->inode_table);
 }
 
-TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock* lock, TfsFsCreateError* err) {
+TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsFsCreateError* err) {
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
 	TfsPath entry_name = tfs_path_pop_last(path, &parent_path);
@@ -104,21 +174,16 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 	// Create the new inode
 	// Note: We need to do this before finding the parent because the inode table requires
 	//       unique access to add a new inode.
-	TfsInodeIdx idx = tfs_inode_table_add(&self->inode_table, type, TfsLockAccessUnique);
+	TfsInodeIdx idx = tfs_inode_table_add(&self->inode_table, type, TfsRwLockAccessUnique);
 
 	// Try to find the parent directory, if we can't, return Err.
-	// Note: We don't pass `lock` to unlock here, since if this fails, we'll need
-	//       to remove the newly created inode, which requires that we have
-	//       unique ownership to the inode table.
 	TfsInodeType parent_type;
 	TfsInodeData* parent_data;
 	TfsFsFindError parent_find_err;
-	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, NULL, TfsLockAccessUnique, &parent_type, &parent_data, &parent_find_err);
+	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, TfsRwLockAccessUnique, &parent_type, &parent_data, &parent_find_err);
 	if (parent_idx == TFS_INODE_IDX_NONE) {
 		// SAFETY: We locked the child inode when we created it
-		// Note: `tfs_fs_find` unlocks `lock` even on error
 		assert(tfs_inode_table_remove_inode(&self->inode_table, idx));
-		if (lock != NULL) { tfs_lock_unlock(lock); }
 		if (err != NULL) {
 			*err = (TfsFsCreateError){
 				.kind = TfsFsCreateErrorInexistentParentDir,
@@ -126,9 +191,6 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 		}
 		return TFS_INODE_IDX_NONE;
 	}
-
-	// Unlock the filesystem lock, since we have the parent locked
-	if (lock != NULL) { tfs_lock_unlock(lock); }
 
 	// If the parent isn't a directory, return Err
 	if (parent_type != TfsInodeTypeDir) {
@@ -161,19 +223,16 @@ TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock*
 	return idx;
 }
 
-bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* err) {
+bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsFsRemoveError* err) {
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
 	TfsPath entry_name = tfs_path_pop_last(path, &parent_path);
 
 	// Try to find the parent directory, if we can't, return Err.
-	// Note: As soon as we get the parent node, we unlock `lock`, as all we
-	//       need to delete the file is the parent's lock (and the child's,
-	//       but we can lock it later without ownership of `lock`).
 	TfsInodeType parent_type;
 	TfsInodeData* parent_data;
 	TfsFsFindError parent_find_err;
-	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, lock, TfsLockAccessUnique, &parent_type, &parent_data, &parent_find_err);
+	TfsInodeIdx parent_idx = tfs_fs_find(self, parent_path, TfsRwLockAccessUnique, &parent_type, &parent_data, &parent_find_err);
 	if (parent_idx == TFS_INODE_IDX_NONE) {
 		if (err != NULL) {
 			*err = (TfsFsRemoveError){
@@ -210,7 +269,7 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 	//         stay alive until we can lock it for deletion.
 	TfsInodeType type;
 	TfsInodeData* data;
-	assert(tfs_inode_table_lock(&self->inode_table, idx, TfsLockAccessUnique, &type, &data));
+	assert(tfs_inode_table_lock(&self->inode_table, idx, TfsRwLockAccessUnique, &type, &data));
 
 	// If it's a directory but it's not empty, return Err
 	if (type == TfsInodeTypeDir && !tfs_inode_dir_is_empty(&data->dir)) {
@@ -238,22 +297,219 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 	return true;
 }
 
-TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsFindError* err) {
-	// Trim `path`
-	path = tfs_path_trim(path);
-
-	// The current index we're checking
-	TfsInodeIdx cur_idx = 0;
-	TfsPath cur_path	= path;
-
+TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsFindError* err) {
 	// Lock the root node for ourselves and unlock the given lock
-	// Note: We can unlock here, as any next command will have to
-	//       also lock the root node, and will have to wait until
-	//       we're finished with it and it's children.
+	TfsInodeIdx cur_idx = 0;
 	TfsInodeData* cur_data;
 	TfsInodeType cur_type;
-	tfs_inode_table_lock(&self->inode_table, cur_idx, access, &cur_type, &cur_data);
-	if (lock != NULL) { tfs_lock_unlock(lock); }
+	assert(tfs_inode_table_lock(&self->inode_table, cur_idx, access, &cur_type, &cur_data));
+
+	return tfs_fs_find_from(self, path, access, cur_idx, cur_type, cur_data, type, data, err);
+}
+
+TfsInodeIdx tfs_fs_move(TfsFs* const self, const TfsPath orig_path, const TfsPath dest_path, TfsFsMoveError* const err) {
+	// Get the common ancestor of both paths
+	TfsPath orig_path_rest;
+	TfsPath dest_path_rest;
+	TfsPath common_ancestor = tfs_path_common_ancestor(orig_path, dest_path, &orig_path_rest, &dest_path_rest);
+
+	// Lock the common ancestor
+	TfsInodeType common_ancestor_type;
+	TfsInodeData* common_ancestor_data;
+	TfsFsFindError find_common_ancestor_err;
+	TfsInodeIdx common_ancestor_idx = tfs_fs_find(self, common_ancestor, TfsRwLockAccessUnique, &common_ancestor_type, &common_ancestor_data, &find_common_ancestor_err);
+	if (common_ancestor_idx == TFS_INODE_IDX_NONE) {
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorInexistentCommonAncestor,
+				.data = {.inexistent_common_ancestor = {.err = find_common_ancestor_err}},
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+
+	// Split the rests
+	TfsPath orig_path_parent;
+	TfsPath orig_path_filename = tfs_path_pop_last(orig_path_rest, &orig_path_parent);
+
+	TfsPath dest_path_parent;
+	TfsPath dest_path_filename = tfs_path_pop_last(orig_path_rest, &orig_path_parent);
+
+	// Lock the origin parent
+	TfsInodeType orig_parent_type;
+	TfsInodeData* orig_parent_data;
+	TfsFsFindError find_orig_parent_err;
+	TfsInodeIdx orig_parent_idx = tfs_fs_find_from(self,
+		orig_path_parent,
+		TfsRwLockAccessUnique,
+		common_ancestor_idx,
+		common_ancestor_type,
+		common_ancestor_data,
+		&orig_parent_type,
+		&orig_parent_data,
+		&find_orig_parent_err);
+
+	// If we couldn't lock it, return Err
+	if (orig_parent_idx == TFS_INODE_IDX_NONE) {
+		assert(tfs_fs_unlock_inode(self, common_ancestor_idx));
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorInexistentOriginParentDir,
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+	// Check if the parent is the same as common ancestor.
+	// Note: Even if they're equal, no deadlocks occur with `tfs_fs_find_from´,
+	//       as it never locks the inode we give it.
+	if (common_ancestor_idx == orig_parent_idx) {
+		assert(tfs_fs_unlock_inode(self, common_ancestor_idx));
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorDestinationOriginParent,
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+	// If the parent isn't a directory, return Err
+	if (orig_parent_type != TfsInodeTypeDir) {
+		assert(tfs_fs_unlock_inode(self, common_ancestor_idx));
+		assert(tfs_fs_unlock_inode(self, orig_parent_idx));
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorOriginParentNotDir,
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+
+	TfsInodeType dest_parent_type;
+	TfsInodeData* dest_parent_data;
+	TfsFsFindError find_dest_parent_err;
+	TfsInodeIdx dest_parent_idx = tfs_fs_find_from(self,
+		dest_path_parent,
+		TfsRwLockAccessUnique,
+		common_ancestor_idx,
+		common_ancestor_type,
+		common_ancestor_data,
+		&dest_parent_type,
+		&dest_parent_data,
+		&find_dest_parent_err);
+
+	// If we couldn't lock it, return Err
+	if (dest_parent_idx == TFS_INODE_IDX_NONE) {
+		assert(tfs_fs_unlock_inode(self, common_ancestor_idx));
+		assert(tfs_fs_unlock_inode(self, orig_parent_idx));
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorInexistentDestinationParentDir,
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+	// Check if the parent is the same as common ancestor.
+	// Note: Even if they're equal, no deadlocks occur with `tfs_fs_find_from´,
+	//       as it never locks the inode we give it.
+	if (common_ancestor_idx == dest_parent_idx) {
+		assert(tfs_fs_unlock_inode(self, common_ancestor_idx));
+		assert(tfs_fs_unlock_inode(self, orig_parent_idx));
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorOriginDestinationParent,
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+	// If the parent isn't a directory, return Err
+	if (dest_parent_type != TfsInodeTypeDir) {
+		assert(tfs_fs_unlock_inode(self, common_ancestor_idx));
+		assert(tfs_fs_unlock_inode(self, orig_parent_idx));
+		assert(tfs_fs_unlock_inode(self, dest_parent_idx));
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorDestinationParentNotDir,
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+
+	// Release the common ancestor
+	assert(tfs_fs_unlock_inode(self, common_ancestor_idx));
+
+	// Find the origin file
+	size_t orig_path_dir_idx;
+	TfsInodeIdx orig_path_idx = tfs_inode_dir_search_by_name(
+		&orig_parent_data->dir,
+		orig_path_filename.chars,
+		orig_path_filename.len,
+		&orig_path_dir_idx);
+	if (orig_path_idx == TFS_INODE_IDX_NONE) {
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorOriginNotFound,
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+
+	// Add the file to the new directory
+	TfsInodeDirAddEntryError add_entry_err;
+	bool add_entry_success = tfs_inode_dir_add_entry(
+		&dest_parent_data->dir,
+		orig_path_idx,
+		dest_path_filename.chars,
+		dest_path_filename.len,
+		&add_entry_err);
+	if (!add_entry_success) {
+		assert(tfs_fs_unlock_inode(self, orig_parent_idx));
+		assert(tfs_fs_unlock_inode(self, dest_parent_idx));
+		if (err != NULL) {
+			*err = (TfsFsMoveError){
+				.kind = TfsFsMoveErrorAddEntry,
+				.data = {.add_entry = {.err = add_entry_err}},
+			};
+		}
+		return TFS_INODE_IDX_NONE;
+	}
+
+	// Release destination's parent lock
+	assert(tfs_fs_unlock_inode(self, dest_parent_idx));
+
+	// Remove the source entry
+	assert(tfs_inode_dir_remove_entry_by_dir_idx(&orig_parent_data->dir, orig_path_dir_idx));
+
+	// Remove the origin's parent lock
+	assert(tfs_fs_unlock_inode(self, orig_parent_idx));
+
+	// Return the index
+	// Note: We returnede it locked.
+	return orig_path_idx;
+}
+
+bool tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx) {
+	// Simply delegate to the inode table
+	return tfs_inode_table_unlock_inode(&self->inode_table, idx);
+}
+
+void tfs_fs_print(const TfsFs* self, FILE* out) {
+	// Print the root inode and all it's children
+	// Note: We start off with '' as the root, instead of '/'.
+	tfs_inode_table_print_tree(&self->inode_table, 0, out, "");
+}
+
+static TfsInodeIdx tfs_fs_find_from(
+	TfsFs* self,
+	TfsPath path,
+	TfsRwLockAccess access,
+	TfsInodeIdx cur_idx,
+	TfsInodeType cur_type,
+	TfsInodeData* cur_data,
+	TfsInodeType* type,
+	TfsInodeData** data,
+	TfsFsFindError* err //
+) {
+	// The current index we're checking
+	TfsPath cur_path = path;
 
 	do {
 		// If there's no more path to split, set the type and data and return the current inode
@@ -298,15 +554,4 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess 
 		assert(tfs_inode_table_unlock_inode(&self->inode_table, cur_idx));
 		cur_idx = child_idx;
 	} while (1);
-}
-
-bool tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx) {
-	// Simply delegate to the inode table
-	return tfs_inode_table_unlock_inode(&self->inode_table, idx);
-}
-
-void tfs_fs_print(const TfsFs* self, FILE* out) {
-	// Print the root inode and all it's children
-	// Note: We start off with '' as the root, instead of '/'.
-	tfs_inode_table_print_tree(&self->inode_table, 0, out, "");
 }

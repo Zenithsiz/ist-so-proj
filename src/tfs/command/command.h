@@ -32,6 +32,11 @@ typedef struct TfsCommand {
 		/// @details
 		/// This command deletes the file at the path given
 		TfsCommandRemove,
+
+		/// @brief Removes a file.
+		/// @details
+		/// This command moves a file to another path.
+		TfsCommandMove,
 	} kind;
 
 	/// @brief Data for all commands
@@ -56,6 +61,15 @@ typedef struct TfsCommand {
 			/// @brief The path of the file to remove
 			TfsPathOwned path;
 		} remove;
+
+		/// @brief Data for `Move` command
+		struct {
+			/// @brief The source path of the file to move
+			TfsPathOwned source;
+
+			/// @brief The destination path of the file to move
+			TfsPathOwned dest;
+		} move;
 	} data;
 } TfsCommand;
 
@@ -63,20 +77,29 @@ typedef struct TfsCommand {
 typedef struct TfsCommandParseError {
 	/// @brief Error kind
 	enum {
+		/// @brief Unable to read line
+		TfsCommandParseErrorReadLine,
+
 		/// @brief Missing command argument
 		TfsCommandParseErrorNoCommand,
-
-		/// @brief Missing path argument
-		TfsCommandParseErrorNoPath,
-
-		/// @brief Missing type argument
-		TfsCommandParseErrorNoType,
 
 		/// @brief Invalid command
 		TfsCommandParseErrorInvalidCommand,
 
-		/// @brief Invalid type
+		/// @brief Missing arguments for #TfsCommandCreate command.
+		TfsCommandParseErrorMissingCreateArgs,
+
+		/// @brief Invalid inode type for #TfsCommandCreate command.
 		TfsCommandParseErrorInvalidType,
+
+		/// @brief Missing arguments for #TfsCommandSearch command.
+		TfsCommandParseErrorMissingSearchArgs,
+
+		/// @brief Missing arguments for #TfsCommandRemove command.
+		TfsCommandParseErrorMissingRemoveArgs,
+
+		/// @brief Missing arguments for #TfsCommandMove command.
+		TfsCommandParseErrorMissingMoveArgs,
 	} kind;
 
 	/// @brief Error data
@@ -89,8 +112,11 @@ typedef struct TfsCommandParseError {
 
 		/// @brief Data for `InvalidType`.
 		struct {
-			/// @brief Character received
+			/// @brief Character received, '\0' is length isn't 1
 			char type;
+
+			/// @brief Length of the string received
+			size_t len;
 		} invalid_type;
 	} data;
 } TfsCommandParseError;

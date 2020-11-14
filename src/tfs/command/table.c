@@ -2,82 +2,97 @@
 
 // Imports
 #include <stdlib.h>	  // malloc, free
-#include <tfs/util.h> // tfs_clamp_size_t
+#include <tfs/util.h> // tfs_max_size_t
 
-/// @brief Reallocates the command table.
-/// @details
-/// If unable to reallocate the table, this function
-/// will call `exit` with `EXIT_FAILURE`.
-static void tfs_command_table_realloc(TfsCommandTable* self) {
-	// Double the current capacity so we don't allocate often
-	// Note: We allocate at least 4 because `2 * 0 == 0`.
-	size_t new_capacity = tfs_clamp_size_t(2 * self->capacity, 4, TFS_COMMAND_TABLE_MAX);
-
+TfsCommandTable tfs_command_table_new(size_t size) {
 	// Try to allocate
 	// Note: We can pass `NULL` to `realloc`.
-	TfsCommand* new_commands = realloc(self->commands, new_capacity * sizeof(TfsCommand));
-	if (new_commands == NULL) {
-		fprintf(stderr, "Unable to expand command table capacity to %zu\n", new_capacity);
+	TfsCommand* commands = malloc(size * sizeof(TfsCommand));
+	if (commands == NULL) {
+		fprintf(stderr, "Unable to allocate command table with %zu elements\n", size);
 		exit(EXIT_FAILURE);
 	}
 
-	// Note: No need to initialize new commands.
-
-	// Move everything into `self`
-	self->commands = new_commands;
-	self->capacity = new_capacity;
-}
-
-TfsCommandTable tfs_command_table_new(void) {
 	return (TfsCommandTable){
-		.commands  = NULL,
-		.capacity  = 0,
-		.first_idx = 0,
-		.last_idx  = 0,
+		.commands		 = commands,
+		.size			 = size,
+		.first_idx		 = 0,
+		.last_idx		 = 0,
+		.writer_exited	 = false,
+		.mutex			 = tfs_mutex_new(),
+		.reader_cond_var = tfs_cond_var_new(),
+		.writer_cond_var = tfs_cond_var_new(),
 	};
 }
 
 void tfs_command_table_destroy(TfsCommandTable* self) {
-	for (size_t n = self->first_idx; n < self->last_idx; n++) {
-		tfs_command_destroy(&self->commands[n]);
+	// Free any leftover commands.
+	while (self->first_idx != self->last_idx) {
+		TfsCommand command;
+		tfs_command_table_pop(self, &command);
+		tfs_command_destroy(&command);
 	}
 
 	free(self->commands);
 }
 
-bool tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
-	// If we're full, try to reallocate
-	if (self->last_idx == self->capacity) {
-		// If we reached the maximum size already, just return false
-		// instead of reallocating
-		if (self->capacity >= TFS_COMMAND_TABLE_MAX) {
-			return false;
-		}
+void tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
+	// Lock the table
+	tfs_mutex_lock(&self->mutex);
 
-		// Else just reallocate and continue
-		tfs_command_table_realloc(self);
+	// If we're 1 command behind the reader, we're full, so wait
+	// Note: We do this wait when we're 1 behind and not when we're
+	//       on the same element, so we can distinguish between empty
+	//       and full capacity.
+	while (self->last_idx == (self->first_idx + 1) % self->size) {
+		tfs_cond_var_wait(&self->writer_cond_var, &self->mutex);
 	}
 
-	// Add the command at the end
-	// Note: Since we reallocate if `self-last_idx` is
-	//       at the end, this index will always be valid.
+	// Then add the command at the end
 	self->commands[self->last_idx] = command;
-	self->last_idx++;
+	self->last_idx				   = (self->last_idx + 1) % self->size;
 
-	return true;
+	// Unlock and wake up any readers waiting
+	tfs_mutex_unlock(&self->mutex);
+	tfs_cond_var_signal(&self->reader_cond_var);
+}
+
+void tfs_command_table_writer_exit(TfsCommandTable* self) {
+	// Lock the table
+	tfs_mutex_lock(&self->mutex);
+
+	// Signal that the writer has exited.
+	self->writer_exited = true;
+
+	// Unlock and wake up all readers waiting
+	tfs_mutex_unlock(&self->mutex);
+	tfs_cond_var_broadcast(&self->reader_cond_var);
 }
 
 bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command) {
-	// If we don't have any commands, return Err
-	if (self->first_idx == self->last_idx) {
-		return false;
+	// Lock the table
+	tfs_mutex_lock(&self->mutex);
+
+	// While we're empty
+	while (self->last_idx == self->first_idx) {
+		// If the writer has exited, return false
+		if (self->writer_exited) {
+			return false;
+		}
+
+		// Else wait
+		tfs_cond_var_wait(&self->reader_cond_var, &self->mutex);
 	}
 
-	// Get our first command
+	// Get our command
 	if (command != NULL) {
 		*command = self->commands[self->first_idx];
 	}
-	self->first_idx++;
+	self->first_idx = (self->first_idx + 1) % self->size;
+
+	// Unlock and wake the writer waiting
+	tfs_mutex_unlock(&self->mutex);
+	tfs_cond_var_signal(&self->writer_cond_var);
 
 	return true;
 }

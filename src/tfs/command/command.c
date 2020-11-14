@@ -1,44 +1,56 @@
 #include "command.h"
 
+// Includes
+#include <string.h> // strlen
+
 void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out) {
 	switch (self->kind) {
-		case TfsCommandParseErrorNoCommand: {
-			fprintf(out, "No command was supplied\n");
+		case TfsCommandParseErrorReadLine:
+			fprintf(out, "Unable to read line from `in`\n");
 			break;
-		}
-
-		case TfsCommandParseErrorNoPath: {
-			fprintf(out, "No path was supplied\n");
+		case TfsCommandParseErrorNoCommand:
+			fprintf(out, "Missing command from line\n");
 			break;
-		}
-
-		case TfsCommandParseErrorNoType: {
-			fprintf(out, "No type was supplied\n");
+		case TfsCommandParseErrorInvalidCommand:
+			fprintf(out, "Invalid command type: '%c'\n", self->data.invalid_command.command);
 			break;
-		}
-
-		case TfsCommandParseErrorInvalidCommand: {
-			fprintf(out, "Invalid command '%c'\n", self->data.invalid_command.command);
+		case TfsCommandParseErrorMissingCreateArgs:
+			fprintf(out, "Missing arguments for `Create` command\n");
 			break;
-		}
-
-		case TfsCommandParseErrorInvalidType: {
-			fprintf(out, "Invalid type '%c'\n", self->data.invalid_type.type);
+		case TfsCommandParseErrorInvalidType:
+			fprintf(out, "Invalid type for `Create` command: '%c'\n", self->data.invalid_type.type);
 			break;
-		}
-
-		default: {
+		case TfsCommandParseErrorMissingSearchArgs:
+			fprintf(out, "Missing arguments for `Search` command\n");
 			break;
-		}
+		case TfsCommandParseErrorMissingRemoveArgs:
+			fprintf(out, "Missing arguments for `Remove` command\n");
+			break;
+		case TfsCommandParseErrorMissingMoveArgs:
+			fprintf(out, "Missing arguments for `Move` command\n");
+			break;
+		default:
+			break;
 	}
 }
 
 bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err) {
-	// Read the command and path
+	// Read a line
+	char line[1024];
+	if (fgets(line, sizeof(line), in) == NULL) {
+		if (err != NULL) {
+			*err = (TfsCommandParseError){
+				.kind = TfsCommandParseErrorReadLine,
+			};
+		}
+		return false;
+	}
+
+	// Read the arguments
 	char command_char;
-	char path_cstr[1024];
-	int tokens_read = fscanf(in, " %c %1024s", &command_char, path_cstr);
-	if (tokens_read <= 0) {
+	char args[1024][2];
+	int tokens_read = sscanf(line, " %c %1023s %1023s", &command_char, args[0], args[1]);
+	if (tokens_read < 1) {
 		if (err != NULL) {
 			*err = (TfsCommandParseError){
 				.kind = TfsCommandParseErrorNoCommand,
@@ -46,26 +58,15 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 		}
 		return false;
 	}
-	if (tokens_read == 1) {
-		if (err != NULL) {
-			*err = (TfsCommandParseError){
-				.kind = TfsCommandParseErrorNoPath,
-			};
-		}
-		return false;
-	}
 
-	// And check the command
 	switch (command_char) {
 		// Create path
+		// c <path> <inode-type>
 		case 'c': {
-			// Read the type
-			char type;
-			tokens_read = fscanf(in, " %c", &type);
-			if (tokens_read != 1) {
+			if (tokens_read != 3) {
 				if (err != NULL) {
 					*err = (TfsCommandParseError){
-						.kind = TfsCommandParseErrorNoType,
+						.kind = TfsCommandParseErrorMissingCreateArgs,
 					};
 				}
 				return false;
@@ -73,7 +74,17 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 
 			// Get the type of what we're creating
 			TfsInodeType inode_type;
-			switch (type) {
+			size_t type_len = strlen(args[1]);
+			if (type_len != 1) {
+				if (err != NULL) {
+					*err = (TfsCommandParseError){
+						.kind = TfsCommandParseErrorInvalidType,
+						.data = {.invalid_type = {.type = '\0', .len = type_len}},
+					};
+				}
+				return false;
+			}
+			switch (args[1][0]) {
 				case 'f': {
 					inode_type = TfsInodeTypeFile;
 					break;
@@ -86,14 +97,14 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 					if (err != NULL) {
 						*err = (TfsCommandParseError){
 							.kind = TfsCommandParseErrorInvalidType,
-							.data = {.invalid_type = {.type = type}},
+							.data = {.invalid_type = {.type = args[1][0], .len = 1}},
 						};
 					}
 					return false;
 				}
 			}
 
-			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(path_cstr));
+			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
 			if (command != NULL) {
 				command->kind			  = TfsCommandCreate;
 				command->data.create.path = path;
@@ -103,8 +114,18 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 		}
 
 		// Look up path
+		// l <path>
 		case 'l': {
-			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(path_cstr));
+			if (tokens_read != 2) {
+				if (err != NULL) {
+					*err = (TfsCommandParseError){
+						.kind = TfsCommandParseErrorMissingSearchArgs,
+					};
+				}
+				return false;
+			}
+
+			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
 			if (command != NULL) {
 				command->kind			  = TfsCommandSearch;
 				command->data.search.path = path;
@@ -112,12 +133,44 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 			return true;
 		}
 
-		// Delete path
+		// Remove path
+		// d <path>
 		case 'd': {
-			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(path_cstr));
+			if (tokens_read != 2) {
+				if (err != NULL) {
+					*err = (TfsCommandParseError){
+						.kind = TfsCommandParseErrorMissingRemoveArgs,
+					};
+				}
+				return false;
+			}
+
+			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
 			if (command != NULL) {
 				command->kind			  = TfsCommandRemove;
 				command->data.remove.path = path;
+			}
+			return true;
+		}
+
+		// Move path
+		// m <source> <dest>
+		case 'm': {
+			if (tokens_read != 3) {
+				if (err != NULL) {
+					*err = (TfsCommandParseError){
+						.kind = TfsCommandParseErrorMissingSearchArgs,
+					};
+				}
+				return false;
+			}
+
+			TfsPathOwned source = tfs_path_to_owned(tfs_path_from_cstr(args[1]));
+			TfsPathOwned dest	= tfs_path_to_owned(tfs_path_from_cstr(args[2]));
+			if (command != NULL) {
+				command->kind			  = TfsCommandMove;
+				command->data.move.source = source;
+				command->data.move.dest	  = dest;
 			}
 			return true;
 		}
@@ -147,6 +200,12 @@ void tfs_command_destroy(TfsCommand* command) {
 
 		case TfsCommandRemove: {
 			tfs_path_owned_destroy(&command->data.remove.path);
+			break;
+		}
+
+		case TfsCommandMove: {
+			tfs_path_owned_destroy(&command->data.move.source);
+			tfs_path_owned_destroy(&command->data.move.dest);
 			break;
 		}
 

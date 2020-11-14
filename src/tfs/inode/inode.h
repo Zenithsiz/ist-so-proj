@@ -10,7 +10,7 @@
 // Includes
 #include <tfs/inode/data.h> // TfsInodeData
 #include <tfs/inode/type.h> // TfsInodeType
-#include <tfs/lock.h>		// TfsLock
+#include <tfs/rw_lock.h>	// TfsRwLock
 
 /// @brief An inode
 /// @details
@@ -25,14 +25,14 @@ typedef struct TfsInode {
 	/// @brief Inode data
 	TfsInodeData data;
 
-	/// @brief Lock for this inode.
-	TfsLock lock;
+	/// @brief Rw lock for this inode.
+	TfsRwLock lock;
 } TfsInode;
 
 /// @brief Creates a new inode
 /// @param type The type of inode to create
 /// @param lock_kind The kind of lock to use for this inode
-TfsInode tfs_inode_new(TfsInodeType type, TfsLockKind lock_kind);
+TfsInode tfs_inode_new(TfsInodeType type);
 
 /// @brief Destroys an inode
 /// @details

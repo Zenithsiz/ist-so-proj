@@ -12,38 +12,42 @@
 #include <stdbool.h>			 // bool
 #include <stdlib.h>				 // size_t
 #include <tfs/command/command.h> // TfsCommand
-
-/// @brief Max number of commands
-#define TFS_COMMAND_TABLE_MAX 150000
+#include <tfs/cond_var.h>		 // TfsCondVar
+#include <tfs/mutex.h>			 // TfsMutex
 
 /// @brief The command table
 /// @details
-/// An expandable ring-buffer of commands.
-/// @warning
-/// All methods of this type are _not_ thread-safe
-/// and should use an external lock for synchronization.
-/// @note
-/// For the first exercice, this has a limit of @ref TFS_COMMAND_TABLE_MAX
-/// commands, which, once reached, will stop accepting new commands. This
-/// makes the 'ring' part of the buffer currently useless, but for the second
-/// exercice the indices will wrap around back to the beginning of the buffer
-/// to fully implement the 'ring' part of the buffer.
+/// An expandable ring-buffer of commands that
+/// acts as a single-producer-multiple-consumer.
 typedef struct TfsCommandTable {
 	/// @brief All of the commands
 	TfsCommand* commands;
 
-	/// @brief Buffer capacity
-	size_t capacity;
+	/// @brief Size of the table
+	size_t size;
 
 	/// @brief Index of first command
 	size_t first_idx;
 
 	/// @brief Index of last command, non-inclusive
 	size_t last_idx;
+
+	/// @brief If the writer has exited.
+	bool writer_exited;
+
+	/// @brief Mutex for synchronization.
+	TfsMutex mutex;
+
+	/// @brief Condition variable for reader to wait on
+	TfsCondVar reader_cond_var;
+
+	/// @brief Condition variable for writer to wait on
+	TfsCondVar writer_cond_var;
 } TfsCommandTable;
 
 /// @brief Creates a new, empty, command table
-TfsCommandTable tfs_command_table_new(void);
+/// @param size Size for the ring buffer
+TfsCommandTable tfs_command_table_new(size_t size);
 
 /// @brief Destroys a command table
 void tfs_command_table_destroy(TfsCommandTable* self);
@@ -51,13 +55,19 @@ void tfs_command_table_destroy(TfsCommandTable* self);
 /// @brief Pushes a command into this command table
 /// @param self
 /// @param command The command to push
-/// @return If successfully pushed.
-bool tfs_command_table_push(TfsCommandTable* self, TfsCommand command);
+void tfs_command_table_push(TfsCommandTable* self, TfsCommand command);
+
+/// @brief Signals all current and future readers that the writer has left and
+///        for them to quit.
+void tfs_command_table_writer_exit(TfsCommandTable* self);
 
 /// @brief Pops a command from this command table
+/// @details
+/// This will wait for a writer to push a command onto the table.
+/// If the command
 /// @param self
 /// @param[out] command The command popped
-/// @return If successfully popped.
+/// @return Returns false if the
 bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command);
 
 #endif

@@ -15,9 +15,10 @@
 #include <stddef.h>			   // size_t
 #include <stdio.h>			   // fprintf, stderr, stdout, stdin
 #include <string.h>			   // strerror
+#include <sys/types.h>		   // ssize_t
 #include <tfs/command/table.h> // TfsCommandTable
 #include <tfs/fs.h>			   // TfsFs
-#include <tfs/lock.h>		   // TfsLock
+#include <tfs/rw_lock.h>	   // TfsRwLock
 #include <time.h>			   // timespec, clock_gettime
 
 /// @brief Data received by each worker
@@ -27,16 +28,6 @@ typedef struct WorkerData {
 
 	/// @brief Command table
 	TfsCommandTable* command_table;
-
-	/// @brief Command lock
-	/// @details
-	/// This lock serves to ensure commands are executed
-	/// as-if sequentially. The lock is locked for writes
-	/// when popping an element from the table. After this
-	/// the file system locks the relevant inodes for the
-	/// execution of the command and unlocks the command
-	/// table lock, allowing other commands to be executed.
-	TfsLock* command_table_lock;
 } WorkerData;
 
 /// @brief Filesystem worker to run in each thread.
@@ -58,8 +49,8 @@ static void open_io(const char* in_filename, const char* out_filename, FILE** in
 static void close_io(FILE** in, FILE** out);
 
 int main(int argc, char** argv) {
-	if (argc != 5) {
-		fprintf(stderr, "Usage: ./tecnicofs <input> <out> <num-threads> <sync>\n");
+	if (argc != 4) {
+		fprintf(stderr, "Usage: ./tecnicofs <input> <out> <num-threads>\n");
 		return EXIT_FAILURE;
 	}
 
@@ -69,49 +60,22 @@ int main(int argc, char** argv) {
 	open_io(argv[1], argv[2], &in, &out);
 
 	// Get number of threads
+	// TODO: Check when negative.
 	char* argv_3_end;
 	size_t num_threads = strtoul(argv[3], &argv_3_end, 0);
-	if (argv_3_end == NULL || argv_3_end[0] != '\0') {
+	if (argv_3_end == NULL || argv_3_end[0] != '\0' || (ssize_t)num_threads < 0) {
 		fprintf(stderr, "Unable to parse number of threads\n");
 		return EXIT_FAILURE;
 	}
 
-	// Get sync strategy
-	TfsLockKind lock_kind;
-	if (strcmp(argv[4], "mutex") == 0) {
-		lock_kind = TfsLockKindMutex;
-	}
-	else if (strcmp(argv[4], "rwlock") == 0) {
-		lock_kind = TfsLockKindRWLock;
-	}
-	else if (strcmp(argv[4], "nosync") == 0) {
-		if (num_threads != 1) {
-			fprintf(stderr, "`nosync` sync strategy can only be used with a single thread\n");
-			return EXIT_FAILURE;
-		}
-		lock_kind = TfsLockKindNone;
-	}
-	else {
-		fprintf(stderr, "Invalid sync strategy '%s'\n", argv[4]);
-		return EXIT_FAILURE;
-	}
-
-	// Create the command table and it's lock, then fill it from the input file.
-	// Note: The command table lock is always a mutex (unless the sync strategy
-	//       is None, where we don't have any lock), as we'll never use shared
-	//       access with it.
-	TfsCommandTable command_table = tfs_command_table_new();
-	TfsLock command_table_lock	  = tfs_lock_new(lock_kind == TfsLockKindNone ? TfsLockKindNone : TfsLockKindMutex);
-	fill_command_table(&command_table, in);
-
-	// Create the file system
-	TfsFs fs = tfs_fs_new(lock_kind);
+	// Create the command table and the file system
+	TfsCommandTable command_table = tfs_command_table_new(128);
+	TfsFs fs					  = tfs_fs_new();
 
 	// Bundle all data together for the workers
 	WorkerData data = (WorkerData){
-		.command_table		= &command_table,
-		.fs					= &fs,
-		.command_table_lock = &command_table_lock,
+		.command_table = &command_table,
+		.fs			   = &fs,
 	};
 
 	// Get the start time of the execution
@@ -127,6 +91,9 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 	}
+
+	// Fill the command table
+	fill_command_table(&command_table, in);
 
 	// Then join them
 	for (size_t n = 0; n < num_threads; n++) {
@@ -147,7 +114,6 @@ int main(int argc, char** argv) {
 	tfs_fs_print(&fs, out);
 
 	// Destroy all resources in reverse order of creation.
-	tfs_lock_destroy(&command_table_lock);
 	tfs_command_table_destroy(&command_table);
 	tfs_fs_destroy(&fs);
 	close_io(&in, &out);
@@ -159,11 +125,10 @@ static void* worker_thread_fn(void* arg) {
 	WorkerData* data = arg;
 
 	while (1) {
-		// Lock and pop a command from the table
-		tfs_lock_lock(data->command_table_lock, TfsLockAccessUnique);
+		// Pop a command from the table.
+		// If it returns `false`, we should exit.
 		TfsCommand command;
 		if (!tfs_command_table_pop(data->command_table, &command)) {
-			tfs_lock_unlock(data->command_table_lock);
 			break;
 		}
 
@@ -177,17 +142,17 @@ static void* worker_thread_fn(void* arg) {
 				TfsInodeType inode_type = command.data.create.type;
 				TfsPath path			= tfs_path_owned_borrow(command.data.create.path);
 
-				fprintf(stderr, "Creating %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
+				fprintf(stderr, "Creating %s '%.*s'\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 
 				// Lock the filesystem and create the file
 				TfsFsCreateError err;
-				TfsInodeIdx idx = tfs_fs_create(data->fs, path, inode_type, data->command_table_lock, &err);
+				TfsInodeIdx idx = tfs_fs_create(data->fs, path, inode_type, &err);
 				if (idx == TFS_INODE_IDX_NONE) {
-					fprintf(stderr, "Unable to create %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
+					fprintf(stderr, "Unable to create %s '%.*s'\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 					tfs_fs_create_error_print(&err, stderr);
 				}
 				else {
-					fprintf(stderr, "Successfully created %s %.*s (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, idx);
+					fprintf(stderr, "Successfully created %s '%.*s' (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, idx);
 					// SAFETY: We received it locked from `tfs_fs_create`
 					assert(tfs_fs_unlock_inode(data->fs, idx));
 				}
@@ -198,16 +163,16 @@ static void* worker_thread_fn(void* arg) {
 			case TfsCommandRemove: {
 				TfsPath path = tfs_path_owned_borrow(command.data.remove.path);
 
-				fprintf(stderr, "Removing %.*s\n", (int)path.len, path.chars);
+				fprintf(stderr, "Removing '%.*s'\n", (int)path.len, path.chars);
 
 				TfsFsRemoveError err;
-				if (!tfs_fs_remove(data->fs, path, data->command_table_lock, &err)) {
-					fprintf(stderr, "Unable to remove %.*s\n", (int)path.len, path.chars);
+				if (!tfs_fs_remove(data->fs, path, &err)) {
+					fprintf(stderr, "Unable to remove '%.*s'\n", (int)path.len, path.chars);
 					tfs_fs_remove_error_print(&err, stderr);
 				}
 				else {
 					// Note: No need to unlock anything, as we just remove the inode
-					fprintf(stderr, "Successfully removed %.*s\n", (int)path.len, path.chars);
+					fprintf(stderr, "Successfully removed '%.*s'\n", (int)path.len, path.chars);
 				}
 				break;
 			}
@@ -215,18 +180,38 @@ static void* worker_thread_fn(void* arg) {
 			case TfsCommandSearch: {
 				TfsPath path = tfs_path_owned_borrow(command.data.search.path);
 
-				fprintf(stderr, "Searching %.*s\n", (int)path.len, path.chars);
+				fprintf(stderr, "Searching '%.*s'\n", (int)path.len, path.chars);
 
 				TfsInodeType inode_type;
 				TfsFsFindError err;
-				TfsInodeIdx idx = tfs_fs_find(data->fs, path, data->command_table_lock, TfsLockAccessShared, &inode_type, NULL, &err);
+				TfsInodeIdx idx = tfs_fs_find(data->fs, path, TfsRwLockAccessShared, &inode_type, NULL, &err);
 				if (idx == TFS_INODE_IDX_NONE) {
-					fprintf(stderr, "Unable to find %.*s\n", (int)path.len, path.chars);
+					fprintf(stderr, "Unable to find '%.*s'\n", (int)path.len, path.chars);
 					tfs_fs_find_error_print(&err, stderr);
 				}
 				else {
-					fprintf(stderr, "Found %s %.*s\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
+					fprintf(stderr, "Found %s '%.*s'\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 					// SAFETY: We received it locked from `tfs_fs_find`.
+					assert(tfs_fs_unlock_inode(data->fs, idx));
+				}
+				break;
+			}
+
+			case TfsCommandMove: {
+				TfsPath source = tfs_path_owned_borrow(command.data.move.source);
+				TfsPath dest   = tfs_path_owned_borrow(command.data.move.dest);
+
+				fprintf(stderr, "Moving '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
+
+				TfsFsMoveError err;
+				TfsInodeIdx idx = tfs_fs_move(data->fs, source, dest, &err);
+				if (idx == TFS_INODE_IDX_NONE) {
+					fprintf(stderr, "Unable to move '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
+					tfs_fs_move_error_print(&err, stderr);
+				}
+				else {
+					fprintf(stderr, "Moved '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
+					// SAFETY: We received it locked from `tfs_fs_move`.
 					assert(tfs_fs_unlock_inode(data->fs, idx));
 				}
 				break;
@@ -276,11 +261,10 @@ static void fill_command_table(TfsCommandTable* table, FILE* in) {
 		}
 
 		// Then push it
-		if (!tfs_command_table_push(table, command)) {
-			fprintf(stderr, "Unable to push command onto table, table is full\n");
-			exit(EXIT_FAILURE);
-		}
+		tfs_command_table_push(table, command);
 	}
+
+	tfs_command_table_writer_exit(table);
 }
 
 static void open_io(const char* in_filename, const char* out_filename, FILE** in, FILE** out) {

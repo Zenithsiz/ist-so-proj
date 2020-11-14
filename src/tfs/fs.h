@@ -10,8 +10,8 @@
 // Imports
 #include <stdio.h>			 // FILE*
 #include <tfs/inode/table.h> // TfsInodeTable
-#include <tfs/lock.h>		 // TfsLockKind
 #include <tfs/path.h>		 // TfsPath
+#include <tfs/rw_lock.h>	 // TfsRwLock
 
 /// @brief The file system
 /// @details
@@ -136,6 +136,77 @@ typedef struct TfsFsRemoveError {
 	} data;
 } TfsFsRemoveError;
 
+/// @brief Error type for #tfs_fs_move
+typedef struct TfsFsMoveError {
+	/// @brief Error kind
+	enum {
+
+		/// @brief Unable to find the common ancestor
+		/// @details
+		/// Given the paths 'a/b/c1' and 'a/b/c2', the path 'a/b'
+		/// was not found.
+		TfsFsMoveErrorInexistentCommonAncestor,
+
+		/// @brief The origin path was the destination's parent.
+		/// @details
+		/// Given the origin path 'a/b/c' and destination path 'a/b/c/d',
+		/// the origin path was the destination's parent.
+		TfsFsMoveErrorOriginDestinationParent,
+
+		/// @brief The destination path was a parent of the origin.
+		/// @details
+		/// Given the origin path 'a/b/c/d' and destination path 'a/b/c',
+		/// the destination path was an existing folder.
+		TfsFsMoveErrorDestinationOriginParent,
+
+		/// @brief Unable to find the origin path's parent directory.
+		/// @details
+		/// Given the origin path 'a/b/c', the path 'a/b' was not found.
+		TfsFsMoveErrorInexistentOriginParentDir,
+
+		/// @brief Unable to find the destination path's parent directory.
+		/// @details
+		/// Given the destination path, 'a/b/c', the path 'a/b' was not found.
+		TfsFsMoveErrorInexistentDestinationParentDir,
+
+		/// @brief The origin path's parent wasn't a directory
+		/// @details
+		/// Given a origin path 'a/b/c', the path 'a/b' was a directory
+		TfsFsMoveErrorOriginParentNotDir,
+
+		/// @brief The destination path's parent wasn't a directory
+		/// @details
+		/// Given a destination path 'a/b/c', the path 'a/b' was a directory
+		TfsFsMoveErrorDestinationParentNotDir,
+
+		/// @brief Unable to find the origin path's.
+		/// @details
+		/// Given the origin path 'a/b/c', the entry 'c' was not found in 'a/b'.
+		TfsFsMoveErrorOriginNotFound,
+
+		/// @brief Unable to add the new entry to the destination parent directory
+		/// @details
+		/// Given a destination path 'a/b/c', 'c' was not able to be added
+		/// to 'a/b'.
+		TfsFsMoveErrorAddEntry,
+	} kind;
+
+	/// @brief Error data
+	union {
+		/// @brief Data for variant TfsFsMoveErrorInexistentCommonAncestor
+		struct {
+			/// @brief Underlying error
+			TfsFsFindError err;
+		} inexistent_common_ancestor;
+
+		/// @brief Data for variant TfsFsMoveErrorAddEntry
+		struct {
+			/// @brief Underlying error
+			TfsInodeDirAddEntryError err;
+		} add_entry;
+	} data;
+} TfsFsMoveError;
+
 /// @brief Prints a textual representation of @p self to @p out
 /// @param self
 /// @param out File to output to.
@@ -151,9 +222,14 @@ void tfs_fs_create_error_print(const TfsFsCreateError* self, FILE* out);
 /// @param out File to output to.
 void tfs_fs_remove_error_print(const TfsFsRemoveError* self, FILE* out);
 
+/// @brief Prints a textual representation of @p self to @p out
+/// @param self
+/// @param out File to output to.
+void tfs_fs_move_error_print(const TfsFsMoveError* self, FILE* out);
+
 /// @brief Creates a new file system
 /// @param lock_kind Lock kind used by all inodes.
-TfsFs tfs_fs_new(TfsLockKind lock_kind);
+TfsFs tfs_fs_new(void);
 
 /// @brief Destroys a file system
 void tfs_fs_destroy(TfsFs* self);
@@ -162,25 +238,22 @@ void tfs_fs_destroy(TfsFs* self);
 /// @param self
 /// @param path The path of the inode to create
 /// @param type The type of inode to create.
-/// @param lock Lock to unlock once operation is atomic.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the created inode. Or #TFS_INODE_IDX_NONE if an error occurred.
 /// @details
 /// The returned inode will be locked, and _must_ be unlocked.
-TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsLock* lock, TfsFsCreateError* err);
+TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsFsCreateError* err);
 
 /// @brief Removes an inode with path @p path
 /// @param self
 /// @param path The path of the inode to remove
-/// @param lock Lock to unlock once operation is atomic.
 /// @param[out] err Set if any errors occur.
 /// @return If successfully removed.
-bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* err);
+bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsFsRemoveError* err);
 
 /// @brief Locks and retrives an inode's data
 /// @param self
 /// @param path The path of the inode to get.
-/// @param lock Lock to unlock once operation is atomic.
 /// @param access Access type to lock te result with.
 /// @param[out] type The type of the inode.
 /// @param[out] data The data of the inode.
@@ -191,7 +264,19 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsLock* lock, TfsFsRemoveError* e
 /// If @p access is `Unique`, it is guaranteed, once @p lock is released,
 /// that no other calls to this function will lock the inode at @p path
 /// before the caller unlocks the returned inode.
-TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsLock* lock, TfsLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsFindError* err);
+TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsFindError* err);
+
+/// @brief Moves an inode
+/// @param self
+/// @param orig_path The origin path to move from
+/// @param dest_path The destination path to move to.
+/// All parents of this path must exist.
+/// @param[out] err Set if any errors occur.
+/// @return Index of the moved inode, if successful. Otherwise #TFS_INODE_IDX_NONE
+/// @details
+/// This move is atomic, and the file system will require unique access
+/// to both paths' parents and the origin file.
+TfsInodeIdx tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsFsMoveError* err);
 
 /// @brief Unlocks an inode
 /// @param self

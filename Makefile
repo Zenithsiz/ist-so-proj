@@ -47,7 +47,12 @@ PROG_DEPS := $(patsubst src/%.c,obj/%.d,$(PROG_SRCS))
 .PHONY: all clean test
 
 # Build all program binaries by default.
-all: $(PROG_BINS)
+all: tecnicofs $(PROG_BINS)
+
+# Special case to bring tecnicofs to the root level directory
+tecnicofs: build/bin/tecnicofs
+	@echo $@: Moving binary
+	@cp '$<' '$@'
 
 # Binaries
 $(TEST_BINS) $(PROG_BINS): build/%: obj/%.o $(LIB_OBJS)

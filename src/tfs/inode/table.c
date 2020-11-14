@@ -28,7 +28,7 @@ static TfsInodeIdx tfs_inode_table_realloc(TfsInodeTable* self) {
 
 	// Set all new inodes as empty, except the first.
 	for (size_t n = self->capacity + 1; n < new_capacity; n++) {
-		new_inodes[n] = tfs_inode_new(TfsInodeTypeNone, self->lock_kind);
+		new_inodes[n] = tfs_inode_new(TfsInodeTypeNone);
 	}
 
 	// Get the empty index as the first new inode.
@@ -42,19 +42,18 @@ static TfsInodeIdx tfs_inode_table_realloc(TfsInodeTable* self) {
 	return empty_idx;
 }
 
-TfsInodeTable tfs_inode_table_new(TfsLockKind lock_kind) {
+TfsInodeTable tfs_inode_table_new(void) {
 	return (TfsInodeTable){
-		.inodes	   = NULL,
-		.capacity  = 0,
-		.lock_kind = lock_kind,
-		.rw_lock   = tfs_lock_new(TfsLockKindRWLock),
+		.inodes	  = NULL,
+		.capacity = 0,
+		.rw_lock  = tfs_rw_lock_new(),
 	};
 }
 
 void tfs_inode_table_destroy(TfsInodeTable* self) {
 	// Lock our rwlock for unique access, so we wait for
 	// any borrows to end
-	tfs_lock_lock(&self->rw_lock, TfsLockAccessUnique);
+	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessUnique);
 
 	// Destroy each inode
 	for (size_t n = 0; n < self->capacity; n++) {
@@ -62,8 +61,8 @@ void tfs_inode_table_destroy(TfsInodeTable* self) {
 	}
 
 	// Then unlock and destroy the lock
-	tfs_lock_unlock(&self->rw_lock);
-	tfs_lock_destroy(&self->rw_lock);
+	tfs_rw_lock_unlock(&self->rw_lock);
+	tfs_rw_lock_destroy(&self->rw_lock);
 
 	// Free the inode table and set it to NULL
 	// Note: We can pass `NULL` here safely.
@@ -71,9 +70,9 @@ void tfs_inode_table_destroy(TfsInodeTable* self) {
 	self->inodes = NULL;
 }
 
-TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockAccess access) {
+TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsRwLockAccess access) {
 	// Lock our rwlock for unique access
-	tfs_lock_lock(&self->rw_lock, TfsLockAccessUnique);
+	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessUnique);
 
 	// Find the first non-empty node
 	TfsInodeIdx empty_idx = TFS_INODE_IDX_NONE;
@@ -90,21 +89,21 @@ TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsLockA
 	}
 
 	// Then initialize and lock the inode
-	self->inodes[empty_idx] = tfs_inode_new(type, self->lock_kind);
-	tfs_lock_lock(&self->inodes[empty_idx].lock, access);
+	self->inodes[empty_idx] = tfs_inode_new(type);
+	tfs_rw_lock_lock(&self->inodes[empty_idx].lock, access);
 
 	// Then downgrade our write lock to read
 	// Note: Although this isn't atomic, it won't affect the newly
 	//       created inode, as we just return an index, so the table
 	//       may reallocate without worry.
-	tfs_lock_unlock(&self->rw_lock);
-	tfs_lock_lock(&self->rw_lock, TfsLockAccessShared);
+	tfs_rw_lock_unlock(&self->rw_lock);
+	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessShared);
 
 	// Unlock and return.
 	return empty_idx;
 }
 
-bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess access, TfsInodeType* type, TfsInodeData** data) {
+bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data) {
 	// If the index is out of bounds, or empty, return error
 	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
 		return false;
@@ -113,8 +112,8 @@ bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsLockAccess ac
 	// The lock ourselves and the inode
 	// Note: We keep our lock locked for shared access until
 	//       the user returns it to `unlock_inode`.
-	tfs_lock_lock(&self->rw_lock, TfsLockAccessShared);
-	tfs_lock_lock(&self->inodes[idx].lock, access);
+	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessShared);
+	tfs_rw_lock_lock(&self->inodes[idx].lock, access);
 
 	// Set it's data and return
 	// SAFETY: We and the inode are locked
@@ -130,8 +129,8 @@ bool tfs_inode_table_unlock_inode(TfsInodeTable* self, TfsInodeIdx idx) {
 	}
 
 	// Else unlock the inode and unlock our rwlock
-	tfs_lock_unlock(&self->inodes[idx].lock);
-	tfs_lock_unlock(&self->rw_lock);
+	tfs_rw_lock_unlock(&self->inodes[idx].lock);
+	tfs_rw_lock_unlock(&self->rw_lock);
 	return true;
 }
 
@@ -143,8 +142,8 @@ bool tfs_inode_table_remove_inode(TfsInodeTable* self, TfsInodeIdx idx) {
 
 	// Else empty the inode, unlock it and unlock our rwlock
 	tfs_inode_empty(&self->inodes[idx]);
-	tfs_lock_unlock(&self->inodes[idx].lock);
-	tfs_lock_unlock(&self->rw_lock);
+	tfs_rw_lock_unlock(&self->inodes[idx].lock);
+	tfs_rw_lock_unlock(&self->rw_lock);
 	return true;
 }
 
