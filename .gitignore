@@ -9,5 +9,5 @@ build/
 # Docs
 docs/
 
-# Resources
-resources/
+# Test output
+resources/out
