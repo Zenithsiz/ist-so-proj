@@ -1,7 +1,7 @@
 /// @file
 /// @brief Thread synchronization condition locks.
 /// @details
-/// This file defines the #TfsCondLock type, used
+/// This file defines the #TfsCondVar type, used
 /// as a wrapper over condition locks
 
 #ifndef TFS_COND_VAR_H

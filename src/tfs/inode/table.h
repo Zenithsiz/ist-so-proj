@@ -38,7 +38,6 @@ typedef struct TfsInodeTable {
 } TfsInodeTable;
 
 /// @brief Creates a new, empty, inode table
-/// @param lock_kind Lock kind used by all inodes.
 TfsInodeTable tfs_inode_table_new(void);
 
 /// @brief Destroys the inode table

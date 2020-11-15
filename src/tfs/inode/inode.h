@@ -31,7 +31,6 @@ typedef struct TfsInode {
 
 /// @brief Creates a new inode
 /// @param type The type of inode to create
-/// @param lock_kind The kind of lock to use for this inode
 TfsInode tfs_inode_new(TfsInodeType type);
 
 /// @brief Destroys an inode

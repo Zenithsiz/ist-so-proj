@@ -228,7 +228,6 @@ void tfs_fs_remove_error_print(const TfsFsRemoveError* self, FILE* out);
 void tfs_fs_move_error_print(const TfsFsMoveError* self, FILE* out);
 
 /// @brief Creates a new file system
-/// @param lock_kind Lock kind used by all inodes.
 TfsFs tfs_fs_new(void);
 
 /// @brief Destroys a file system

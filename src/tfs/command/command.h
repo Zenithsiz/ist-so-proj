@@ -86,19 +86,19 @@ typedef struct TfsCommandParseError {
 		/// @brief Invalid command
 		TfsCommandParseErrorInvalidCommand,
 
-		/// @brief Missing arguments for #TfsCommandCreate command.
+		/// @brief Missing arguments for `Create` command.
 		TfsCommandParseErrorMissingCreateArgs,
 
-		/// @brief Invalid inode type for #TfsCommandCreate command.
+		/// @brief Invalid inode type for `Create` command.
 		TfsCommandParseErrorInvalidType,
 
-		/// @brief Missing arguments for #TfsCommandSearch command.
+		/// @brief Missing arguments for `Search` command.
 		TfsCommandParseErrorMissingSearchArgs,
 
-		/// @brief Missing arguments for #TfsCommandRemove command.
+		/// @brief Missing arguments for `Remove` command.
 		TfsCommandParseErrorMissingRemoveArgs,
 
-		/// @brief Missing arguments for #TfsCommandMove command.
+		/// @brief Missing arguments for `Move` command.
 		TfsCommandParseErrorMissingMoveArgs,
 	} kind;
 
