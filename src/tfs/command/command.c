@@ -159,14 +159,14 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 			if (tokens_read != 3) {
 				if (err != NULL) {
 					*err = (TfsCommandParseError){
-						.kind = TfsCommandParseErrorMissingSearchArgs,
+						.kind = TfsCommandParseErrorMissingMoveArgs,
 					};
 				}
 				return false;
 			}
 
-			TfsPathOwned source = tfs_path_to_owned(tfs_path_from_cstr(args[1]));
-			TfsPathOwned dest	= tfs_path_to_owned(tfs_path_from_cstr(args[2]));
+			TfsPathOwned source = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
+			TfsPathOwned dest	= tfs_path_to_owned(tfs_path_from_cstr(args[1]));
 			if (command != NULL) {
 				command->kind			  = TfsCommandMove;
 				command->data.move.source = source;

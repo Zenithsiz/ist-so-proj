@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
 	// TODO: Check when negative.
 	char* argv_3_end;
 	size_t num_threads = strtoul(argv[3], &argv_3_end, 0);
-	if (argv_3_end == NULL || argv_3_end[0] != '\0' || (ssize_t)num_threads < 0) {
+	if (argv_3_end == NULL || argv_3_end[0] != '\0' || (ssize_t)num_threads <= 0) {
 		fprintf(stderr, "Unable to parse number of threads\n");
 		return EXIT_FAILURE;
 	}
@@ -204,13 +204,14 @@ static void* worker_thread_fn(void* arg) {
 				fprintf(stderr, "Moving '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
 
 				TfsFsMoveError err;
-				TfsInodeIdx idx = tfs_fs_move(data->fs, source, dest, &err);
+				TfsInodeType inode_type;
+				TfsInodeIdx idx = tfs_fs_move(data->fs, source, dest, TfsRwLockAccessShared, &inode_type, NULL, &err);
 				if (idx == TFS_INODE_IDX_NONE) {
 					fprintf(stderr, "Unable to move '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
 					tfs_fs_move_error_print(&err, stderr);
 				}
 				else {
-					fprintf(stderr, "Moved '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
+					fprintf(stderr, "Successfully moved %s '%.*s' (Inode %zu) to '%.*s'\n", tfs_inode_type_str(inode_type), (int)source.len, source.chars, idx, (int)dest.len, dest.chars);
 					// SAFETY: We received it locked from `tfs_fs_move`.
 					assert(tfs_fs_unlock_inode(data->fs, idx));
 				}

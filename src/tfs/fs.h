@@ -254,7 +254,7 @@ bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsFsRemoveError* err);
 /// @brief Locks and retrives an inode's data
 /// @param self
 /// @param path The path of the inode to get.
-/// @param access Access type to lock te result with.
+/// @param access Access type to lock the result with.
 /// @param[out] type The type of the inode.
 /// @param[out] data The data of the inode.
 /// @param[out] err Set if any errors occur.
@@ -271,12 +271,17 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access, TfsIn
 /// @param orig_path The origin path to move from
 /// @param dest_path The destination path to move to.
 /// All parents of this path must exist.
+/// @param access Access type to lock the source with.
+/// @param[out] type The type of the source inode.
+/// @param[out] data The data of the source inode.
 /// @param[out] err Set if any errors occur.
 /// @return Index of the moved inode, if successful. Otherwise #TFS_INODE_IDX_NONE
+/// @warning
+/// The returned inode is _not_ locked.
 /// @details
 /// This move is atomic, and the file system will require unique access
 /// to both paths' parents and the origin file.
-TfsInodeIdx tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsFsMoveError* err);
+TfsInodeIdx tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsMoveError* err);
 
 /// @brief Unlocks an inode
 /// @param self
