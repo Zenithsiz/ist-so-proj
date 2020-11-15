@@ -60,7 +60,6 @@ int main(int argc, char** argv) {
 	open_io(argv[1], argv[2], &in, &out);
 
 	// Get number of threads
-	// TODO: Check when negative.
 	char* argv_3_end;
 	size_t num_threads = strtoul(argv[3], &argv_3_end, 0);
 	if (argv_3_end == NULL || argv_3_end[0] != '\0' || (ssize_t)num_threads <= 0) {
