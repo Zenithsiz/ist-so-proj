@@ -567,7 +567,7 @@ static TfsInodeIdx tfs_fs_find_from(
 		// with the child node.
 		assert(tfs_inode_table_lock(&self->inode_table, child_idx, access, &cur_type, &cur_data));
 		// Note: If the user told us to not unlock the start inode, skip it.
-		if (unlock_start && cur_idx == start_idx) {
+		if ((unlock_start && cur_idx == start_idx) || (cur_idx != start_idx)) {
 			assert(tfs_inode_table_unlock_inode(&self->inode_table, cur_idx));
 		}
 		cur_idx = child_idx;
