@@ -33,7 +33,13 @@ void tfs_command_table_destroy(TfsCommandTable* self) {
 		tfs_command_destroy(&command);
 	}
 
+	// Free the commands buffer
 	free(self->commands);
+
+	// Then the mutex and cond vars
+	tfs_mutex_destroy(&self->mutex);
+	tfs_cond_var_destroy(&self->reader_cond_var);
+	tfs_cond_var_destroy(&self->writer_cond_var);
 }
 
 void tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
@@ -53,8 +59,8 @@ void tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
 	self->last_idx				   = (self->last_idx + 1) % self->size;
 
 	// Unlock and wake up any readers waiting
-	tfs_mutex_unlock(&self->mutex);
 	tfs_cond_var_signal(&self->reader_cond_var);
+	tfs_mutex_unlock(&self->mutex);
 }
 
 void tfs_command_table_writer_exit(TfsCommandTable* self) {
@@ -65,8 +71,8 @@ void tfs_command_table_writer_exit(TfsCommandTable* self) {
 	self->writer_exited = true;
 
 	// Unlock and wake up all readers waiting
-	tfs_mutex_unlock(&self->mutex);
 	tfs_cond_var_broadcast(&self->reader_cond_var);
+	tfs_mutex_unlock(&self->mutex);
 }
 
 bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command) {
@@ -77,6 +83,7 @@ bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command) {
 	while (self->last_idx == self->first_idx) {
 		// If the writer has exited, return false
 		if (self->writer_exited) {
+			tfs_mutex_unlock(&self->mutex);
 			return false;
 		}
 
@@ -91,8 +98,8 @@ bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command) {
 	self->first_idx = (self->first_idx + 1) % self->size;
 
 	// Unlock and wake the writer waiting
-	tfs_mutex_unlock(&self->mutex);
 	tfs_cond_var_signal(&self->writer_cond_var);
+	tfs_mutex_unlock(&self->mutex);
 
 	return true;
 }

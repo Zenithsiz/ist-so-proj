@@ -104,16 +104,18 @@ TfsInodeIdx tfs_inode_table_add(TfsInodeTable* self, TfsInodeType type, TfsRwLoc
 }
 
 bool tfs_inode_table_lock(TfsInodeTable* self, TfsInodeIdx idx, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data) {
-	// If the index is out of bounds, or empty, return error
-	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
-		return false;
-	}
-
 	// The lock ourselves and the inode
 	// Note: We keep our lock locked for shared access until
 	//       the user returns it to `unlock_inode`.
 	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessShared);
 	tfs_rw_lock_lock(&self->inodes[idx].lock, access);
+
+	// If the index is out of bounds, or empty, return error
+	if (idx >= self->capacity || self->inodes[idx].type == TfsInodeTypeNone) {
+		tfs_rw_lock_unlock(&self->rw_lock);
+		tfs_rw_lock_unlock(&self->inodes[idx].lock);
+		return false;
+	}
 
 	// Set it's data and return
 	// SAFETY: We and the inode are locked

@@ -48,7 +48,7 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 
 	// Read the arguments
 	char command_char;
-	char args[1024][2];
+	char args[2][1024];
 	int tokens_read = sscanf(line, " %c %1023s %1023s", &command_char, args[0], args[1]);
 	if (tokens_read < 1) {
 		if (err != NULL) {
