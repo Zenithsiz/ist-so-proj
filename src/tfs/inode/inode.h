@@ -29,9 +29,15 @@ typedef struct TfsInode {
 	TfsRwLock lock;
 } TfsInode;
 
-/// @brief Creates a new inode
-/// @param type The type of inode to create
-TfsInode tfs_inode_new(TfsInodeType type);
+/// @brief Creates a new, empty, inode
+TfsInode tfs_inode_new(void);
+
+/// @brief Initializes a node
+/// @param self
+/// @param type The type of inode to initialize
+/// @details
+/// This will _not_ reset the lock, simply change the type of the inode
+void tfs_inode_init(TfsInode* self, TfsInodeType type);
 
 /// @brief Destroys an inode
 /// @details

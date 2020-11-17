@@ -9,10 +9,10 @@
 /// @param self
 /// @param path The path to lock (all components except the last will be locked for reading).
 /// @param start_inode The inode to start at. _Must_ be locked.
-/// @param locked_inodes Array to store all locked inodes. Must be able to store as many components as exist in `path`
-/// plus 1.
+/// @param locked_inodes Array to store all locked inodes. Must be able to store as many components as exist in `path`.
 /// @param access Type of access to lock the last component with
-/// plus one.
+/// @details
+/// Save all further inodes found (_not_ including the start inode) in @p locked_inodes
 static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 	TfsPath path,
 	TfsLockedInode start_inode,
@@ -21,18 +21,15 @@ static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 ) {
 	TfsPath cur_path = tfs_path_trim(path);
 
-	// Lock root
-	size_t locked_inodes_len = 1;
-	locked_inodes[0] = start_inode;
+	TfsLockedInode cur_inode = start_inode;
+	size_t locked_inodes_len = 0;
 
 	while (cur_path.len != 0) {
 		// Get the next component
 		TfsPath cur_dir = tfs_path_pop_first(cur_path, &cur_path);
 
-		TfsLockedInode* cur_inode = &locked_inodes[locked_inodes_len - 1];
-
 		// If we're not a directory, return Err
-		if (cur_inode->type != TfsInodeTypeDir) {
+		if (cur_inode.type != TfsInodeTypeDir) {
 			// Unlock all inodes locked so far
 			for (size_t n = 0; n < locked_inodes_len; n++) {
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
@@ -53,7 +50,7 @@ static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 
 		// Else try to get the child node's index
 		TfsInodeDirSearchByNameResult find_child_result =
-			tfs_inode_dir_search_by_name(&cur_inode->data->dir, cur_dir.chars, cur_dir.len);
+			tfs_inode_dir_search_by_name(&cur_inode.data->dir, cur_dir.chars, cur_dir.len);
 		if (!find_child_result.success) {
 			// Unlock all inodes locked so far
 			for (size_t n = 0; n < locked_inodes_len; n++) {
@@ -75,8 +72,9 @@ static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 
 		// If we found it, lock it and add it to the table
 		TfsInodeIdx child_idx = find_child_result.data.success.idx;
-		locked_inodes[locked_inodes_len] =
+		cur_inode =
 			tfs_inode_table_lock(&self->inode_table, child_idx, cur_path.len == 0 ? access : TfsRwLockAccessShared);
+		locked_inodes[locked_inodes_len] = cur_inode;
 		locked_inodes_len++;
 	}
 
@@ -89,16 +87,20 @@ static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 /// @param locked_inodes Array to store all locked inodes. Must be able to store as many components as exist in `path`
 /// plus 1 for the root.
 /// @param access Type of access to lock the last component with
-/// plus one.
+/// @details
+/// Saves the root _and_ all further components in @p locked_inodes
 static TfsFsFindResult tfs_fs_lock_all(TfsFs* const self,
 	TfsPath path,
 	TfsLockedInode* locked_inodes,
 	TfsRwLockAccess access //
 ) {
-	TfsLockedInode root =
+	locked_inodes[0] =
 		tfs_inode_table_lock(&self->inode_table, TFS_FS_ROOT_IDX, path.len == 0 ? access : TfsRwLockAccessShared);
 
-	return tfs_fs_lock_all_from(self, path, root, locked_inodes, access);
+	TfsFsFindResult result = tfs_fs_lock_all_from(self, path, locked_inodes[0], locked_inodes + 1, access);
+	if (!result.success) { tfs_inode_table_unlock_inode(&self->inode_table, TFS_FS_ROOT_IDX); }
+
+	return result;
 }
 
 TfsFs tfs_fs_new(void) {
@@ -290,12 +292,17 @@ TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access) {
 }
 
 TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsRwLockAccess access) {
-	// Split the paths
+	// Get the common ancestor of both paths
+	TfsPath orig_path_rest;
+	TfsPath dest_path_rest;
+	TfsPath common_ancestor_path = tfs_path_common_ancestor(orig_path, dest_path, &orig_path_rest, &dest_path_rest);
+
+	// Split the rests
 	TfsPath orig_path_parent;
-	TfsPath orig_path_filename = tfs_path_pop_last(orig_path, &orig_path_parent);
+	TfsPath orig_path_filename = tfs_path_pop_last(orig_path_rest, &orig_path_parent);
 
 	TfsPath dest_path_parent;
-	TfsPath dest_path_filename = tfs_path_pop_last(dest_path, &dest_path_parent);
+	TfsPath dest_path_filename = tfs_path_pop_last(dest_path_rest, &dest_path_parent);
 
 	// If the origin path is the destination path's parent, or backwards, return Err
 	if (tfs_path_eq(orig_path, dest_path_parent)) {
@@ -311,22 +318,49 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		};
 	}
 
+	// Lock up until the common path normally
+	// Note: If the common ancestor is one of the parents, we lock it with unique.
+	const size_t locked_common_inodes_len = tfs_path_components_len(common_ancestor_path) + 1;
+	TfsLockedInode locked_common_inodes[locked_common_inodes_len];
+	TfsFsFindResult common_result = tfs_fs_lock_all(self,
+		common_ancestor_path,
+		locked_common_inodes,
+		orig_path_parent.len == 0 || dest_path_parent.len == 0 ? TfsRwLockAccessUnique : TfsRwLockAccessShared //
+	);
+	if (!common_result.success) {
+		return (TfsFsMoveResult){
+			.success = false,
+			.data.err.kind = TfsFsMoveErrorInexistentCommonAncestor,
+		};
+	}
+	TfsLockedInode common_ancestor = common_result.data.inode;
+
 	// If both parents are the same, simply rename the file
 	if (tfs_path_eq(orig_path_parent, dest_path_parent)) {
 		// All locked inodes, for each component
-		const size_t locked_inodes_len = tfs_path_components_len(orig_path_parent) + 1;
+		const size_t locked_inodes_len = tfs_path_components_len(orig_path_parent);
 		TfsLockedInode locked_inodes[locked_inodes_len];
 
 		// Lock the parent
 		TfsFsFindResult find_parent_result =
-			tfs_fs_lock_all(self, orig_path_parent, locked_inodes, TfsRwLockAccessUnique);
+			tfs_fs_lock_all_from(self, orig_path_parent, common_ancestor, locked_inodes, TfsRwLockAccessUnique);
 		if (!find_parent_result.success) {
+			for (size_t n = 0; n < locked_common_inodes_len; n++) {
+				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+			}
 			return (TfsFsMoveResult){
 				.success = false, .data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}}};
 		}
 
+		// If it isn't a directory, return Err
 		TfsLockedInode parent = find_parent_result.data.inode;
 		if (parent.type != TfsInodeTypeDir) {
+			for (size_t n = 0; n < locked_common_inodes_len; n++) {
+				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+			}
+			for (size_t n = 0; n < locked_inodes_len; n++) {
+				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
+			}
 			return (TfsFsMoveResult){
 				.success = false, .data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorOriginParentNotDir}}};
 		}
@@ -335,6 +369,12 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		TfsInodeDirSearchByNameResult search_result =
 			tfs_inode_dir_search_by_name(&parent.data->dir, orig_path_filename.chars, orig_path_filename.len);
 		if (!search_result.success) {
+			for (size_t n = 0; n < locked_common_inodes_len; n++) {
+				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+			}
+			for (size_t n = 0; n < locked_inodes_len; n++) {
+				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
+			}
 			return (TfsFsMoveResult){
 				.success = false, .data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorOriginNotFound}}};
 		}
@@ -347,6 +387,13 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		TfsInodeDirRenameResult rename_result =
 			tfs_inode_dir_rename(&parent.data->dir, child.idx, dest_path_filename.chars, dest_path_filename.len);
 		if (!rename_result.success) {
+			for (size_t n = 0; n < locked_common_inodes_len; n++) {
+				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+			}
+			for (size_t n = 0; n < locked_inodes_len; n++) {
+				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
+			}
+			tfs_inode_table_unlock_inode(&self->inode_table, child.idx);
 			return (TfsFsMoveResult){.success = false,
 				.data = {.err =
 							 (TfsFsMoveError){
@@ -358,6 +405,9 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		}
 
 		// Unlock all inodes (except child inode)
+		for (size_t n = 0; n < locked_common_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+		}
 		for (size_t n = 0; n < locked_inodes_len; n++) {
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 		}
@@ -369,67 +419,100 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 	}
 
 	// All locked inodes, for each component
-	const size_t locked_orig_inodes_len = tfs_path_components_len(orig_path_parent) + 1;
+	const size_t locked_orig_inodes_len = tfs_path_components_len(orig_path_parent);
 	TfsLockedInode locked_orig_inodes[locked_orig_inodes_len];
-	const size_t locked_dest_inodes_len = tfs_path_components_len(dest_path_parent) + 1;
+	const size_t locked_dest_inodes_len = tfs_path_components_len(dest_path_parent);
 	TfsLockedInode locked_dest_inodes[locked_dest_inodes_len];
 
-	// Else lock each path in a deterministic order.
+	// Then lock each path in a deterministic order.
 	TfsLockedInode orig_parent;
 	TfsLockedInode dest_parent;
-	if (tfs_str_cmp(orig_path_parent.chars, orig_path_parent.len, dest_path_parent.chars, dest_path_parent.len) > 0) {
-		TfsFsFindResult orig_parent_result =
-			tfs_fs_lock_all(self, orig_path_parent, locked_orig_inodes, TfsRwLockAccessUnique);
-		if (!orig_parent_result.success) {
-			return (TfsFsMoveResult){
-				.success = false,
-				.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}},
-			};
-		}
-		orig_parent = orig_parent_result.data.inode;
-
-		TfsFsFindResult dest_parent_result =
-			tfs_fs_lock_all(self, orig_path_parent, locked_orig_inodes, TfsRwLockAccessUnique);
-		if (!dest_parent_result.success) {
-			for (size_t n = 0; n < locked_orig_inodes_len; n++) {
-				tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
+	// TODO: Check sign
+	if (tfs_str_cmp(orig_path_parent.chars, orig_path_parent.len, dest_path_parent.chars, dest_path_parent.len) < 0) {
+		if (orig_path_parent.len == 0) { orig_parent = common_ancestor; }
+		else {
+			TfsFsFindResult orig_parent_result = tfs_fs_lock_all_from(
+				self, orig_path_parent, common_ancestor, locked_orig_inodes, TfsRwLockAccessUnique);
+			if (!orig_parent_result.success) {
+				for (size_t n = 0; n < locked_common_inodes_len; n++) {
+					tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+				}
+				return (TfsFsMoveResult){
+					.success = false,
+					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}},
+				};
 			}
-			return (TfsFsMoveResult){
-				.success = false,
-				.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentDestinationParentDir}},
-			};
+			orig_parent = orig_parent_result.data.inode;
 		}
-		dest_parent = dest_parent_result.data.inode;
+
+		if (dest_path_parent.len == 0) { dest_parent = common_ancestor; }
+		else {
+			TfsFsFindResult dest_parent_result = tfs_fs_lock_all_from(
+				self, dest_path_parent, common_ancestor, locked_dest_inodes, TfsRwLockAccessUnique);
+			if (!dest_parent_result.success) {
+				for (size_t n = 0; n < locked_common_inodes_len; n++) {
+					tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+				}
+				for (size_t n = 0; n < locked_orig_inodes_len; n++) {
+					tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
+				}
+				return (TfsFsMoveResult){
+					.success = false,
+					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentDestinationParentDir}},
+				};
+			}
+			dest_parent = dest_parent_result.data.inode;
+		}
 	}
 	else {
-		TfsFsFindResult dest_parent_result =
-			tfs_fs_lock_all(self, orig_path_parent, locked_orig_inodes, TfsRwLockAccessUnique);
-		if (!dest_parent_result.success) {
-			return (TfsFsMoveResult){
-				.success = false,
-				.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentDestinationParentDir}},
-			};
-		}
-		dest_parent = dest_parent_result.data.inode;
-
-		TfsFsFindResult orig_parent_result =
-			tfs_fs_lock_all(self, orig_path_parent, locked_orig_inodes, TfsRwLockAccessUnique);
-		if (!orig_parent_result.success) {
-			for (size_t n = 0; n < locked_dest_inodes_len; n++) {
-				tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
+		if (dest_path_parent.len == 0) { dest_parent = common_ancestor; }
+		else {
+			TfsFsFindResult dest_parent_result = tfs_fs_lock_all_from(
+				self, dest_path_parent, common_ancestor, locked_dest_inodes, TfsRwLockAccessUnique);
+			if (!dest_parent_result.success) {
+				for (size_t n = 0; n < locked_common_inodes_len; n++) {
+					tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+				}
+				return (TfsFsMoveResult){
+					.success = false,
+					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentDestinationParentDir}},
+				};
 			}
-			return (TfsFsMoveResult){
-				.success = false,
-				.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}},
-			};
+			dest_parent = dest_parent_result.data.inode;
 		}
-		orig_parent = orig_parent_result.data.inode;
+
+		if (orig_path_parent.len == 0) { orig_parent = common_ancestor; }
+		else {
+			TfsFsFindResult orig_parent_result = tfs_fs_lock_all_from(
+				self, orig_path_parent, common_ancestor, locked_orig_inodes, TfsRwLockAccessUnique);
+			if (!orig_parent_result.success) {
+				for (size_t n = 0; n < locked_common_inodes_len; n++) {
+					tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+				}
+				for (size_t n = 0; n < locked_dest_inodes_len; n++) {
+					tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
+				}
+				return (TfsFsMoveResult){
+					.success = false,
+					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}},
+				};
+			}
+			orig_parent = orig_parent_result.data.inode;
+		}
 	}
 
 	// If one of the parents isn't a directory, return Err
 	if (orig_parent.type != TfsInodeTypeDir) {
-		tfs_fs_unlock_inode(self, orig_parent.idx);
-		tfs_fs_unlock_inode(self, dest_parent.idx);
+		for (size_t n = 0; n < locked_common_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_orig_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_dest_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
+		}
+
 		return (TfsFsMoveResult){
 			.success = false,
 			// TODO: CHANGE ALL ERRORS TO BE LIKE THIS
@@ -437,8 +520,16 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		};
 	}
 	if (dest_parent.type != TfsInodeTypeDir) {
-		tfs_fs_unlock_inode(self, orig_parent.idx);
-		tfs_fs_unlock_inode(self, dest_parent.idx);
+		for (size_t n = 0; n < locked_common_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_orig_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_dest_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
+		}
+
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorDestinationParentNotDir,
@@ -449,8 +540,16 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 	TfsInodeDirSearchByNameResult search_result =
 		tfs_inode_dir_search_by_name(&orig_parent.data->dir, orig_path_filename.chars, orig_path_filename.len);
 	if (!search_result.success) {
-		tfs_fs_unlock_inode(self, orig_parent.idx);
-		tfs_fs_unlock_inode(self, dest_parent.idx);
+		for (size_t n = 0; n < locked_common_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_orig_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_dest_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
+		}
+
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorOriginNotFound,
@@ -464,8 +563,16 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 	TfsInodeDirAddEntryResult add_entry_result =
 		tfs_inode_dir_add_entry(&dest_parent.data->dir, orig.idx, dest_path_filename.chars, dest_path_filename.len);
 	if (!add_entry_result.success) {
-		tfs_fs_unlock_inode(self, orig_parent.idx);
-		tfs_fs_unlock_inode(self, dest_parent.idx);
+		for (size_t n = 0; n < locked_common_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_orig_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
+		}
+		for (size_t n = 0; n < locked_dest_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
+		}
+
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorAddEntry,
@@ -473,17 +580,22 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		};
 	}
 
-	// Release destination's parent lock
-	tfs_fs_unlock_inode(self, dest_parent.idx);
-
 	// Remove the source entry
 	tfs_inode_dir_remove_entry_by_dir_idx(&orig_parent.data->dir, search_result.data.success.dir_idx);
 
-	// Remove the origin's parent lock
-	tfs_fs_unlock_inode(self, orig_parent.idx);
+	// Release all locks (except the source's lock)
+	for (size_t n = 0; n < locked_common_inodes_len; n++) {
+		tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+	}
+	for (size_t n = 0; n < locked_orig_inodes_len; n++) {
+		tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
+	}
+	for (size_t n = 0; n < locked_dest_inodes_len; n++) {
+		tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
+	}
 
 	// Return the index
-	// Note: We returnede it locked.
+	// Note: We return it locked.
 	return (TfsFsMoveResult){
 		.success = true,
 		.data.inode = orig,

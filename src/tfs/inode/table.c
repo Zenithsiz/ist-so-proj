@@ -15,7 +15,7 @@ TfsInodeTable tfs_inode_table_new(size_t size) {
 	}
 
 	// Initialize them to empty
-	for (TfsInodeIdx n = 0; n < size; n++) { inodes[n] = tfs_inode_new(TfsInodeTypeNone); }
+	for (TfsInodeIdx n = 0; n < size; n++) { inodes[n] = tfs_inode_new(); }
 
 	return (TfsInodeTable){
 		.inodes = inodes,
@@ -57,7 +57,7 @@ TfsInodeIdx tfs_inode_table_add(TfsInodeTable* const self, TfsInodeType type) {
 	assert(empty_idx != TFS_INODE_IDX_NONE);
 
 	// Then initialize it
-	self->inodes[empty_idx] = tfs_inode_new(type);
+	tfs_inode_init(&self->inodes[empty_idx], type);
 
 	// And return it
 	return empty_idx;

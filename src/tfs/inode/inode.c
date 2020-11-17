@@ -3,30 +3,33 @@
 // Imports
 #include <stdlib.h> // free
 
-TfsInode tfs_inode_new(TfsInodeType type) {
+TfsInode tfs_inode_new(void) {
+	return (TfsInode){
+		.type = TfsInodeTypeNone,
+		.lock = tfs_rw_lock_new(),
+	};
+}
+void tfs_inode_init(TfsInode* self, TfsInodeType type) {
+	tfs_inode_empty(self);
+
 	switch (type) {
 		// Set initial data to `NULL`
-		case TfsInodeTypeFile:
-			return (TfsInode){
-				.type = type,
-				.data = {.file = {.contents = NULL}},
-				.lock = tfs_rw_lock_new(),
-			};
-
-		case TfsInodeTypeDir:
-			return (TfsInode){
-				.type = type,
-				.data = {.dir = tfs_inode_dir_new()},
-				.lock = tfs_rw_lock_new(),
-			};
-
-		case TfsInodeTypeNone:
-		default:
-			return (TfsInode){
-				.type = type,
-				.lock = tfs_rw_lock_new(),
-			};
+		case TfsInodeTypeFile: {
+			self->data.file.contents = NULL;
+			break;
+		}
+		case TfsInodeTypeDir: {
+			self->data.dir = tfs_inode_dir_new();
+			break;
+		}
+		case TfsInodeTypeNone: {
+			break;
+		}
+		default: {
+			break;
+		}
 	}
+	self->type = type;
 }
 
 void tfs_inode_destroy(TfsInode* self) {

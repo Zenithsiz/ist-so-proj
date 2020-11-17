@@ -3,6 +3,7 @@
 // Imports
 #include <assert.h> // assert
 #include <errno.h>	// EBUSY
+#include <stdlib.h> // exit, EXIT_FAILURE
 
 TfsRwLock tfs_rw_lock_new(void) {
 	return (TfsRwLock){
@@ -17,11 +18,13 @@ void tfs_rw_lock_destroy(TfsRwLock* self) { //
 void tfs_rw_lock_lock(TfsRwLock* self, TfsRwLockAccess access) {
 	switch (access) {
 		case TfsRwLockAccessShared: {
-			assert(pthread_rwlock_rdlock(&self->rw_lock) == 0);
+			int err = pthread_rwlock_rdlock(&self->rw_lock);
+			assert(err == 0);
 			break;
 		}
 		case TfsRwLockAccessUnique: {
-			assert(pthread_rwlock_wrlock(&self->rw_lock) == 0);
+			int err = pthread_rwlock_wrlock(&self->rw_lock);
+			assert(err == 0);
 			break;
 		}
 
@@ -38,7 +41,10 @@ bool tfs_rw_lock_try_lock(TfsRwLock* self, TfsRwLockAccess access) {
 			switch (err) {
 				case 0: return true;
 				case EBUSY: return false;
-				default: exit(EXIT_FAILURE);
+				default: {
+					exit(EXIT_FAILURE);
+					return false;
+				}
 			}
 		}
 		case TfsRwLockAccessUnique: {
@@ -46,7 +52,10 @@ bool tfs_rw_lock_try_lock(TfsRwLock* self, TfsRwLockAccess access) {
 			switch (err) {
 				case 0: return true;
 				case EBUSY: return false;
-				default: exit(EXIT_FAILURE);
+				default: {
+					exit(EXIT_FAILURE);
+					return false;
+				}
 			}
 		}
 		default: {
