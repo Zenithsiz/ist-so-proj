@@ -9,6 +9,7 @@
 
 // Imports
 #include <pthread.h> // pthread
+#include <stdbool.h> // bool
 
 /// @brief Lock access
 typedef enum TfsRwLockAccess {
@@ -42,6 +43,12 @@ void tfs_rw_lock_destroy(TfsRwLock* self);
 /// @param self
 /// @param access Access type to lock the lock with
 void tfs_rw_lock_lock(TfsRwLock* self, TfsRwLockAccess access);
+
+/// @brief Attempts to lock this rw lock.
+/// @param self
+/// @param access Access type to lock the lock with
+/// @return If successfully locked
+bool tfs_rw_lock_try_lock(TfsRwLock* self, TfsRwLockAccess access);
 
 /// @brief Unlocks this rw lock
 void tfs_rw_lock_unlock(TfsRwLock* self);

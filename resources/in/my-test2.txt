@@ -1,0 +1,13 @@
+c /a d
+c /a/x f
+m /a/x /a
+l /a/y
+
+
+
+# m /a/c /b/c     # Good, lock /a and /b, create /b/c and remove /a/c
+# m /a   /a/c     # Bad, orig == dest_parent
+# m /a/c /a       # Bad, orig_parent == dest
+# m /a/b /a/c     # Good, lock /a only and rename 'a' -> 'c'
+# m /a/b/c /a/c   # Good, lock /a and /b, create /a/c and remove /a/b/c (Same as normal)
+# m /a/b/c /b/d/c # Good, lock /a/b /b/d, create /b/d/c and remove /a/b/c (Same as normal)

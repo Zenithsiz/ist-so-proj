@@ -9,14 +9,14 @@
 
 /// @brief Checks if @p ch is either a forward slash, '/',
 ///        or space, according to #isspace
-static inline bool is_slash_or_space(int ch) {
+static inline bool is_slash_or_space(int ch) { //
 	return ch == '/' || isspace(ch);
 }
 
 TfsPath tfs_path_owned_borrow(TfsPathOwned self) {
 	return (TfsPath){
 		.chars = self.chars,
-		.len   = self.len,
+		.len = self.len,
 	};
 }
 
@@ -40,21 +40,19 @@ TfsPathOwned tfs_path_to_owned(TfsPath self) {
 	if (self.len == 0) {
 		return (TfsPathOwned){
 			.chars = NULL,
-			.len   = 0,
+			.len = 0,
 		};
 	}
 
 	// Else copy the string over.
 	// Note: Using memcpy as we don't consider the null terminator.
 	char* chars = malloc(self.len * sizeof(char));
-	if (chars == NULL) {
-		fprintf(stderr, "Unable to allocate owned path with buffer size %zu", self.len);
-	}
+	if (chars == NULL) { fprintf(stderr, "Unable to allocate owned path with buffer size %zu", self.len); }
 	memcpy(chars, self.chars, self.len);
 
 	return (TfsPathOwned){
 		.chars = chars,
-		.len   = self.len,
+		.len = self.len,
 	};
 }
 
@@ -65,15 +63,11 @@ bool tfs_path_eq(TfsPath lhs, TfsPath rhs) {
 		TfsPath rhs_first = tfs_path_pop_first(rhs, &rhs);
 
 		// If any component is empty, return if both are empty.
-		if (lhs_first.len == 0 || rhs_first.len == 0) {
-			return lhs_first.len == 0 && rhs_first.len == 0;
-		}
+		if (lhs_first.len == 0 || rhs_first.len == 0) { return lhs_first.len == 0 && rhs_first.len == 0; }
 
 		// If they're different, return false
 		// Note: They've been trimmed by `pop_first`.
-		if (!tfs_str_eq(lhs_first.chars, lhs_first.len, rhs_first.chars, rhs_first.len)) {
-			return false;
-		}
+		if (!tfs_str_eq(lhs_first.chars, lhs_first.len, rhs_first.chars, rhs_first.len)) { return false; }
 	} while (1);
 }
 
@@ -85,9 +79,7 @@ TfsPath tfs_path_trim(TfsPath self) {
 	}
 
 	// Remove any trailing slashes and whitespace
-	while (self.len > 0 && is_slash_or_space(self.chars[self.len - 1])) {
-		self.len--;
-	}
+	while (self.len > 0 && is_slash_or_space(self.chars[self.len - 1])) { self.len--; }
 	return self;
 }
 
@@ -125,7 +117,7 @@ TfsPath tfs_path_pop_first(TfsPath self, TfsPath* rest) {
 	}
 	return tfs_path_trim((TfsPath){
 		.chars = self.chars,
-		.len   = first_sep_pos,
+		.len = first_sep_pos,
 	});
 }
 
@@ -155,18 +147,31 @@ TfsPath tfs_path_pop_last(TfsPath self, TfsPath* rest) {
 	if (rest != NULL) {
 		*rest = tfs_path_trim((TfsPath){
 			.chars = self.chars,
-			.len   = last_sep_pos,
+			.len = last_sep_pos,
 		});
 	}
 	// Note: Fine to include the slash, as it'll get
 	//       removed by `trim`.
 	return tfs_path_trim((TfsPath){
 		.chars = self.chars + last_sep_pos,
-		.len   = self.len - last_sep_pos,
+		.len = self.len - last_sep_pos,
 	});
 }
 
-TfsPath tfs_path_common_ancestor(const TfsPath lhs, const TfsPath rhs, TfsPath* const lhs_rest, TfsPath* const rhs_rest) {
+size_t tfs_path_components_len(TfsPath self) {
+	self = tfs_path_trim(self);
+
+	size_t len = 0;
+	while (self.len != 0) {
+		tfs_path_pop_last(self, &self);
+		len++;
+	}
+
+	return len;
+}
+
+TfsPath tfs_path_common_ancestor(
+	const TfsPath lhs, const TfsPath rhs, TfsPath* const lhs_rest, TfsPath* const rhs_rest) {
 	TfsPath cur_lhs = lhs;
 	TfsPath cur_rhs = rhs;
 
@@ -180,12 +185,13 @@ TfsPath tfs_path_common_ancestor(const TfsPath lhs, const TfsPath rhs, TfsPath* 
 		TfsPath cur_rhs_first = tfs_path_pop_first(cur_rhs, &cur_rhs);
 
 		// If either both paths are now empty or they're different, return.
-		if ((cur_lhs_first.len == 0 && cur_rhs_first.len == 0) || !tfs_str_eq(cur_lhs_first.chars, cur_lhs_first.len, cur_rhs_first.chars, cur_rhs_first.len)) {
+		if ((cur_lhs_first.len == 0 && cur_rhs_first.len == 0) ||
+			!tfs_str_eq(cur_lhs_first.chars, cur_lhs_first.len, cur_rhs_first.chars, cur_rhs_first.len)) {
 			if (lhs_rest != NULL) { *lhs_rest = old_lhs; }
 			if (rhs_rest != NULL) { *rhs_rest = old_rhs; }
 			return tfs_path_trim((TfsPath){
 				.chars = lhs.chars,
-				.len   = (size_t)(old_lhs.chars - lhs.chars),
+				.len = (size_t)(old_lhs.chars - lhs.chars),
 			});
 		}
 	} while (1);

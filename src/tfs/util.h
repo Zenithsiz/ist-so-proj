@@ -34,4 +34,12 @@ inline static bool tfs_str_eq(const char* lhs, size_t lhs_len, const char* rhs, 
 	return lhs_len == rhs_len && strncmp(lhs, rhs, lhs_len) == 0;
 }
 
+/// @brief Compares two possibly non-terminated strings.
+inline static int tfs_str_cmp(const char* lhs, size_t lhs_len, const char* rhs, size_t rhs_len) {
+	if (lhs_len < rhs_len) { return -1; }
+	if (lhs_len > rhs_len) { return 1; }
+
+	return strncmp(lhs, rhs, lhs_len);
+}
+
 #endif

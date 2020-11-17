@@ -18,8 +18,8 @@ static TfsTestResult from_c_str(void) {
 
 	for (size_t n = 0; cstrs[n] != NULL; n++) {
 		const char* cstr = cstrs[n];
-		size_t cstr_len	 = strlen(cstr);
-		TfsPath path	 = tfs_path_from_cstr(cstr);
+		size_t cstr_len = strlen(cstr);
+		TfsPath path = tfs_path_from_cstr(cstr);
 
 		// Make sure the path and the original cstring are equal
 		TFS_ASSERT_OR_RETURN(tfs_str_eq(path.chars, path.len, cstr, cstr_len));
@@ -90,9 +90,9 @@ static TfsTestResult pop_last(void) {
 	};
 
 	for (size_t n = 0; paths[n] != NULL; n++) {
-		TfsPath path			= tfs_path_from_cstr(paths[n][0]);
+		TfsPath path = tfs_path_from_cstr(paths[n][0]);
 		TfsPath expected_result = tfs_path_from_cstr(paths[n][1]);
-		TfsPath expected_rest	= tfs_path_from_cstr(paths[n][2]);
+		TfsPath expected_rest = tfs_path_from_cstr(paths[n][2]);
 
 		TfsPath rest;
 		TfsPath result = tfs_path_pop_last(path, &rest);
@@ -123,9 +123,9 @@ static TfsTestResult pop_first(void) {
 	};
 
 	for (size_t n = 0; paths[n] != NULL; n++) {
-		TfsPath path			= tfs_path_from_cstr(paths[n][0]);
+		TfsPath path = tfs_path_from_cstr(paths[n][0]);
 		TfsPath expected_result = tfs_path_from_cstr(paths[n][1]);
-		TfsPath expected_rest	= tfs_path_from_cstr(paths[n][2]);
+		TfsPath expected_rest = tfs_path_from_cstr(paths[n][2]);
 
 		TfsPath rest;
 		TfsPath result = tfs_path_pop_first(path, &rest);
@@ -152,9 +152,9 @@ static TfsTestResult common_ancestor(void) {
 	};
 
 	for (size_t n = 0; paths[n] != NULL; n++) {
-		TfsPath lhs				  = tfs_path_from_cstr(paths[n][0]);
-		TfsPath rhs				  = tfs_path_from_cstr(paths[n][1]);
-		TfsPath expected_result	  = tfs_path_from_cstr(paths[n][2]);
+		TfsPath lhs = tfs_path_from_cstr(paths[n][0]);
+		TfsPath rhs = tfs_path_from_cstr(paths[n][1]);
+		TfsPath expected_result = tfs_path_from_cstr(paths[n][2]);
 		TfsPath expected_lhs_rest = tfs_path_from_cstr(paths[n][3]);
 		TfsPath expected_rhs_rest = tfs_path_from_cstr(paths[n][4]);
 
@@ -184,9 +184,7 @@ int main(void) {
 	};
 	// clang-format on
 
-	if (tfs_test_all(tests, stdout) == TfsTestResultSuccess) {
-		return EXIT_SUCCESS;
-	}
+	if (tfs_test_all(tests, stdout) == TfsTestResultSuccess) { return EXIT_SUCCESS; }
 	else {
 		return EXIT_FAILURE;
 	}

@@ -69,12 +69,12 @@ int main(int argc, char** argv) {
 
 	// Create the command table and the file system
 	TfsCommandTable command_table = tfs_command_table_new(128);
-	TfsFs fs					  = tfs_fs_new();
+	TfsFs fs = tfs_fs_new();
 
 	// Bundle all data together for the workers
 	WorkerData data = (WorkerData){
 		.command_table = &command_table,
-		.fs			   = &fs,
+		.fs = &fs,
 	};
 
 	// Get the start time of the execution
@@ -106,7 +106,8 @@ int main(int argc, char** argv) {
 	// Print how long we took
 	struct timespec end_time;
 	assert(clock_gettime(CLOCK_REALTIME, &end_time) == 0);
-	double diff_secs = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 10.0e9;
+	double diff_secs =
+		(double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 10.0e9;
 	fprintf(stdout, "TecnicoFS completed in %.4f seconds\n", diff_secs);
 
 	// Print the tree before exiting
@@ -127,9 +128,7 @@ static void* worker_thread_fn(void* arg) {
 		// Pop a command from the table.
 		// If it returns `false`, we should exit.
 		TfsCommand command;
-		if (!tfs_command_table_pop(data->command_table, &command)) {
-			break;
-		}
+		if (!tfs_command_table_pop(data->command_table, &command)) { break; }
 
 		// Execute each command on the file system
 		// Note: We pass the command table lock to unlock once it's ready
@@ -139,21 +138,29 @@ static void* worker_thread_fn(void* arg) {
 		switch (command.kind) {
 			case TfsCommandCreate: {
 				TfsInodeType inode_type = command.data.create.type;
-				TfsPath path			= tfs_path_owned_borrow(command.data.create.path);
+				TfsPath path = tfs_path_owned_borrow(command.data.create.path);
 
 				fprintf(stderr, "Creating %s '%.*s'\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
 
 				// Lock the filesystem and create the file
-				TfsFsCreateError err;
-				TfsInodeIdx idx = tfs_fs_create(data->fs, path, inode_type, &err);
-				if (idx == TFS_INODE_IDX_NONE) {
-					fprintf(stderr, "Unable to create %s '%.*s'\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
-					tfs_fs_create_error_print(&err, stderr);
+				TfsFsCreateResult result = tfs_fs_create(data->fs, path, inode_type);
+				if (!result.success) {
+					fprintf(stderr,
+						"Unable to create %s '%.*s'\n",
+						tfs_inode_type_str(inode_type),
+						(int)path.len,
+						path.chars);
+					tfs_fs_create_error_print(&result.data.err, stderr);
 				}
 				else {
-					fprintf(stderr, "Successfully created %s '%.*s' (Inode %zu)\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars, idx);
-					// SAFETY: We received it locked from `tfs_fs_create`
-					assert(tfs_fs_unlock_inode(data->fs, idx));
+					TfsInodeIdx idx = result.data.idx;
+					fprintf(stderr,
+						"Successfully created %s '%.*s' (Inode %zu)\n",
+						tfs_inode_type_str(inode_type),
+						(int)path.len,
+						path.chars,
+						idx);
+					tfs_fs_unlock_inode(data->fs, idx);
 				}
 				break;
 			}
@@ -164,10 +171,10 @@ static void* worker_thread_fn(void* arg) {
 
 				fprintf(stderr, "Removing '%.*s'\n", (int)path.len, path.chars);
 
-				TfsFsRemoveError err;
-				if (!tfs_fs_remove(data->fs, path, &err)) {
+				TfsFsRemoveResult result = tfs_fs_remove(data->fs, path);
+				if (!result.success) {
 					fprintf(stderr, "Unable to remove '%.*s'\n", (int)path.len, path.chars);
-					tfs_fs_remove_error_print(&err, stderr);
+					tfs_fs_remove_error_print(&result.data.err, stderr);
 				}
 				else {
 					// Note: No need to unlock anything, as we just remove the inode
@@ -181,38 +188,51 @@ static void* worker_thread_fn(void* arg) {
 
 				fprintf(stderr, "Searching '%.*s'\n", (int)path.len, path.chars);
 
-				TfsInodeType inode_type;
-				TfsFsFindError err;
-				TfsInodeIdx idx = tfs_fs_find(data->fs, path, TfsRwLockAccessShared, &inode_type, NULL, &err);
-				if (idx == TFS_INODE_IDX_NONE) {
+				TfsFsFindResult result = tfs_fs_find(data->fs, path, TfsRwLockAccessShared);
+				if (!result.success) {
 					fprintf(stderr, "Unable to find '%.*s'\n", (int)path.len, path.chars);
-					tfs_fs_find_error_print(&err, stderr);
+					tfs_fs_find_error_print(&result.data.err, stderr);
 				}
 				else {
-					fprintf(stderr, "Found %s '%.*s'\n", tfs_inode_type_str(inode_type), (int)path.len, path.chars);
-					// SAFETY: We received it locked from `tfs_fs_find`.
-					assert(tfs_fs_unlock_inode(data->fs, idx));
+					TfsLockedInode inode = result.data.inode;
+					fprintf(stderr,
+						"Found %s '%.*s' (Inode %zu)\n",
+						tfs_inode_type_str(inode.type),
+						(int)path.len,
+						path.chars,
+						inode.idx);
+					tfs_fs_unlock_inode(data->fs, inode.idx);
 				}
 				break;
 			}
 
 			case TfsCommandMove: {
 				TfsPath source = tfs_path_owned_borrow(command.data.move.source);
-				TfsPath dest   = tfs_path_owned_borrow(command.data.move.dest);
+				TfsPath dest = tfs_path_owned_borrow(command.data.move.dest);
 
 				fprintf(stderr, "Moving '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
 
-				TfsFsMoveError err;
-				TfsInodeType inode_type;
-				TfsInodeIdx idx = tfs_fs_move(data->fs, source, dest, TfsRwLockAccessShared, &inode_type, NULL, &err);
-				if (idx == TFS_INODE_IDX_NONE) {
-					fprintf(stderr, "Unable to move '%.*s' to '%.*s'\n", (int)source.len, source.chars, (int)dest.len, dest.chars);
-					tfs_fs_move_error_print(&err, stderr);
+				TfsFsMoveResult result = tfs_fs_move(data->fs, source, dest, TfsRwLockAccessUnique);
+				if (!result.success) {
+					fprintf(stderr,
+						"Unable to move '%.*s' to '%.*s'\n",
+						(int)source.len,
+						source.chars,
+						(int)dest.len,
+						dest.chars);
+					tfs_fs_move_error_print(&result.data.err, stderr);
 				}
 				else {
-					fprintf(stderr, "Successfully moved %s '%.*s' (Inode %zu) to '%.*s'\n", tfs_inode_type_str(inode_type), (int)source.len, source.chars, idx, (int)dest.len, dest.chars);
-					// SAFETY: We received it locked from `tfs_fs_move`.
-					assert(tfs_fs_unlock_inode(data->fs, idx));
+					TfsLockedInode inode = result.data.inode;
+					fprintf(stderr,
+						"Successfully moved %s '%.*s' (Inode %zu) to '%.*s'\n",
+						tfs_inode_type_str(inode.type),
+						(int)source.len,
+						source.chars,
+						inode.idx,
+						(int)dest.len,
+						dest.chars);
+					tfs_fs_unlock_inode(data->fs, inode.idx);
 				}
 				break;
 			}
@@ -247,9 +267,7 @@ static void fill_command_table(TfsCommandTable* table, FILE* in) {
 		}
 
 		// If the line is empty, stop
-		if (feof(in)) {
-			break;
-		}
+		if (feof(in)) { break; }
 
 		// Try to parse it
 		TfsCommandParseError parse_err;
@@ -270,9 +288,7 @@ static void fill_command_table(TfsCommandTable* table, FILE* in) {
 static void open_io(const char* in_filename, const char* out_filename, FILE** in, FILE** out) {
 	// Open the input file
 	// Note: If we receive '-', use stdin
-	if (strcmp(in_filename, "-") == 0) {
-		*in = stdin;
-	}
+	if (strcmp(in_filename, "-") == 0) { *in = stdin; }
 	else {
 		*in = fopen(in_filename, "r");
 		if (*in == NULL) {
@@ -284,9 +300,7 @@ static void open_io(const char* in_filename, const char* out_filename, FILE** in
 
 	// Open the output file
 	// Note: If we receive '-', use stdout
-	if (strcmp(out_filename, "-") == 0) {
-		*out = stdout;
-	}
+	if (strcmp(out_filename, "-") == 0) { *out = stdout; }
 	else {
 		*out = fopen(out_filename, "w");
 		if (*out == NULL) {
@@ -319,6 +333,6 @@ static void close_io(FILE** in, FILE** out) {
 	}
 
 	// Then set both to `NULL`
-	*in	 = NULL;
+	*in = NULL;
 	*out = NULL;
 }

@@ -26,7 +26,6 @@
 /// @brief Asserts 2 values are equal, else returns @ref TfsTestResultFailure
 /// @details
 /// This is a simple wrapper over `TFS_ASSERT_OR_RETURN(lhs == rhs)`
-#define TFS_ASSERT_EQ_OR_RETURN(lhs, rhs) \
-	TFS_ASSERT_OR_RETURN(lhs == rhs)
+#define TFS_ASSERT_EQ_OR_RETURN(lhs, rhs) TFS_ASSERT_OR_RETURN(lhs == rhs)
 
 #endif

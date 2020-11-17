@@ -3,12 +3,12 @@ Language: Cpp
 BasedOnStyle: Microsoft
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveMacros: true
-AlignConsecutiveAssignments: true
+AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
 AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Always
 AllowShortLoopsOnASingleLine: true
 BinPackArguments: false
@@ -20,7 +20,7 @@ BraceWrapping:
   AfterFunction: false
   AfterStruct: false
 BreakStringLiterals: true
-ColumnLimit: 0
+ColumnLimit: 120
 DeriveLineEnding: true
 IncludeBlocks: Regroup
 IndentCaseLabels: true

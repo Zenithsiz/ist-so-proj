@@ -14,12 +14,12 @@ TfsCommandTable tfs_command_table_new(size_t size) {
 	}
 
 	return (TfsCommandTable){
-		.commands		 = commands,
-		.size			 = size,
-		.first_idx		 = 0,
-		.last_idx		 = 0,
-		.writer_exited	 = false,
-		.mutex			 = tfs_mutex_new(),
+		.commands = commands,
+		.size = size,
+		.first_idx = 0,
+		.last_idx = 0,
+		.writer_exited = false,
+		.mutex = tfs_mutex_new(),
 		.reader_cond_var = tfs_cond_var_new(),
 		.writer_cond_var = tfs_cond_var_new(),
 	};
@@ -56,7 +56,7 @@ void tfs_command_table_push(TfsCommandTable* self, TfsCommand command) {
 
 	// Then add the command at the end
 	self->commands[self->last_idx] = command;
-	self->last_idx				   = (self->last_idx + 1) % self->size;
+	self->last_idx = (self->last_idx + 1) % self->size;
 
 	// Unlock and wake up any readers waiting
 	tfs_cond_var_signal(&self->reader_cond_var);
@@ -92,9 +92,7 @@ bool tfs_command_table_pop(TfsCommandTable* self, TfsCommand* command) {
 	}
 
 	// Get our command
-	if (command != NULL) {
-		*command = self->commands[self->first_idx];
-	}
+	if (command != NULL) { *command = self->commands[self->first_idx]; }
 	self->first_idx = (self->first_idx + 1) % self->size;
 
 	// Unlock and wake the writer waiting

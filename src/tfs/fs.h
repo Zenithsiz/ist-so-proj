@@ -13,6 +13,9 @@
 #include <tfs/path.h>		 // TfsPath
 #include <tfs/rw_lock.h>	 // TfsRwLock
 
+/// @brief Root directory index
+#define TFS_FS_ROOT_IDX (0)
+
 /// @brief The file system
 /// @details
 /// As opposed to #TfsInodeTable , access to each inode
@@ -27,7 +30,7 @@
 typedef struct TfsFs {
 	/// @brief The inode table
 	/// @invariant
-	/// The first inode, with index 0, will always be
+	/// The first inode, with index #TFS_FS_ROOT_IDX , will always be
 	/// a directory. This inode is also called the root.
 	TfsInodeTable inode_table;
 } TfsFs;
@@ -64,6 +67,21 @@ typedef struct TfsFsFindError {
 		} name_not_found;
 	} data;
 } TfsFsFindError;
+
+/// @brief Result type for #tfs_fs_find
+typedef struct TfsFsFindResult {
+	/// @brief If the operation was successful
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief Locked inode
+		TfsLockedInode inode;
+
+		/// @brief Any possible errors
+		TfsFsFindError err;
+	} data;
+} TfsFsFindResult;
 
 /// @brief Error type for #tfs_fs_create
 typedef struct TfsFsCreateError {
@@ -102,6 +120,21 @@ typedef struct TfsFsCreateError {
 	} data;
 } TfsFsCreateError;
 
+/// @brief Result type for #tfs_fs_create
+typedef struct TfsFsCreateResult {
+	/// @brief If the operation was successful
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief The inode's index
+		TfsInodeIdx idx;
+
+		/// @brief Any possible errors
+		TfsFsCreateError err;
+	} data;
+} TfsFsCreateResult;
+
 /// @brief Error type for #tfs_fs_remove
 typedef struct TfsFsRemoveError {
 	/// @brief Error kind
@@ -136,11 +169,22 @@ typedef struct TfsFsRemoveError {
 	} data;
 } TfsFsRemoveError;
 
+/// @brief Result type for #tfs_fs_remove
+typedef struct TfsFsRemoveResult {
+	/// @brief If the operation was successful
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief Any possible errors
+		TfsFsRemoveError err;
+	} data;
+} TfsFsRemoveResult;
+
 /// @brief Error type for #tfs_fs_move
 typedef struct TfsFsMoveError {
 	/// @brief Error kind
 	enum {
-
 		/// @brief Unable to find the common ancestor
 		/// @details
 		/// Given the paths 'a/b/c1' and 'a/b/c2', the path 'a/b'
@@ -189,23 +233,50 @@ typedef struct TfsFsMoveError {
 		/// Given a destination path 'a/b/c', 'c' was not able to be added
 		/// to 'a/b'.
 		TfsFsMoveErrorAddEntry,
+
+		/// @brief Unable to rename entry in parent directory
+		/// @details
+		/// Given a source path 'a/b/c' and destination path 'a/b/d', couldn't
+		/// rename 'c' to 'd'.
+		TfsFsMoveErrorRenameEntry,
 	} kind;
 
 	/// @brief Error data
 	union {
-		/// @brief Data for variant TfsFsMoveErrorInexistentCommonAncestor
+		/// @brief Data for variant #TfsFsMoveErrorInexistentCommonAncestor
 		struct {
 			/// @brief Underlying error
 			TfsFsFindError err;
 		} inexistent_common_ancestor;
 
-		/// @brief Data for variant TfsFsMoveErrorAddEntry
+		/// @brief Data for variant #TfsFsMoveErrorAddEntry
 		struct {
 			/// @brief Underlying error
 			TfsInodeDirAddEntryError err;
 		} add_entry;
+
+		/// @brief Data for variant #TfsFsMoveErrorRenameEntry
+		struct {
+			/// @brief Underlying error
+			TfsInodeDirRenameError err;
+		} rename_entry;
 	} data;
 } TfsFsMoveError;
+
+/// @brief Result type for #tfs_fs_move
+typedef struct TfsFsMoveResult {
+	/// @brief If the operation was successful
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief The inode's
+		TfsLockedInode inode;
+
+		/// @brief Any possible errors
+		TfsFsMoveError err;
+	} data;
+} TfsFsMoveResult;
 
 /// @brief Prints a textual representation of @p self to @p out
 /// @param self
@@ -237,33 +308,21 @@ void tfs_fs_destroy(TfsFs* self);
 /// @param self
 /// @param path The path of the inode to create
 /// @param type The type of inode to create.
-/// @param[out] err Set if any errors occur.
-/// @return Index of the created inode. Or #TFS_INODE_IDX_NONE if an error occurred.
 /// @details
-/// The returned inode will be locked, and _must_ be unlocked.
-TfsInodeIdx tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type, TfsFsCreateError* err);
+/// The returned inode will be locked with unique access, and _must_ be unlocked.
+TfsFsCreateResult tfs_fs_create(TfsFs* self, TfsPath path, TfsInodeType type);
 
 /// @brief Removes an inode with path @p path
 /// @param self
 /// @param path The path of the inode to remove
-/// @param[out] err Set if any errors occur.
-/// @return If successfully removed.
-bool tfs_fs_remove(TfsFs* self, TfsPath path, TfsFsRemoveError* err);
+TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path);
 
 /// @brief Locks and retrives an inode's data
 /// @param self
 /// @param path The path of the inode to get.
 /// @param access Access type to lock the result with.
-/// @param[out] type The type of the inode.
-/// @param[out] data The data of the inode.
-/// @param[out] err Set if any errors occur.
-/// @return Index of the inode, if found. Otherwise #TFS_INODE_IDX_NONE
 /// @warning The returned inode _must_ be unlocked.
-/// @details
-/// If @p access is `Unique`, it is guaranteed, once @p lock is released,
-/// that no other calls to this function will lock the inode at @p path
-/// before the caller unlocks the returned inode.
-TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsFindError* err);
+TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access);
 
 /// @brief Moves an inode
 /// @param self
@@ -271,22 +330,14 @@ TfsInodeIdx tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access, TfsIn
 /// @param dest_path The destination path to move to.
 /// All parents of this path must exist.
 /// @param access Access type to lock the source with.
-/// @param[out] type The type of the source inode.
-/// @param[out] data The data of the source inode.
-/// @param[out] err Set if any errors occur.
-/// @return Index of the moved inode, if successful. Otherwise #TFS_INODE_IDX_NONE
 /// @warning
-/// The returned inode is _not_ locked.
-/// @details
-/// This move is atomic, and the file system will require unique access
-/// to both paths' parents and the origin file.
-TfsInodeIdx tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsRwLockAccess access, TfsInodeType* type, TfsInodeData** data, TfsFsMoveError* err);
+/// The returned inode _must_ be unlocked.
+TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsRwLockAccess access);
 
 /// @brief Unlocks an inode
 /// @param self
-/// @param idx The index of the inode to unlock
-/// @return If successfully unlocked.
-bool tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx);
+/// @param idx The index of the inode to unlock. _Must_ be valid.
+void tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx);
 
 /// @brief Prints the contents of the filesystem
 /// @param self

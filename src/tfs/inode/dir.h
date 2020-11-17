@@ -71,10 +71,84 @@ typedef struct TfsInodeDirAddEntryError {
 	} data;
 } TfsInodeDirAddEntryError;
 
+/// @brief Result type for #tfs_inode_dir_add_entry
+typedef struct TfsInodeDirAddEntryResult {
+	/// @brief If successful.
+	bool success;
+
+	/// @brief Result
+	union {
+		/// @brief Error
+		TfsInodeDirAddEntryError err;
+	} data;
+} TfsInodeDirAddEntryResult;
+
+/// @brief Error type for #tfs_inode_dir_rename
+typedef struct TfsInodeDirRenameError {
+	/// @brief Error kind
+	enum {
+		/// @brief No inode with the name found,
+		TfsInodeDirRenameErrorNotFound = -1,
+
+		/// @brief The new entry name was empty
+		TfsInodeDirRenameErrorEmptyName = -2,
+
+		/// @brief An entry with the same filename already exists
+		TfsInodeDirRenameErrorDuplicateName = -3,
+	} kind;
+
+	/// @brief Result data
+	union {
+		/// @brief Data for variant #TfsInodeDirRenameErrorDuplicateName
+		struct {
+			/// @brief Index of the entry with the same name
+			TfsInodeIdx idx;
+
+			/// @brief Directory index of the entry with the same name
+			size_t dir_idx;
+		} duplicate_name;
+	} data;
+} TfsInodeDirRenameError;
+
+/// @brief Result type for #tfs_inode_dir_rename
+typedef struct TfsInodeDirRenameResult {
+	/// @brief If successful
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief Possible error
+		TfsInodeDirRenameError err;
+	} data;
+} TfsInodeDirRenameResult;
+
+/// @brief Result type for #tfs_inode_dir_search_by_name
+typedef struct TfsInodeDirSearchByNameResult {
+	/// @brief If successful.
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief Success data
+		struct {
+			/// @brief Inode index
+			TfsInodeIdx idx;
+
+			/// @brief Dir index
+			size_t dir_idx;
+		} success;
+	} data;
+} TfsInodeDirSearchByNameResult;
+
 /// @brief Prints a textual representation of @p self to @p out
 /// @param self
 /// @param out File to output to.
 void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, FILE* out);
+
+/// @brief Prints a textual representation of @p self to @p out
+/// @param self
+/// @param out File to output to.
+void tfs_inode_dir_rename_error_print(const TfsInodeDirRenameError* self, FILE* out);
 
 /// @brief Creates a new directory entry
 /// @param idx Index of the new entry
@@ -98,29 +172,29 @@ bool tfs_inode_dir_is_empty(const TfsInodeDir* self);
 /// @param self
 /// @param name Name of the entry to search for. Is not required to be null terminated.
 /// @param name_len Length of @p name.
-/// @param[out] dir_idx Directory index of the inode found.
-/// @return The inode index, if found, otherwise #TFS_INODE_IDX_NONE.
-TfsInodeIdx tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len, size_t* dir_idx);
-
-/// @brief Removes an entry given it's inode index.
-/// @param self
-/// @param idx The index of the entry to remove.
-/// @return If successfully removed.
-bool tfs_inode_dir_remove_entry(TfsInodeDir* self, TfsInodeIdx idx);
+TfsInodeDirSearchByNameResult tfs_inode_dir_search_by_name(const TfsInodeDir* self, const char* name, size_t name_len);
 
 /// @brief Removes an entry given it's directory index
 /// @param self
-/// @param dir_idx The directory index of the entry to remove.
-/// @return If successfully removed.
-bool tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, size_t dir_idx);
+/// @param dir_idx The directory index of the entry to remove. _Must_ be valid
+void tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, size_t dir_idx);
+
+/// @brief Renames a file given it's inode index
+/// @param self
+/// @param idx The index of the entry to remove
+/// @param new_name New Name of the entry. Is not required to be null terminated.
+/// @param new_name_len Length of @p new_name.
+TfsInodeDirRenameResult tfs_inode_dir_rename(
+	TfsInodeDir* self, TfsInodeIdx idx, const char* new_name, size_t new_name_len //
+);
 
 /// @brief Adds an entry given it's index and name.
 /// @param self
 /// @param idx The index of the inode to add.
 /// @param name The name of the entry to add. Is not required to be null terminated.
 /// @param name_len Length of @p name.
-/// @param[out] err Set is any errors occur
-/// @return If successfully added the entry.
-bool tfs_inode_dir_add_entry(TfsInodeDir* self, TfsInodeIdx idx, const char* name, size_t name_len, TfsInodeDirAddEntryError* err);
+TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(
+	TfsInodeDir* self, TfsInodeIdx idx, const char* name, size_t name_len //
+);
 
 #endif

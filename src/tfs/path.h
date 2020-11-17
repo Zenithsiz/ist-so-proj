@@ -87,6 +87,9 @@ TfsPath tfs_path_pop_first(TfsPath self, TfsPath* rest);
 /// Both the returned value and @p rest will be trimmed
 TfsPath tfs_path_pop_last(TfsPath self, TfsPath* rest);
 
+/// @brief Returns the number of components in this path
+size_t tfs_path_components_len(TfsPath self);
+
 /// @brief Retrieves the common ancestor of two paths
 /// @details
 /// The common ancestor of two paths is defined as the
