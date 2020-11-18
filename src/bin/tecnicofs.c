@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
 	}
 
 	// Create the command table and the file system
-	TfsCommandTable command_table = tfs_command_table_new(128);
+	TfsCommandTable command_table = tfs_command_table_new(10);
 	TfsFs fs = tfs_fs_new();
 
 	// Bundle all data together for the workers
