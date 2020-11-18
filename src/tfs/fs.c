@@ -163,6 +163,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 
 		// Remove the inode we created
 		tfs_inode_table_remove_inode(&self->inode_table, idx);
+
 		return (TfsFsCreateResult){
 			.success = false,
 			.data.err.kind = TfsFsCreateErrorAddEntry,
@@ -170,7 +171,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 		};
 	}
 
-	// Unlock all inodes locked so far and return the inode
+	// Unlock all inodes locked so far (except the child)
 	for (size_t n = 0; n < locked_inodes_len; n++) {
 		tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 	}
@@ -318,6 +319,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			.data.err.kind = TfsFsMoveErrorInexistentCommonAncestor,
 		};
 	}
+
 	// If all rests are empty, return success, as we're moving a file to itself
 	// Note: We do it here because we need to lock the inode to return it
 	if (dest_path_rest.len == 0 && orig_path_rest.len == 0) {
@@ -332,6 +334,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			.data.inode = locked_common_inodes[locked_common_inodes_len - 1],
 		};
 	}
+
 	// Else if it isn't a directory, return Err
 	TfsLockedInode common_ancestor = common_result.data.inode;
 	if (common_ancestor.type != TfsInodeTypeDir) {
