@@ -270,18 +270,18 @@ static void fill_command_table(TfsCommandTable* table, FILE* in) {
 		if (feof(in)) { break; }
 
 		// Try to parse it
-		TfsCommandParseError parse_err;
-		TfsCommand command;
-		if (!tfs_command_parse(in, &command, &parse_err)) {
+		TfsCommandParseResult parse_result = tfs_command_parse(in);
+		if (!parse_result.success) {
 			fprintf(stderr, "Unable to parse line %zu\n", cur_line);
-			tfs_command_parse_error_print(&parse_err, stderr);
+			tfs_command_parse_error_print(&parse_result.data.err, stderr);
 			exit(EXIT_FAILURE);
 		}
 
 		// Then push it
-		tfs_command_table_push(table, command);
+		tfs_command_table_push(table, parse_result.data.command);
 	}
 
+	// Exit after we hit eof.
 	tfs_command_table_writer_exit(table);
 }
 
