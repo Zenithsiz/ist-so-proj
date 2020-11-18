@@ -21,16 +21,14 @@ void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out) 
 	}
 }
 
-bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err) {
+TfsCommandParseResult tfs_command_parse(FILE* in) {
 	// Read a line
 	char line[1024];
 	if (fgets(line, sizeof(line), in) == NULL) {
-		if (err != NULL) {
-			*err = (TfsCommandParseError){
-				.kind = TfsCommandParseErrorReadLine,
-			};
-		}
-		return false;
+		return (TfsCommandParseResult){
+			.success = false,
+			.data.err.kind = TfsCommandParseErrorReadLine,
+		};
 	}
 
 	// Read the arguments
@@ -38,12 +36,10 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 	char args[2][1024];
 	int tokens_read = sscanf(line, " %c %1023s %1023s", &command_char, args[0], args[1]);
 	if (tokens_read < 1) {
-		if (err != NULL) {
-			*err = (TfsCommandParseError){
-				.kind = TfsCommandParseErrorNoCommand,
-			};
-		}
-		return false;
+		return (TfsCommandParseResult){
+			.success = false,
+			.data.err.kind = TfsCommandParseErrorNoCommand,
+		};
 	}
 
 	switch (command_char) {
@@ -51,25 +47,22 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 		// c <path> <inode-type>
 		case 'c': {
 			if (tokens_read != 3) {
-				if (err != NULL) {
-					*err = (TfsCommandParseError){
-						.kind = TfsCommandParseErrorMissingCreateArgs,
-					};
-				}
-				return false;
+				return (TfsCommandParseResult){
+					.success = false,
+					.data.err.kind = TfsCommandParseErrorMissingCreateArgs,
+				};
 			}
 
 			// Get the type of what we're creating
 			TfsInodeType inode_type;
 			size_t type_len = strlen(args[1]);
 			if (type_len != 1) {
-				if (err != NULL) {
-					*err = (TfsCommandParseError){
-						.kind = TfsCommandParseErrorInvalidType,
-						.data = {.invalid_type = {.type = '\0', .len = type_len}},
-					};
-				}
-				return false;
+				return (TfsCommandParseResult){
+					.success = false,
+					.data.err.kind = TfsCommandParseErrorInvalidType,
+					.data.err.data.invalid_type.type = '\0',
+					.data.err.data.invalid_type.len = type_len,
+				};
 			}
 			switch (args[1][0]) {
 				case 'f': {
@@ -81,94 +74,85 @@ bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err)
 					break;
 				}
 				default: {
-					if (err != NULL) {
-						*err = (TfsCommandParseError){
-							.kind = TfsCommandParseErrorInvalidType,
-							.data = {.invalid_type = {.type = args[1][0], .len = 1}},
-						};
-					}
-					return false;
+					return (TfsCommandParseResult){
+						.success = false,
+						.data.err.kind = TfsCommandParseErrorInvalidType,
+						.data.err.data.invalid_type.type = args[1][0],
+						.data.err.data.invalid_type.len = 1,
+					};
 				}
 			}
 
 			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
-			if (command != NULL) {
-				command->kind = TfsCommandCreate;
-				command->data.create.path = path;
-				command->data.create.type = inode_type;
-			}
-			return true;
+			return (TfsCommandParseResult){
+				.success = true,
+				.data.command.kind = TfsCommandCreate,
+				.data.command.data.create.path = path,
+				.data.command.data.create.type = inode_type,
+			};
 		}
 
 		// Look up path
 		// l <path>
 		case 'l': {
 			if (tokens_read != 2) {
-				if (err != NULL) {
-					*err = (TfsCommandParseError){
-						.kind = TfsCommandParseErrorMissingSearchArgs,
-					};
-				}
-				return false;
+				return (TfsCommandParseResult){
+					.success = false,
+					.data.err.kind = TfsCommandParseErrorMissingSearchArgs,
+				};
 			}
 
 			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
-			if (command != NULL) {
-				command->kind = TfsCommandSearch;
-				command->data.search.path = path;
-			}
-			return true;
+			return (TfsCommandParseResult){
+				.success = true,
+				.data.command.kind = TfsCommandSearch,
+				.data.command.data.search.path = path,
+			};
 		}
 
 		// Remove path
 		// d <path>
 		case 'd': {
 			if (tokens_read != 2) {
-				if (err != NULL) {
-					*err = (TfsCommandParseError){
-						.kind = TfsCommandParseErrorMissingRemoveArgs,
-					};
-				}
-				return false;
+				return (TfsCommandParseResult){
+					.success = false,
+					.data.err.kind = TfsCommandParseErrorMissingRemoveArgs,
+				};
 			}
 
 			TfsPathOwned path = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
-			if (command != NULL) {
-				command->kind = TfsCommandRemove;
-				command->data.remove.path = path;
-			}
-			return true;
+			return (TfsCommandParseResult){
+				.success = true,
+				.data.command.kind = TfsCommandRemove,
+				.data.command.data.remove.path = path,
+			};
 		}
 
 		// Move path
 		// m <source> <dest>
 		case 'm': {
 			if (tokens_read != 3) {
-				if (err != NULL) {
-					*err = (TfsCommandParseError){
-						.kind = TfsCommandParseErrorMissingMoveArgs,
-					};
-				}
-				return false;
+				return (TfsCommandParseResult){
+					.success = false,
+					.data.err.kind = TfsCommandParseErrorMissingMoveArgs,
+				};
 			}
 
 			TfsPathOwned source = tfs_path_to_owned(tfs_path_from_cstr(args[0]));
 			TfsPathOwned dest = tfs_path_to_owned(tfs_path_from_cstr(args[1]));
-			if (command != NULL) {
-				command->kind = TfsCommandMove;
-				command->data.move.source = source;
-				command->data.move.dest = dest;
-			}
-			return true;
+			return (TfsCommandParseResult){
+				.success = true,
+				.data.command.kind = TfsCommandMove,
+				.data.command.data.move.source = source,
+				.data.command.data.move.dest = dest,
+			};
 		}
 		default: {
-			if (err != NULL) {
-				*err = (TfsCommandParseError){
-					.kind = TfsCommandParseErrorInvalidCommand,
-					.data = {.invalid_command = {.command = command_char}},
-				};
-			}
-			return false;
+			return (TfsCommandParseResult){
+				.success = false,
+				.data.command.kind = TfsCommandParseErrorInvalidCommand,
+				.data.err.data.invalid_command.command = command_char,
+			};
 		}
 	}
 }

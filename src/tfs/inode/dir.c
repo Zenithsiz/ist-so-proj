@@ -119,11 +119,8 @@ TfsInodeDirSearchByNameResult tfs_inode_dir_search_by_name(const TfsInodeDir* se
 		// Else set the dir idx and return the index
 		return (TfsInodeDirSearchByNameResult){
 			.success = true,
-			.data = {.success =
-						 {
-							 .idx = self->entries[n].inode_idx,
-							 .dir_idx = n,
-						 }},
+			.data.success.idx = self->entries[n].inode_idx,
+			.data.success.dir_idx = n,
 		};
 	}
 
@@ -161,11 +158,9 @@ TfsInodeDirRenameResult tfs_inode_dir_rename(
 			if (tfs_str_eq(new_name, new_name_len, entry->name, entry->name_len)) {
 				return (TfsInodeDirRenameResult){
 					.success = false,
-					.data = {.err =
-								 (TfsInodeDirRenameError){
-									 .kind = TfsInodeDirRenameErrorDuplicateName,
-									 .data = {.duplicate_name = {.idx = entry->inode_idx, .dir_idx = n}},
-								 }},
+					.data.err.kind = TfsInodeDirRenameErrorDuplicateName,
+					.data.err.data.duplicate_name.idx = entry->inode_idx,
+					.data.err.data.duplicate_name.dir_idx = n,
 				};
 			}
 		}
@@ -175,7 +170,7 @@ TfsInodeDirRenameResult tfs_inode_dir_rename(
 	if (dir_idx == (size_t)-1) {
 		return (TfsInodeDirRenameResult){
 			.success = false,
-			.data = {.err = (TfsInodeDirRenameError){.kind = TfsInodeDirRenameErrorNotFound}},
+			.data.err.kind = TfsInodeDirRenameErrorNotFound,
 		};
 	}
 
@@ -194,7 +189,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(
 	if (name_len == 0) {
 		return (TfsInodeDirAddEntryResult){
 			.success = false,
-			.data = {.err = (TfsInodeDirAddEntryError){.kind = TfsInodeDirAddEntryErrorEmptyName}},
+			.data.err.kind = TfsInodeDirAddEntryErrorEmptyName,
 		};
 	}
 
@@ -212,11 +207,9 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(
 			if (tfs_str_eq(name, name_len, entry->name, entry->name_len)) {
 				return (TfsInodeDirAddEntryResult){
 					.success = false,
-					.data = {.err =
-								 (TfsInodeDirAddEntryError){
-									 .kind = TfsInodeDirAddEntryErrorDuplicateName,
-									 .data = {.duplicate_name = {.idx = entry->inode_idx, .dir_idx = n}},
-								 }},
+					.data.err.kind = TfsInodeDirAddEntryErrorDuplicateName,
+					.data.err.data.duplicate_name.idx = entry->inode_idx,
+					.data.err.data.duplicate_name.dir_idx = n,
 				};
 			}
 		}

@@ -40,11 +40,8 @@ static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 			bad_dir_path.len = (size_t)(cur_dir.chars - path.chars);
 			return (TfsFsFindResult){
 				.success = false,
-				.data = {.err =
-							 (TfsFsFindError){
-								 .kind = TfsFsFindErrorParentsNotDir,
-								 .data = {.parents_not_dir = {.path = bad_dir_path}},
-							 }},
+				.data.err.kind = TfsFsFindErrorParentsNotDir,
+				.data.err.data.parents_not_dir.path = bad_dir_path,
 			};
 		}
 
@@ -62,11 +59,8 @@ static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 			bad_dir_path.len = (size_t)(cur_dir.chars - path.chars) + cur_dir.len;
 			return (TfsFsFindResult){
 				.success = false,
-				.data = {.err =
-							 (TfsFsFindError){
-								 .kind = TfsFsFindErrorNameNotFound,
-								 .data = {.name_not_found = {.path = bad_dir_path}},
-							 }},
+				.data.err.kind = TfsFsFindErrorNameNotFound,
+				.data.err.data.name_not_found.path = bad_dir_path,
 			};
 		}
 
@@ -78,7 +72,7 @@ static TfsFsFindResult tfs_fs_lock_all_from(TfsFs* const self,
 		locked_inodes_len++;
 	}
 
-	return (TfsFsFindResult){.success = true, .data = {.inode = locked_inodes[locked_inodes_len - 1]}};
+	return (TfsFsFindResult){.success = true, .data.inode = locked_inodes[locked_inodes_len - 1]};
 }
 
 /// @brief Helper function to lock all inodes until a given directory starting from the root (while unlocked)
@@ -136,11 +130,8 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 	if (!find_parent_result.success) {
 		return (TfsFsCreateResult){
 			.success = false,
-			.data = {.err =
-						 (TfsFsCreateError){
-							 .kind = TfsFsCreateErrorInexistentParentDir,
-							 .data = {.inexistent_parent_dir = {.err = find_parent_result.data.err}},
-						 }},
+			.data.err.kind = TfsFsCreateErrorInexistentParentDir,
+			.data.err.data.inexistent_parent_dir.err = find_parent_result.data.err,
 		};
 	}
 
@@ -154,7 +145,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 
 		return (TfsFsCreateResult){
 			.success = false,
-			.data = {.err = (TfsFsCreateError){.kind = TfsFsCreateErrorParentNotDir}},
+			.data.err.kind = TfsFsCreateErrorParentNotDir,
 		};
 	}
 
@@ -174,11 +165,8 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 		tfs_inode_table_remove_inode(&self->inode_table, idx);
 		return (TfsFsCreateResult){
 			.success = false,
-			.data = {.err =
-						 (TfsFsCreateError){
-							 .kind = TfsFsCreateErrorAddEntry,
-							 .data = {.add_entry = {.err = add_entry_result.data.err}},
-						 }},
+			.data.err.kind = TfsFsCreateErrorAddEntry,
+			.data.err.data.add_entry.err = add_entry_result.data.err,
 		};
 	}
 
@@ -186,7 +174,7 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 	for (size_t n = 0; n < locked_inodes_len; n++) {
 		tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 	}
-	return (TfsFsCreateResult){.success = true, .data = {.idx = idx}};
+	return (TfsFsCreateResult){.success = true, .data.idx = idx};
 }
 
 TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
@@ -203,11 +191,8 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 	if (!find_parent_result.success) {
 		return (TfsFsRemoveResult){
 			.success = false,
-			.data = {.err =
-						 (TfsFsRemoveError){
-							 .kind = TfsFsRemoveErrorInexistentParentDir,
-							 .data = {.inexistent_parent_dir = {.err = find_parent_result.data.err}},
-						 }},
+			.data.err.kind = TfsFsRemoveErrorInexistentParentDir,
+			.data.err.data.inexistent_parent_dir.err = find_parent_result.data.err,
 		};
 	}
 
@@ -221,7 +206,7 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 
 		return (TfsFsRemoveResult){
 			.success = false,
-			.data = {.err = (TfsFsRemoveError){.kind = TfsFsRemoveErrorParentNotDir}},
+			.data.err.kind = TfsFsRemoveErrorParentNotDir,
 		};
 	}
 
@@ -236,7 +221,7 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 
 		return (TfsFsRemoveResult){
 			.success = false,
-			.data = {.err = (TfsFsRemoveError){.kind = TfsFsRemoveErrorNameNotFound}},
+			.data.err.kind = TfsFsRemoveErrorNameNotFound,
 		};
 	}
 
@@ -257,7 +242,7 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 
 		return (TfsFsRemoveResult){
 			.success = false,
-			.data = {.err = (TfsFsRemoveError){.kind = TfsFsRemoveErrorRemoveNonEmptyDir}},
+			.data.err.kind = TfsFsRemoveErrorRemoveNonEmptyDir,
 		};
 	}
 
@@ -308,13 +293,13 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 	if (tfs_path_eq(orig_path, dest_path_parent)) {
 		return (TfsFsMoveResult){
 			.success = false,
-			.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorOriginDestinationParent}},
+			.data.err.kind = TfsFsMoveErrorOriginDestinationParent,
 		};
 	}
 	if (tfs_path_eq(orig_path_parent, dest_path)) {
 		return (TfsFsMoveResult){
 			.success = false,
-			.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorDestinationOriginParent}},
+			.data.err.kind = TfsFsMoveErrorDestinationOriginParent,
 		};
 	}
 
@@ -348,8 +333,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			for (size_t n = 0; n < locked_common_inodes_len; n++) {
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 			}
-			return (TfsFsMoveResult){
-				.success = false, .data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}}};
+			return (TfsFsMoveResult){.success = false, .data.err.kind = TfsFsMoveErrorInexistentOriginParentDir};
 		}
 
 		// If it isn't a directory, return Err
@@ -362,7 +346,9 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 			}
 			return (TfsFsMoveResult){
-				.success = false, .data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorOriginParentNotDir}}};
+				.success = false,
+				.data.err.kind = TfsFsMoveErrorOriginParentNotDir,
+			};
 		}
 
 		// Find the child
@@ -376,7 +362,9 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 			}
 			return (TfsFsMoveResult){
-				.success = false, .data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorOriginNotFound}}};
+				.success = false,
+				.data.err.kind = TfsFsMoveErrorOriginNotFound,
+			};
 		}
 
 		// Lock the child
@@ -394,14 +382,11 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 			}
 			tfs_inode_table_unlock_inode(&self->inode_table, child.idx);
-			return (TfsFsMoveResult){.success = false,
-				.data = {.err =
-							 (TfsFsMoveError){
-								 .kind = TfsFsMoveErrorRenameEntry,
-								 .data = {.rename_entry = {.err = rename_result.data.err}},
-							 }
-
-				}};
+			return (TfsFsMoveResult){
+				.success = false,
+				.data.err.kind = TfsFsMoveErrorRenameEntry,
+				.data.err.data.rename_entry.err = rename_result.data.err,
+			};
 		}
 
 		// Unlock all inodes (except child inode)
@@ -439,7 +424,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				}
 				return (TfsFsMoveResult){
 					.success = false,
-					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}},
+					.data.err.kind = TfsFsMoveErrorInexistentOriginParentDir,
 				};
 			}
 			orig_parent = orig_parent_result.data.inode;
@@ -458,7 +443,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				}
 				return (TfsFsMoveResult){
 					.success = false,
-					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentDestinationParentDir}},
+					.data.err.kind = TfsFsMoveErrorInexistentDestinationParentDir,
 				};
 			}
 			dest_parent = dest_parent_result.data.inode;
@@ -475,7 +460,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				}
 				return (TfsFsMoveResult){
 					.success = false,
-					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentDestinationParentDir}},
+					.data.err.kind = TfsFsMoveErrorInexistentDestinationParentDir,
 				};
 			}
 			dest_parent = dest_parent_result.data.inode;
@@ -494,7 +479,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				}
 				return (TfsFsMoveResult){
 					.success = false,
-					.data = {.err = (TfsFsMoveError){.kind = TfsFsMoveErrorInexistentOriginParentDir}},
+					.data.err.kind = TfsFsMoveErrorInexistentOriginParentDir,
 				};
 			}
 			orig_parent = orig_parent_result.data.inode;

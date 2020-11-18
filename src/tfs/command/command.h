@@ -73,7 +73,7 @@ typedef struct TfsCommand {
 	} data;
 } TfsCommand;
 
-/// @brief Error type for `tfs_command_parse`
+/// @brief Error type for #tfs_command_parse
 typedef struct TfsCommandParseError {
 	/// @brief Error kind
 	enum {
@@ -121,6 +121,21 @@ typedef struct TfsCommandParseError {
 	} data;
 } TfsCommandParseError;
 
+/// @brief Result type for #tfs_command_parse
+typedef struct TfsCommandParseResult {
+	/// @brief If successful
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief Success command
+		TfsCommand command;
+
+		/// @brief Underlying error
+		TfsCommandParseError err;
+	} data;
+} TfsCommandParseResult;
+
 /// @brief Prints a textual representation of @p self to @p out
 /// @param self
 /// @param out File to output to.
@@ -128,10 +143,7 @@ void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out);
 
 /// @brief Parses a command from a space-separated argument list
 /// @param in The file to read from
-/// @param[out] command Parsed command
-/// @param[out] err Set if an error occurs
-/// @return If successfully parsed.
-bool tfs_command_parse(FILE* in, TfsCommand* command, TfsCommandParseError* err);
+TfsCommandParseResult tfs_command_parse(FILE* in);
 
 /// @brief Destroys a command
 void tfs_command_destroy(TfsCommand* command);
