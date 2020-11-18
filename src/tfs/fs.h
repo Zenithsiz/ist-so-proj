@@ -191,6 +191,12 @@ typedef struct TfsFsMoveError {
 		/// was not found.
 		TfsFsMoveErrorInexistentCommonAncestor,
 
+		/// @brief The common ancestor was not a directory
+		/// @details
+		/// Given the paths 'a/b/c1' and 'a/b/c2', the path 'a/b'
+		/// was not a directory
+		TfsFsMoveErrorCommonAncestorNotDir,
+
 		/// @brief The origin path was the destination's parent.
 		/// @details
 		/// Given the origin path 'a/b/c' and destination path 'a/b/c/d',

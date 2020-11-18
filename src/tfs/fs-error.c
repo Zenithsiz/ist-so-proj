@@ -80,6 +80,10 @@ void tfs_fs_move_error_print(const TfsFsMoveError* self, FILE* out) {
 			fprintf(out, "The common ancestor of both paths was not found\n");
 			break;
 		}
+		case TfsFsMoveErrorCommonAncestorNotDir: {
+			fprintf(out, "The common ancestor of both paths was not a directory.");
+			break;
+		}
 		case TfsFsMoveErrorOriginDestinationParent: {
 			fprintf(out, "The origin path was the destination path's parent\n");
 			break;

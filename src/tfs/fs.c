@@ -318,48 +318,41 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			.data.err.kind = TfsFsMoveErrorInexistentCommonAncestor,
 		};
 	}
+	// If all rests are empty, return success, as we're moving a file to itself
+	// Note: We do it here because we need to lock the inode to return it
+	if (dest_path_rest.len == 0 && orig_path_rest.len == 0) {
+		// Unlock everything except the last
+		for (size_t n = 0; n < locked_common_inodes_len - 1; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+		}
+
+		// Note: `len >= 1`, so this is always valid.
+		return (TfsFsMoveResult){
+			.success = true,
+			.data.inode = locked_common_inodes[locked_common_inodes_len - 1],
+		};
+	}
+	// Else if it isn't a directory, return Err
 	TfsLockedInode common_ancestor = common_result.data.inode;
+	if (common_ancestor.type != TfsInodeTypeDir) {
+		for (size_t n = 0; n < locked_common_inodes_len; n++) {
+			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
+		}
+		return (TfsFsMoveResult){
+			.success = false,
+			.data.err.kind = TfsFsMoveErrorCommonAncestorNotDir,
+		};
+	}
 
 	// If both parents are the same, simply rename the file
-	if (tfs_path_eq(orig_path_parent, dest_path_parent)) {
-		// All locked inodes, for each component
-		const size_t locked_inodes_len = tfs_path_components_len(orig_path_parent);
-		TfsLockedInode locked_inodes[locked_inodes_len];
-
-		// Lock the parent
-		TfsFsFindResult find_parent_result =
-			tfs_fs_lock_all_from(self, orig_path_parent, common_ancestor, locked_inodes, TfsRwLockAccessUnique);
-		if (!find_parent_result.success) {
-			for (size_t n = 0; n < locked_common_inodes_len; n++) {
-				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
-			}
-			return (TfsFsMoveResult){.success = false, .data.err.kind = TfsFsMoveErrorInexistentOriginParentDir};
-		}
-
-		// If it isn't a directory, return Err
-		TfsLockedInode parent = find_parent_result.data.inode;
-		if (parent.type != TfsInodeTypeDir) {
-			for (size_t n = 0; n < locked_common_inodes_len; n++) {
-				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
-			}
-			for (size_t n = 0; n < locked_inodes_len; n++) {
-				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
-			}
-			return (TfsFsMoveResult){
-				.success = false,
-				.data.err.kind = TfsFsMoveErrorOriginParentNotDir,
-			};
-		}
-
+	// Note: If both parents are the same, they'll both be empty and the common ancestor is the parent
+	if (orig_path_parent.len == 0 && dest_path_parent.len == 0) {
 		// Find the child
 		TfsInodeDirSearchByNameResult search_result =
-			tfs_inode_dir_search_by_name(&parent.data->dir, orig_path_filename.chars, orig_path_filename.len);
+			tfs_inode_dir_search_by_name(&common_ancestor.data->dir, orig_path_filename.chars, orig_path_filename.len);
 		if (!search_result.success) {
 			for (size_t n = 0; n < locked_common_inodes_len; n++) {
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
-			}
-			for (size_t n = 0; n < locked_inodes_len; n++) {
-				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 			}
 			return (TfsFsMoveResult){
 				.success = false,
@@ -372,14 +365,11 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			tfs_inode_table_lock(&self->inode_table, search_result.data.success.idx, TfsRwLockAccessUnique);
 
 		// Rename it
-		TfsInodeDirRenameResult rename_result =
-			tfs_inode_dir_rename(&parent.data->dir, child.idx, dest_path_filename.chars, dest_path_filename.len);
+		TfsInodeDirRenameResult rename_result = tfs_inode_dir_rename(
+			&common_ancestor.data->dir, child.idx, dest_path_filename.chars, dest_path_filename.len);
 		if (!rename_result.success) {
 			for (size_t n = 0; n < locked_common_inodes_len; n++) {
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
-			}
-			for (size_t n = 0; n < locked_inodes_len; n++) {
-				tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 			}
 			tfs_inode_table_unlock_inode(&self->inode_table, child.idx);
 			return (TfsFsMoveResult){
@@ -393,9 +383,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		for (size_t n = 0; n < locked_common_inodes_len; n++) {
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 		}
-		for (size_t n = 0; n < locked_inodes_len; n++) {
-			tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
-		}
 
 		return (TfsFsMoveResult){
 			.success = true,
@@ -403,7 +390,8 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		};
 	}
 
-	// All locked inodes, for each component
+	// All locked inodes, for each parent component
+	// Note: Not including the common parent again.
 	const size_t locked_orig_inodes_len = tfs_path_components_len(orig_path_parent);
 	TfsLockedInode locked_orig_inodes[locked_orig_inodes_len];
 	const size_t locked_dest_inodes_len = tfs_path_components_len(dest_path_parent);
@@ -412,7 +400,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 	// Then lock each path in a deterministic order.
 	TfsLockedInode orig_parent;
 	TfsLockedInode dest_parent;
-	// TODO: Check sign
 	if (tfs_str_cmp(orig_path_parent.chars, orig_path_parent.len, dest_path_parent.chars, dest_path_parent.len) < 0) {
 		if (orig_path_parent.len == 0) { orig_parent = common_ancestor; }
 		else {
@@ -500,7 +487,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 
 		return (TfsFsMoveResult){
 			.success = false,
-			// TODO: CHANGE ALL ERRORS TO BE LIKE THIS
 			.data.err.kind = TfsFsMoveErrorOriginParentNotDir,
 		};
 	}
@@ -589,6 +575,7 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 
 void tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx) {
 	// Simply delegate to the inode table
+	// Note: it will check if `idx` is valid, so we don't have to.
 	tfs_inode_table_unlock_inode(&self->inode_table, idx);
 }
 
