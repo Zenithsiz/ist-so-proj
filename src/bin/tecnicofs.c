@@ -77,10 +77,6 @@ int main(int argc, char** argv) {
 		.fs = &fs,
 	};
 
-	// Get the start time of the execution
-	struct timespec start_time;
-	assert(clock_gettime(CLOCK_REALTIME, &start_time) == 0);
-
 	// Create all threads
 	pthread_t worker_threads[num_threads];
 	for (size_t n = 0; n < num_threads; n++) {
@@ -90,6 +86,10 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 	}
+
+	// Get the start time of the execution
+	struct timespec start_time;
+	assert(clock_gettime(CLOCK_REALTIME, &start_time) == 0);
 
 	// Fill the command table
 	fill_command_table(&command_table, in);
