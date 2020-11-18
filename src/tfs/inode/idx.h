@@ -14,6 +14,7 @@
 
 /// @brief An inode index
 typedef struct TfsInodeIdx {
+	/// @brief The index of the inode in the inode table.
 	size_t idx;
 } TfsInodeIdx;
 

@@ -49,6 +49,7 @@ typedef struct TfsInodeDir {
 
 /// @brief A directory index
 typedef struct TfsInodeDirIdx {
+	/// @brief The index of the inode in the directory
 	size_t idx;
 } TfsInodeDirIdx;
 

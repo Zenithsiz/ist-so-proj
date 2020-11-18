@@ -26,6 +26,7 @@ typedef struct TfsInodeTable {
 	size_t capacity;
 } TfsInodeTable;
 
+/// @brief A locked inode
 typedef struct TfsLockedInode {
 	/// Inode's index
 	TfsInodeIdx idx;
