@@ -47,6 +47,11 @@ typedef struct TfsInodeDir {
 	size_t capacity;
 } TfsInodeDir;
 
+/// @brief A directory index
+typedef struct TfsInodeDirIdx {
+	size_t idx;
+} TfsInodeDirIdx;
+
 /// @brief Error type for #tfs_inode_dir_add_entry
 typedef struct TfsInodeDirAddEntryError {
 	/// @brief Error kind
@@ -66,7 +71,7 @@ typedef struct TfsInodeDirAddEntryError {
 			TfsInodeIdx idx;
 
 			/// @brief Directory index of the entry with the same name
-			size_t dir_idx;
+			TfsInodeDirIdx dir_idx;
 		} duplicate_name;
 	} data;
 } TfsInodeDirAddEntryError;
@@ -105,7 +110,7 @@ typedef struct TfsInodeDirRenameError {
 			TfsInodeIdx idx;
 
 			/// @brief Directory index of the entry with the same name
-			size_t dir_idx;
+			TfsInodeDirIdx dir_idx;
 		} duplicate_name;
 	} data;
 } TfsInodeDirRenameError;
@@ -135,7 +140,7 @@ typedef struct TfsInodeDirSearchByNameResult {
 			TfsInodeIdx idx;
 
 			/// @brief Dir index
-			size_t dir_idx;
+			TfsInodeDirIdx dir_idx;
 		} success;
 	} data;
 } TfsInodeDirSearchByNameResult;
@@ -177,7 +182,7 @@ TfsInodeDirSearchByNameResult tfs_inode_dir_search_by_name(const TfsInodeDir* se
 /// @brief Removes an entry given it's directory index
 /// @param self
 /// @param dir_idx The directory index of the entry to remove. _Must_ be valid
-void tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, size_t dir_idx);
+void tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, TfsInodeDirIdx dir_idx);
 
 /// @brief Renames a file given it's inode index
 /// @param self

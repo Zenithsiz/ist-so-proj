@@ -26,7 +26,7 @@ void tfs_inode_dir_add_entry_error_print(const TfsInodeDirAddEntryError* self, F
 		}
 
 		case TfsInodeDirAddEntryErrorDuplicateName: {
-			fprintf(out, "An entry with the same name (Inode %zu) already exists\n", self->data.duplicate_name.idx);
+			fprintf(out, "An entry with the same name (Inode %zu) already exists\n", self->data.duplicate_name.idx.idx);
 			break;
 		}
 
@@ -46,7 +46,7 @@ void tfs_inode_dir_rename_error_print(const TfsInodeDirRenameError* self, FILE* 
 			break;
 		}
 		case TfsInodeDirRenameErrorDuplicateName: {
-			fprintf(out, "An entry with the same name (Inode %zu) already exists\n", self->data.duplicate_name.idx);
+			fprintf(out, "An entry with the same name (Inode %zu) already exists\n", self->data.duplicate_name.idx.idx);
 			break;
 		}
 		default: {
@@ -87,7 +87,9 @@ TfsInodeDir tfs_inode_dir_new(void) {
 void tfs_inode_dir_destroy(TfsInodeDir* self) {
 	// Destroy all entries
 	for (size_t n = 0; n < self->capacity; ++n) {
-		if (self->entries[n].inode_idx != TFS_INODE_IDX_NONE) { tfs_inode_dir_entry_destroy(&self->entries[n]); }
+		if (self->entries[n].inode_idx.idx != TFS_INODE_IDX_NONE.idx) {
+			tfs_inode_dir_entry_destroy(&self->entries[n]);
+		}
 	}
 
 	// Free our entries and set them to NULL
@@ -99,7 +101,7 @@ void tfs_inode_dir_destroy(TfsInodeDir* self) {
 bool tfs_inode_dir_is_empty(const TfsInodeDir* self) {
 	// Check every entry, if we find a non-empty one, we're not empty
 	for (size_t n = 0; n < self->capacity; n++) {
-		if (self->entries[n].inode_idx != TFS_INODE_IDX_NONE) { return false; }
+		if (self->entries[n].inode_idx.idx != TFS_INODE_IDX_NONE.idx) { return false; }
 	}
 
 	// If we got here, they were all empty
@@ -110,7 +112,7 @@ TfsInodeDirSearchByNameResult tfs_inode_dir_search_by_name(const TfsInodeDir* se
 	// If the name matches on any entry and it's not empty, return it
 	for (size_t n = 0; n < self->capacity; n++) {
 		// If we're empty, skip
-		if (self->entries[n].inode_idx == TFS_INODE_IDX_NONE) { continue; }
+		if (self->entries[n].inode_idx.idx == TFS_INODE_IDX_NONE.idx) { continue; }
 
 		// If the names are different, continue
 		TfsInodeDirEntry* entry = &self->entries[n];
@@ -120,7 +122,7 @@ TfsInodeDirSearchByNameResult tfs_inode_dir_search_by_name(const TfsInodeDir* se
 		return (TfsInodeDirSearchByNameResult){
 			.success = true,
 			.data.success.idx = self->entries[n].inode_idx,
-			.data.success.dir_idx = n,
+			.data.success.dir_idx.idx = n,
 		};
 	}
 
@@ -128,12 +130,12 @@ TfsInodeDirSearchByNameResult tfs_inode_dir_search_by_name(const TfsInodeDir* se
 	return (TfsInodeDirSearchByNameResult){.success = false};
 }
 
-void tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, size_t dir_idx) {
+void tfs_inode_dir_remove_entry_by_dir_idx(TfsInodeDir* self, TfsInodeDirIdx dir_idx) {
 	// Make sure `dir_idx` is valid.
-	assert(dir_idx < self->capacity);
+	assert(dir_idx.idx < self->capacity);
 
 	// Then destroy the entry
-	tfs_inode_dir_entry_destroy(&self->entries[dir_idx]);
+	tfs_inode_dir_entry_destroy(&self->entries[dir_idx.idx]);
 }
 
 TfsInodeDirRenameResult tfs_inode_dir_rename(
@@ -143,7 +145,7 @@ TfsInodeDirRenameResult tfs_inode_dir_rename(
 	size_t dir_idx = (size_t)-1;
 	for (size_t n = 0; n < self->capacity; n++) {
 		// If we found it, set it.
-		if (self->entries[n].inode_idx == idx) {
+		if (self->entries[n].inode_idx.idx == idx.idx) {
 			dir_idx = n;
 
 			// If it's name is equal to the new name, return success
@@ -160,7 +162,7 @@ TfsInodeDirRenameResult tfs_inode_dir_rename(
 					.success = false,
 					.data.err.kind = TfsInodeDirRenameErrorDuplicateName,
 					.data.err.data.duplicate_name.idx = entry->inode_idx,
-					.data.err.data.duplicate_name.dir_idx = n,
+					.data.err.data.duplicate_name.dir_idx.idx = n,
 				};
 			}
 		}
@@ -197,7 +199,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(
 	size_t empty_idx = (size_t)-1;
 	for (size_t n = 0; n < self->capacity; n++) {
 		// If we're empty, if we haven't found an empty index yet, set it
-		if (self->entries[n].inode_idx == TFS_INODE_IDX_NONE) {
+		if (self->entries[n].inode_idx.idx == TFS_INODE_IDX_NONE.idx) {
 			if (empty_idx == (size_t)-1) { empty_idx = n; }
 		}
 
@@ -209,7 +211,7 @@ TfsInodeDirAddEntryResult tfs_inode_dir_add_entry(
 					.success = false,
 					.data.err.kind = TfsInodeDirAddEntryErrorDuplicateName,
 					.data.err.data.duplicate_name.idx = entry->inode_idx,
-					.data.err.data.duplicate_name.dir_idx = n,
+					.data.err.data.duplicate_name.dir_idx.idx = n,
 				};
 			}
 		}

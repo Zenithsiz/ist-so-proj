@@ -13,12 +13,14 @@
 #include <stddef.h> // size_t
 
 /// @brief An inode index
-typedef size_t TfsInodeIdx;
+typedef struct TfsInodeIdx {
+	size_t idx;
+} TfsInodeIdx;
 
 /// @brief A nonexistant index
 /// @details
 /// This type is used as a sentinel value indicating
 /// that an operation involving inodes failed.
-#define TFS_INODE_IDX_NONE ((TfsInodeIdx)-1)
+#define TFS_INODE_IDX_NONE ((TfsInodeIdx){.idx = (size_t)(-1)})
 
 #endif

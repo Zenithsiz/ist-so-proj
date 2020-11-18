@@ -105,7 +105,7 @@ TfsFs tfs_fs_new(void) {
 
 	// Create the root node and unlock it
 	TfsInodeIdx idx = tfs_inode_table_add(&fs.inode_table, TfsInodeTypeDir);
-	assert(idx == TFS_FS_ROOT_IDX);
+	assert(idx.idx == TFS_FS_ROOT_IDX.idx);
 	tfs_inode_table_unlock_inode(&fs.inode_table, idx);
 
 	return fs;
@@ -595,5 +595,5 @@ void tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx) {
 void tfs_fs_print(const TfsFs* self, FILE* out) {
 	// Print the root inode and all it's children
 	// Note: We start off with '' as the root, instead of '/'.
-	tfs_inode_table_print_tree(&self->inode_table, 0, out, "");
+	tfs_inode_table_print_tree(&self->inode_table, TFS_FS_ROOT_IDX, out, "");
 }

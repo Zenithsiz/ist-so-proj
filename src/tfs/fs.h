@@ -14,7 +14,7 @@
 #include <tfs/rw_lock.h>	 // TfsRwLock
 
 /// @brief Root directory index
-#define TFS_FS_ROOT_IDX (0)
+#define TFS_FS_ROOT_IDX ((TfsInodeIdx){.idx = 0})
 
 /// @brief The file system
 /// @details

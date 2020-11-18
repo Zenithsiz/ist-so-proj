@@ -159,7 +159,7 @@ static void* worker_thread_fn(void* arg) {
 						tfs_inode_type_str(inode_type),
 						(int)path.len,
 						path.chars,
-						idx);
+						idx.idx);
 					tfs_fs_unlock_inode(data->fs, idx);
 				}
 				break;
@@ -200,7 +200,7 @@ static void* worker_thread_fn(void* arg) {
 						tfs_inode_type_str(inode.type),
 						(int)path.len,
 						path.chars,
-						inode.idx);
+						inode.idx.idx);
 					tfs_fs_unlock_inode(data->fs, inode.idx);
 				}
 				break;
@@ -229,7 +229,7 @@ static void* worker_thread_fn(void* arg) {
 						tfs_inode_type_str(inode.type),
 						(int)source.len,
 						source.chars,
-						inode.idx,
+						inode.idx.idx,
 						(int)dest.len,
 						dest.chars);
 					tfs_fs_unlock_inode(data->fs, inode.idx);
