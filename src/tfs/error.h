@@ -1,8 +1,7 @@
 /// @file
 /// @brief File system errors
 /// @details
-/// Errors used for future funcionalities
-/// of the file system.
+/// Errors used for server communication with clients.
 
 #ifndef TFS_ERROR_H
 #define TFS_ERROR_H
