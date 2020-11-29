@@ -94,8 +94,7 @@ void tfs_client_server_connection_destroy(TfsClientServerConnection* connection)
 
 #include <errno.h>
 
-TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_command(
-	TfsClientServerConnection* connection,
+TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_command(TfsClientServerConnection* self,
 	const TfsCommand* command //
 ) {
 	// Build the command string
@@ -104,12 +103,12 @@ TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_com
 	size_t command_str_len = strlen(command_str);
 
 	// Send the string to the server
-	ssize_t characters_sent = sendto(connection->client_socket,
+	ssize_t characters_sent = sendto(self->client_socket,
 		command_str,
 		command_str_len + 1,
 		0,
-		(struct sockaddr*)&connection->server_address,
-		connection->server_address_len //
+		(struct sockaddr*)&self->server_address,
+		self->server_address_len //
 	);
 	if (characters_sent < 0) {
 		return (TfsClientServerConnectionSendCommandResult){
@@ -122,7 +121,7 @@ TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_com
 	// Receive the response from the server.
 	// Note: Response is either '\x00' for failure, or '\x01' for success.
 	char response_buffer;
-	ssize_t characters_received = recv(connection->client_socket, &response_buffer, 1, 0);
+	ssize_t characters_received = recv(self->client_socket, &response_buffer, 1, 0);
 	if (characters_received < 0) {
 		return (TfsClientServerConnectionSendCommandResult){
 			.success = false,
@@ -134,4 +133,40 @@ TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_com
 		.success = true,
 		.data.command_successful = response_buffer != '\0',
 	};
+}
+
+tfs_client_server_connection_send_command_create(TfsClientServerConnection* self,
+	TfsPathOwned path,
+	TfsInodeType type //
+) {
+	TfsCommand command = (TfsCommand){.kind = TfsCommandCreate, .data.create.path = path, .data.create.type = type};
+	tfs_client_server_connection_send_command(self, &command);
+	tfs_command_destroy(&command);
+}
+
+tfs_client_server_connection_send_command_remove(TfsClientServerConnection* self, TfsPathOwned path) {
+	TfsCommand command = (TfsCommand){.kind = TfsCommandRemove, .data.remove.path = path};
+	tfs_client_server_connection_send_command(self, &command);
+	tfs_command_destroy(&command);
+}
+
+tfs_client_server_connection_send_command_search(TfsClientServerConnection* self, TfsPathOwned path) {
+	TfsCommand command = (TfsCommand){.kind = TfsCommandSearch, .data.search.path = path};
+	tfs_client_server_connection_send_command(self, &command);
+	tfs_command_destroy(&command);
+}
+
+tfs_client_server_connection_send_command_move(TfsClientServerConnection* self,
+	TfsPathOwned source,
+	TfsPathOwned dest //
+) {
+	TfsCommand command = (TfsCommand){.kind = TfsCommandMove, .data.move.source = source, .data.move.dest = dest};
+	tfs_client_server_connection_send_command(self, &command);
+	tfs_command_destroy(&command);
+}
+
+tfs_client_server_connection_send_command_print(TfsClientServerConnection* self, const char* path) {
+	TfsCommand command = (TfsCommand){.kind = TfsCommandPrint, .data.print.path = path};
+	tfs_client_server_connection_send_command(self, &command);
+	tfs_command_destroy(&command);
 }

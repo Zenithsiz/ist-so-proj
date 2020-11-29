@@ -106,10 +106,44 @@ TfsClientServerConnectionNewResult tfs_client_server_connection_new(const char* 
 void tfs_client_server_connection_destroy(TfsClientServerConnection* connection);
 
 /// @brief Sends a message to the tfs server
+/// @param self
 /// @param command The command to send
-TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_command(
-	TfsClientServerConnection* connection,
+TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_command( //
+	TfsClientServerConnection* self,
 	const TfsCommand* command //
 );
+
+/// @brief Sends a create command to the tfs server
+/// @param self
+/// @param path Path to create
+/// @param type Type of inode to create
+tfs_client_server_connection_send_command_create(TfsClientServerConnection* self,
+	TfsPathOwned path,
+	TfsInodeType type //
+);
+
+/// @brief Sends a remove command to the tfs server
+/// @param self
+/// @param path Path to remove
+tfs_client_server_connection_send_command_remove(TfsClientServerConnection* self, TfsPathOwned path);
+
+/// @brief Sends a search command to the tfs server
+/// @param self
+/// @param path Path to search
+tfs_client_server_connection_send_command_search(TfsClientServerConnection* self, TfsPathOwned path);
+
+/// @brief Sends a move command to the tfs server
+/// @param self
+/// @param source Source path to move
+/// @param dest Destination path to move
+tfs_client_server_connection_send_command_move(TfsClientServerConnection* self,
+	TfsPathOwned source,
+	TfsPathOwned dest //
+);
+
+/// @brief Sends a print command to the tfs server
+/// @param self
+/// @param path Path to output to. *Takes ownership*
+tfs_client_server_connection_send_command_print(TfsClientServerConnection* self, const char* path);
 
 #endif
