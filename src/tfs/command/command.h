@@ -145,6 +145,9 @@ void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out);
 /// @param in The file to read from
 TfsCommandParseResult tfs_command_parse(FILE* in);
 
+/// @brief Serializes this command to a string
+void tfs_command_to_string(const TfsCommand* command, char* buffer, size_t buffer_len);
+
 /// @brief Destroys a command
 void tfs_command_destroy(TfsCommand* command);
 

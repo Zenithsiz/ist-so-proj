@@ -2,6 +2,7 @@
 obj/
 build/
 /tecnicofs
+/tecnicofs-client
 /core
 
 # Vscode

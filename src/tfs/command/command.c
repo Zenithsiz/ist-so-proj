@@ -5,19 +5,40 @@
 
 void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out) {
 	switch (self->kind) {
-		case TfsCommandParseErrorReadLine: fprintf(out, "Unable to read line from `in`\n"); break;
-		case TfsCommandParseErrorNoCommand: fprintf(out, "Missing command from line\n"); break;
-		case TfsCommandParseErrorInvalidCommand:
+		case TfsCommandParseErrorReadLine: {
+			fprintf(out, "Unable to read line from `in`\n");
+			break;
+		}
+		case TfsCommandParseErrorNoCommand: {
+			fprintf(out, "Missing command from line\n");
+			break;
+		}
+		case TfsCommandParseErrorInvalidCommand: {
 			fprintf(out, "Invalid command type: '%c'\n", self->data.invalid_command.command);
 			break;
-		case TfsCommandParseErrorMissingCreateArgs: fprintf(out, "Missing arguments for `Create` command\n"); break;
+		}
+		case TfsCommandParseErrorMissingCreateArgs: {
+			fprintf(out, "Missing arguments for `Create` command\n");
+			break;
+		}
 		case TfsCommandParseErrorInvalidType:
 			fprintf(out, "Invalid type for `Create` command: '%c'\n", self->data.invalid_type.type);
 			break;
-		case TfsCommandParseErrorMissingSearchArgs: fprintf(out, "Missing arguments for `Search` command\n"); break;
-		case TfsCommandParseErrorMissingRemoveArgs: fprintf(out, "Missing arguments for `Remove` command\n"); break;
-		case TfsCommandParseErrorMissingMoveArgs: fprintf(out, "Missing arguments for `Move` command\n"); break;
-		default: break;
+		case TfsCommandParseErrorMissingSearchArgs: {
+			fprintf(out, "Missing arguments for `Search` command\n");
+			break;
+		}
+		case TfsCommandParseErrorMissingRemoveArgs: {
+			fprintf(out, "Missing arguments for `Remove` command\n");
+			break;
+		}
+		case TfsCommandParseErrorMissingMoveArgs: {
+			fprintf(out, "Missing arguments for `Move` command\n");
+			break;
+		}
+		default: {
+			break;
+		}
 	}
 }
 
@@ -153,6 +174,43 @@ TfsCommandParseResult tfs_command_parse(FILE* in) {
 				.data.command.kind = TfsCommandParseErrorInvalidCommand,
 				.data.err.data.invalid_command.command = command_char,
 			};
+		}
+	}
+}
+
+void tfs_command_to_string(const TfsCommand* command, char* buffer, size_t buffer_len) {
+	switch (command->kind) {
+		case TfsCommandCreate: {
+			snprintf(buffer,
+				buffer_len,
+				"c %.*s %c",
+				(int)command->data.create.path.len,
+				command->data.create.path.chars,
+				command->data.create.type == TfsInodeTypeFile ? 'f' : 'd' //
+			);
+			break;
+		}
+		case TfsCommandSearch: {
+			snprintf(buffer, buffer_len, "l %.*s", (int)command->data.search.path.len, command->data.search.path.chars);
+			break;
+		}
+		case TfsCommandRemove: {
+			snprintf(buffer, buffer_len, "d %.*s", (int)command->data.remove.path.len, command->data.remove.path.chars);
+			break;
+		}
+		case TfsCommandMove: {
+			snprintf(buffer,
+				buffer_len,
+				"m %.*s %.*s",
+				(int)command->data.move.source.len,
+				command->data.move.source.chars,
+				(int)command->data.move.dest.len,
+				command->data.move.dest.chars //
+			);
+			break;
+		}
+		default: {
+			break;
 		}
 	}
 }

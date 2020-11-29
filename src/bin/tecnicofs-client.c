@@ -1,113 +1,133 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <tfs/client-api.h> // tfs_client_*
-#include <tfs/error.h>		// TfsError
+/// @file
+/// @brief Filesystem client
+/// @details
+/// This file serves as the client to the tfs.
+/// @note
+/// All static functions here, when encountering an error,
+/// will simply report it and exit the program, as opposed
+/// to returning an error.
 
-FILE* inputFile;
-char* serverName;
+#include <ctype.h>		// isspace
+#include <errno.h>		// errno
+#include <stdio.h>		// fprintf, stderr
+#include <stdlib.h>		// size_t
+#include <tfs/client.h> // tfs_client_*
 
-static void displayUsage(const char* appName) {
-	printf("Usage: %s inputfile server_socket_name\n", appName);
-	exit(EXIT_FAILURE);
-}
+/// @brief Processes all input from `in`, sending it to the server at `connection`
+/// @param connection The server connection to send commands to
+/// @param in Input file to read commands from
+static void process_input(TfsClientServerConnection* connection, FILE* in);
 
-static void parseArgs(long argc, char* const argv[]) {
-	if (argc != 3) {
-		fprintf(stderr, "Invalid format:\n");
-		displayUsage(argv[0]);
-	}
+/// @brief Opens the input file
+/// @param in_filename Filename of the file to open in `in`. Or '-' for stdin.
+/// @param[out] in Opened input file.
+static void open_input(const char* in_filename, FILE** in);
 
-	serverName = argv[2];
-
-	inputFile = fopen(argv[1], "r");
-
-	if (inputFile == NULL) {
-		fprintf(stderr, "Error: cannot open input file\n");
-		exit(EXIT_FAILURE);
-	}
-}
-
-void errorParse() {
-	fprintf(stderr, "Error: command invalid\n");
-	exit(EXIT_FAILURE);
-}
-
-void* processInput() {
-	char line[1024];
-
-	while (fgets(line, sizeof(line) / sizeof(char), inputFile)) {
-		char op;
-		char arg1[1024], arg2[1024];
-		int res;
-
-		int numTokens = sscanf(line, "%c %s %s", &op, arg1, arg2);
-
-		/* perform minimal validation */
-		if (numTokens < 1) { continue; }
-		switch (op) {
-			case 'c':
-				if (numTokens != 3) {
-					errorParse();
-					break;
-				}
-				switch (arg2[0]) {
-					case 'f':
-						res = tfsCreate(arg1, 'f');
-						if (!res) printf("Created file: %s\n", arg1);
-						else
-							printf("Unable to create file: %s\n", arg1);
-						break;
-					case 'd':
-						res = tfsCreate(arg1, 'd');
-						if (!res) printf("Created directory: %s\n", arg1);
-						else
-							printf("Unable to create directory: %s\n", arg1);
-						break;
-					default: fprintf(stderr, "Error: invalid node type\n");
-				}
-				break;
-			case 'l':
-				if (numTokens != 2) errorParse();
-				res = tfsLookup(arg1);
-				if (res >= 0) printf("Search: %s found\n", arg1);
-				else
-					printf("Search: %s not found\n", arg1);
-				break;
-			case 'd':
-				if (numTokens != 2) errorParse();
-				res = tfsDelete(arg1);
-				if (!res) printf("Deleted: %s\n", arg1);
-				else
-					printf("Unable to delete: %s\n", arg1);
-				break;
-			case 'm':
-				if (numTokens != 3) errorParse();
-				res = tfsMove(arg1, arg2);
-				if (!res) printf("Moved: %s to %s\n", arg1, arg2);
-				else
-					printf("Unable to move: %s to %s\n", arg1, arg2);
-				break;
-			case '#': break;
-			default: { /* error */ errorParse();
-			}
-		}
-	}
-	fclose(inputFile);
-	return NULL;
-}
+/// @brief Closes the input file
+/// @param in The input file.
+static void close_input(FILE** in);
 
 int main(int argc, char* argv[]) {
-	parseArgs(argc, argv);
-
-	if (tfsMount(serverName) == 0) printf("Mounted! (socket = %s)\n", serverName);
-	else {
-		fprintf(stderr, "Unable to mount socket: %s\n", serverName);
-		exit(EXIT_FAILURE);
+	if (argc != 3) {
+		fprintf(stderr, "Usage: ./tecnicofs-client <input-file> <server-socket-name>\n");
+		return EXIT_FAILURE;
 	}
 
-	processInput();
+	// Open the input file
+	FILE* in;
+	open_input(argv[1], &in);
 
-	tfsUnmount();
+	// Start the client-server connection
+	const char* server_path = argv[2];
+	TfsClientServerConnectionNewResult connection_result = tfs_client_server_connection_new(server_path);
+	if (!connection_result.success) {
+		fprintf(stderr, "Unable to mount socket: %s\n", server_path);
+		tfs_client_server_connection_new_error_print(&connection_result.data.err, stderr);
+		return EXIT_FAILURE;
+	}
+	TfsClientServerConnection connection = connection_result.data.connection;
+	printf("Mounted on the tfs server! (socket = %s)\n", server_path);
 
-	exit(EXIT_SUCCESS);
+	// Process all input
+	process_input(&connection, in);
+
+	tfs_client_server_connection_destroy(&connection);
+	close_input(&in);
+
+	return EXIT_SUCCESS;
+}
+
+static void process_input(TfsClientServerConnection* connection, FILE* in) {
+	for (size_t cur_line = 1;; cur_line++) {
+		// Skip any whitespace
+		int last_char;
+		while (last_char = fgetc(in), isspace(last_char)) {}
+		ungetc(last_char, in);
+
+		// If it starts with '#', skip this line
+		int peek = fgetc(in);
+		if (peek == '#') {
+			while (fgetc(in) != '\n' && !feof(in)) {}
+			continue;
+		}
+		else {
+			ungetc(peek, in);
+		}
+
+		// If the line is empty, stop
+		if (feof(in)) { break; }
+
+		// Try to parse it
+		TfsCommandParseResult parse_result = tfs_command_parse(in);
+		if (!parse_result.success) {
+			fprintf(stderr, "Unable to parse line %zu\n", cur_line);
+			tfs_command_parse_error_print(&parse_result.data.err, stderr);
+			exit(EXIT_FAILURE);
+		}
+
+		// Then send it to the server
+		TfsCommand command = parse_result.data.command;
+		TfsClientServerConnectionSendCommandResult send_result =
+			tfs_client_server_connection_send_command(connection, &command);
+		tfs_command_destroy(&command);
+		if (!send_result.success) {
+			fprintf(stderr, "Unable to send command to server\n");
+			fprintf(stderr, "(%d) %s\n", errno, strerror(errno));
+			tfs_client_server_connection_send_command_error_print(&send_result.data.err, stderr);
+			exit(EXIT_FAILURE);
+		}
+
+		if (!send_result.data.command_successful) {
+			fprintf(stderr, "Failed to execute command in line %zu\n", cur_line);
+		}
+	}
+}
+
+static void open_input(const char* in_filename, FILE** in) {
+	// Open the input file
+	// Note: If we receive '-', use stdin
+	if (strcmp(in_filename, "-") == 0) { *in = stdin; }
+	else {
+		*in = fopen(in_filename, "r");
+		if (*in == NULL) {
+			fprintf(stderr, "Unable to open input file '%s'\n", in_filename);
+			fprintf(stderr, "(%d) %s\n", errno, strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
+static void close_input(FILE** in) {
+	// If `in` isn't stdin, close it
+	if (*in != stdin) {
+		int res = fclose(*in);
+		if (res != 0) {
+			fprintf(stderr, "Unable to close input file\n");
+			fprintf(stderr, "(%d) %s\n", errno, strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	// Then set it to `NULL`
+	*in = NULL;
 }
