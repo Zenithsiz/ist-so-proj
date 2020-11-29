@@ -37,6 +37,11 @@ typedef struct TfsCommand {
 		/// @details
 		/// This command moves a file to another path.
 		TfsCommandMove,
+
+		/// @brief Prints the filesytem
+		/// @details
+		/// This command prints the whole filesystem to a path.
+		TfsCommandPrint,
 	} kind;
 
 	/// @brief Data for all commands
@@ -70,6 +75,13 @@ typedef struct TfsCommand {
 			/// @brief The destination path of the file to move
 			TfsPathOwned dest;
 		} move;
+
+		/// @brief Data for `Print` command
+		struct {
+			/// @brief The path to print the filesystem to
+			/// @note This is owned
+			char* path;
+		} print;
 	} data;
 } TfsCommand;
 
@@ -100,6 +112,9 @@ typedef struct TfsCommandParseError {
 
 		/// @brief Missing arguments for `Move` command.
 		TfsCommandParseErrorMissingMoveArgs,
+
+		/// @brief Missing arguments for `Print` command.
+		TfsCommandParseErrorMissingPrintArgs,
 	} kind;
 
 	/// @brief Error data

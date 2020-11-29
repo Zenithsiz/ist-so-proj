@@ -33,6 +33,9 @@ typedef struct TfsFs {
 	/// The first inode, with index #TFS_FS_ROOT_IDX , will always be
 	/// a directory. This inode is also called the root.
 	TfsInodeTable inode_table;
+
+	/// @brief Global read-write lock for print synchronization
+	TfsRwLock rw_lock;
 } TfsFs;
 
 /// @brief Error type for #tfs_fs_find
@@ -284,6 +287,27 @@ typedef struct TfsFsMoveResult {
 	} data;
 } TfsFsMoveResult;
 
+/// @brief Error type for #tfs_fs_print
+typedef struct TfsFsPrintError {
+	/// @brief Error kind
+	enum {
+		/// @brief Unable to create file
+		TfsFsPrintErrorCreate,
+	} kind;
+} TfsFsPrintError;
+
+/// @brief Result type for #tfs_fs_remove
+typedef struct TfsFsPrintResult {
+	/// @brief If the operation was successful
+	bool success;
+
+	/// @brief Result data
+	union {
+		/// @brief Any possible errors
+		TfsFsPrintError err;
+	} data;
+} TfsFsPrintResult;
+
 /// @brief Prints a textual representation of @p self to @p out
 /// @param self
 /// @param out File to output to.
@@ -303,6 +327,11 @@ void tfs_fs_remove_error_print(const TfsFsRemoveError* self, FILE* out);
 /// @param self
 /// @param out File to output to.
 void tfs_fs_move_error_print(const TfsFsMoveError* self, FILE* out);
+
+/// @brief Prints a textual representation of @p self to @p out
+/// @param self
+/// @param out File to output to.
+void tfs_fs_print_error_print(const TfsFsPrintError* self, FILE* out);
 
 /// @brief Creates a new file system
 TfsFs tfs_fs_new(void);
@@ -340,14 +369,14 @@ TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access);
 /// The returned inode _must_ be unlocked.
 TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsRwLockAccess access);
 
+/// @brief Prints the contents of the filesystem
+/// @param self
+/// @param file_name File to output to.
+TfsFsPrintResult tfs_fs_print(TfsFs* self, const char* file_name);
+
 /// @brief Unlocks an inode
 /// @param self
 /// @param idx The index of the inode to unlock. _Must_ be valid.
 void tfs_fs_unlock_inode(TfsFs* self, TfsInodeIdx idx);
-
-/// @brief Prints the contents of the filesystem
-/// @param self
-/// @param out File to output to.
-void tfs_fs_print(const TfsFs* self, FILE* out);
 
 #endif

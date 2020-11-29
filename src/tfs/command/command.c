@@ -1,6 +1,7 @@
 #include "command.h"
 
 // Includes
+#include <stdlib.h> // free
 #include <string.h> // strlen
 
 void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out) {
@@ -34,6 +35,10 @@ void tfs_command_parse_error_print(const TfsCommandParseError* self, FILE* out) 
 		}
 		case TfsCommandParseErrorMissingMoveArgs: {
 			fprintf(out, "Missing arguments for `Move` command\n");
+			break;
+		}
+		case TfsCommandParseErrorMissingPrintArgs: {
+			fprintf(out, "Missing arguments for `Print` command\n");
 			break;
 		}
 		default: {
@@ -168,6 +173,24 @@ TfsCommandParseResult tfs_command_parse(FILE* in) {
 				.data.command.data.move.dest = dest,
 			};
 		}
+		// Print path
+		// m <path>
+		case 'p': {
+			if (tokens_read != 2) {
+				return (TfsCommandParseResult){
+					.success = false,
+					.data.err.kind = TfsCommandParseErrorMissingPrintArgs,
+				};
+			}
+
+			char* path = strdup(args[0]);
+			return (TfsCommandParseResult){
+				.success = true,
+				.data.command.kind = TfsCommandPrint,
+				.data.command.data.print.path = path,
+			};
+		}
+
 		default: {
 			return (TfsCommandParseResult){
 				.success = false,
@@ -209,6 +232,10 @@ void tfs_command_to_string(const TfsCommand* command, char* buffer, size_t buffe
 			);
 			break;
 		}
+		case TfsCommandPrint: {
+			snprintf(buffer, buffer_len, "p %s", command->data.print.path);
+			break;
+		}
 		default: {
 			break;
 		}
@@ -235,6 +262,10 @@ void tfs_command_destroy(TfsCommand* command) {
 		case TfsCommandMove: {
 			tfs_path_owned_destroy(&command->data.move.source);
 			tfs_path_owned_destroy(&command->data.move.dest);
+			break;
+		}
+		case TfsCommandPrint: {
+			free(command->data.print.path);
 			break;
 		}
 

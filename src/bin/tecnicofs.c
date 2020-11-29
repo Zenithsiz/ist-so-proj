@@ -253,6 +253,23 @@ static void* worker_thread_fn(void* arg) {
 				break;
 			}
 
+			case TfsCommandPrint: {
+				const char* file_name = command.data.print.path;
+
+				fprintf(stderr, "Printing filesystem to '%s'\n", file_name);
+
+				TfsFsPrintResult result = tfs_fs_print(data->fs, file_name);
+				executed_successfully = result.success;
+				if (!executed_successfully) {
+					fprintf(stderr, "Unable to print filesystem to '%s'\n", file_name);
+					tfs_fs_print_error_print(&result.data.err, stderr);
+				}
+				else {
+					fprintf(stderr, "Successfully printed filesystem to '%s'\n", file_name);
+				}
+				break;
+			}
+
 			default: {
 			}
 		}

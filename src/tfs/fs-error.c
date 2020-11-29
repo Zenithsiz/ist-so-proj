@@ -127,3 +127,16 @@ void tfs_fs_move_error_print(const TfsFsMoveError* self, FILE* out) {
 		}
 	}
 }
+
+void tfs_fs_print_error_print(const TfsFsPrintError* self, FILE* out) {
+	switch (self->kind) {
+		case TfsFsPrintErrorCreate: {
+			fprintf(out, "Unable to create file\n");
+			break;
+		}
+
+		default: {
+			break;
+		}
+	}
+}
