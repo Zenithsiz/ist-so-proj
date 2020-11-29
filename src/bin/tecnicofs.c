@@ -137,6 +137,10 @@ static void* worker_thread_fn(void* arg) {
 		TfsCommandParseResult parse_result = tfs_command_parse(command_input);
 		fclose(command_input);
 		if (!parse_result.success) {
+			// Respond with negative
+			char response = '\0';
+			sendto(data->server_socket, &response, 1, 0, (struct sockaddr*)&client_address, client_address_len);
+
 			fprintf(stderr, "Unable to parse command: \"%s\"\n", command_str);
 			tfs_command_parse_error_print(&parse_result.data.err, stderr);
 			continue;
