@@ -7,11 +7,11 @@
 /// will simply report it and exit the program, as opposed
 /// to returning an error.
 
-#include <ctype.h>		// isspace
-#include <errno.h>		// errno
-#include <stdio.h>		// fprintf, stderr
-#include <stdlib.h>		// size_t
-#include <tfs/client.h> // tfs_client_*
+#include <ctype.h>			// isspace
+#include <errno.h>			// errno
+#include <stdio.h>			// fprintf, stderr
+#include <stdlib.h>			// size_t
+#include <tfs/client-api.h> // tfs_client_*
 
 /// @brief Processes all input from `in`, sending it to the server at `connection`
 /// @param connection The server connection to send commands to

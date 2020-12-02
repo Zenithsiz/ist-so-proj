@@ -1,7 +1,8 @@
-#include "client.h"
+#include "client-api.h"
 
 // Imports
 #include <assert.h> // assert
+#include <stdlib.h> // exit, EXIT_FAILURE
 #include <unistd.h> // getpid, unlink, close, open
 
 void tfs_client_server_connection_new_error_print(const TfsClientServerConnectionNewError* self, FILE* out) {
@@ -92,8 +93,6 @@ void tfs_client_server_connection_destroy(TfsClientServerConnection* connection)
 	unlink(connection->client_address.sun_path);
 }
 
-#include <errno.h>
-
 TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_command(TfsClientServerConnection* self,
 	const TfsCommand* command //
 ) {
@@ -135,38 +134,124 @@ TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_com
 	};
 }
 
-tfs_client_server_connection_send_command_create(TfsClientServerConnection* self,
-	TfsPathOwned path,
-	TfsInodeType type //
-) {
-	TfsCommand command = (TfsCommand){.kind = TfsCommandCreate, .data.create.path = path, .data.create.type = type};
-	tfs_client_server_connection_send_command(self, &command);
+/// @brief Global client connection for the API.
+static TfsClientServerConnection global_client_connection;
+
+/// @brief If the global client is currently initialized
+static bool global_client_connection_initialized = false;
+
+int tfsCreate(const char* path, char type) {
+	TfsInodeType new_type;
+	switch (type) {
+		case 'f': {
+			new_type = TfsInodeTypeFile;
+			break;
+		}
+		case 'd': {
+			new_type = TfsInodeTypeDir;
+			break;
+		}
+		default: {
+			return 1;
+		}
+	}
+
+	TfsPathOwned new_path = tfs_path_to_owned(tfs_path_from_cstr(path));
+
+	TfsCommand command =
+		(TfsCommand){.kind = TfsCommandCreate, .data.create.path = new_path, .data.create.type = new_type};
+	TfsClientServerConnectionSendCommandResult result =
+		tfs_client_server_connection_send_command(&global_client_connection, &command);
 	tfs_command_destroy(&command);
+	if (!result.success) { return 1; }
+
+	if (!result.data.command_successful) { return 2; }
+
+	return 0;
 }
 
-tfs_client_server_connection_send_command_remove(TfsClientServerConnection* self, TfsPathOwned path) {
-	TfsCommand command = (TfsCommand){.kind = TfsCommandRemove, .data.remove.path = path};
-	tfs_client_server_connection_send_command(self, &command);
+int tfsDelete(const char* path) {
+	TfsPathOwned new_path = tfs_path_to_owned(tfs_path_from_cstr(path));
+
+	TfsCommand command = (TfsCommand){.kind = TfsCommandRemove, .data.remove.path = new_path};
+	TfsClientServerConnectionSendCommandResult result =
+		tfs_client_server_connection_send_command(&global_client_connection, &command);
 	tfs_command_destroy(&command);
+	if (!result.success) { return 1; }
+
+	if (!result.data.command_successful) { return 2; }
+
+	return 0;
 }
 
-tfs_client_server_connection_send_command_search(TfsClientServerConnection* self, TfsPathOwned path) {
-	TfsCommand command = (TfsCommand){.kind = TfsCommandSearch, .data.search.path = path};
-	tfs_client_server_connection_send_command(self, &command);
+int tfsLookup(const char* path) {
+	TfsPathOwned new_path = tfs_path_to_owned(tfs_path_from_cstr(path));
+
+	TfsCommand command = (TfsCommand){.kind = TfsCommandSearch, .data.search.path = new_path};
+	TfsClientServerConnectionSendCommandResult result =
+		tfs_client_server_connection_send_command(&global_client_connection, &command);
 	tfs_command_destroy(&command);
+	if (!result.success) { return 1; }
+
+	if (!result.data.command_successful) { return 2; }
+
+	return 0;
 }
 
-tfs_client_server_connection_send_command_move(TfsClientServerConnection* self,
-	TfsPathOwned source,
-	TfsPathOwned dest //
-) {
-	TfsCommand command = (TfsCommand){.kind = TfsCommandMove, .data.move.source = source, .data.move.dest = dest};
-	tfs_client_server_connection_send_command(self, &command);
+int tfsMove(const char* from, const char* to) {
+	TfsPathOwned new_from = tfs_path_to_owned(tfs_path_from_cstr(from));
+	TfsPathOwned new_to = tfs_path_to_owned(tfs_path_from_cstr(to));
+
+	TfsCommand command = (TfsCommand){.kind = TfsCommandMove, .data.move.source = new_from, .data.move.dest = new_to};
+	TfsClientServerConnectionSendCommandResult result =
+		tfs_client_server_connection_send_command(&global_client_connection, &command);
 	tfs_command_destroy(&command);
+	if (!result.success) { return 1; }
+
+	if (!result.data.command_successful) { return 2; }
+
+	return 0;
 }
 
-tfs_client_server_connection_send_command_print(TfsClientServerConnection* self, const char* path) {
-	TfsCommand command = (TfsCommand){.kind = TfsCommandPrint, .data.print.path = path};
-	tfs_client_server_connection_send_command(self, &command);
+int tfsPrint(const char* path) {
+	char* new_path = strdup(path);
+
+	TfsCommand command = (TfsCommand){.kind = TfsCommandPrint, .data.print.path = new_path};
+	TfsClientServerConnectionSendCommandResult result =
+		tfs_client_server_connection_send_command(&global_client_connection, &command);
 	tfs_command_destroy(&command);
+	if (!result.success) { return 1; }
+
+	if (!result.data.command_successful) { return 2; }
+
+	return 0;
+}
+
+int tfsMount(const char* server_path) {
+	if (global_client_connection_initialized) {
+		tfs_client_server_connection_destroy(&global_client_connection);
+		global_client_connection_initialized = false;
+	}
+
+	TfsClientServerConnectionNewResult result = tfs_client_server_connection_new(server_path);
+	if (!result.success) {
+		fprintf(stderr, "Unable to initialize the client connections\n");
+		tfs_client_server_connection_new_error_print(&result.data.err, stderr);
+		return 1;
+	}
+	global_client_connection = result.data.connection;
+
+	return 0;
+}
+
+int tfsUnmount(void) {
+	if (!global_client_connection_initialized) {
+		fprintf(stderr, "Tried to unmount while no connection was alive");
+		return 1;
+	}
+
+	tfs_client_server_connection_destroy(&global_client_connection);
+	global_client_connection_initialized = false;
+
+	return 0;
 }

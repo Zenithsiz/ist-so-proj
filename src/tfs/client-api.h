@@ -113,37 +113,40 @@ TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_com
 	const TfsCommand* command //
 );
 
-/// @brief Sends a create command to the tfs server
-/// @param self
+/// @brief Sends a create command to the tfs server on the global client connection
 /// @param path Path to create
 /// @param type Type of inode to create
-tfs_client_server_connection_send_command_create(TfsClientServerConnection* self,
-	TfsPathOwned path,
-	TfsInodeType type //
-);
+/// @return `0` on success
+int tfsCreate(const char* path, char type);
 
-/// @brief Sends a remove command to the tfs server
-/// @param self
+/// @brief Sends a remove command to the tfs server on the global client connection
 /// @param path Path to remove
-tfs_client_server_connection_send_command_remove(TfsClientServerConnection* self, TfsPathOwned path);
+/// @return `0` on success
+int tfsDelete(const char* path);
 
-/// @brief Sends a search command to the tfs server
-/// @param self
+/// @brief Sends a search command to the tfs server on the global client connection
 /// @param path Path to search
-tfs_client_server_connection_send_command_search(TfsClientServerConnection* self, TfsPathOwned path);
+/// @return `0` on success
+int tfsLookup(const char* path);
 
-/// @brief Sends a move command to the tfs server
-/// @param self
+/// @brief Sends a move command to the tfs server on the global client connection
 /// @param source Source path to move
 /// @param dest Destination path to move
-tfs_client_server_connection_send_command_move(TfsClientServerConnection* self,
-	TfsPathOwned source,
-	TfsPathOwned dest //
-);
+/// @return `0` on success
+int tfsMove(const char* from, const char* to);
 
-/// @brief Sends a print command to the tfs server
-/// @param self
-/// @param path Path to output to. *Takes ownership*
-tfs_client_server_connection_send_command_print(TfsClientServerConnection* self, const char* path);
+/// @brief Sends a print command to the tfs server on the global client connection
+/// @param source Output path to print to
+/// @return `0` on success
+int tfsPrint(const char* path);
+
+/// @brief Mounts the global client connection with a server on `server_path`
+/// @param server_path Path of the server to mount on.
+/// @return `0` on success
+int tfsMount(const char* server_path);
+
+/// @brief Unmounts server on the global client connection
+/// @return `0` on success
+int tfsUnmount(void);
 
 #endif
