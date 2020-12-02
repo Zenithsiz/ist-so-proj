@@ -101,7 +101,7 @@ TfsFs tfs_fs_new(void) {
 	const size_t inode_table_size = 128;
 
 	// Create the inode table
-	TfsFs fs = {.inode_table = tfs_inode_table_new(inode_table_size), .rw_lock = tfs_rw_lock_new()};
+	TfsFs fs = {.inode_table = tfs_inode_table_new(inode_table_size)};
 
 	// Create the root node and unlock it
 	TfsInodeIdx idx = tfs_inode_table_add(&fs.inode_table, TfsInodeTypeDir);
@@ -114,14 +114,9 @@ TfsFs tfs_fs_new(void) {
 void tfs_fs_destroy(TfsFs* self) {
 	// Destroy the inode table
 	tfs_inode_table_destroy(&self->inode_table);
-
-	// And destroy the lock
-	tfs_rw_lock_destroy(&self->rw_lock);
 }
 
 TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType type) {
-	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessUnique);
-
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
 	TfsPath entry_name = tfs_path_pop_last(path, &parent_path);
@@ -133,7 +128,6 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 	// Find the parent inode
 	TfsFsFindResult find_parent_result = tfs_fs_lock_all(self, parent_path, locked_inodes, TfsRwLockAccessUnique);
 	if (!find_parent_result.success) {
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsCreateResult){
 			.success = false,
 			.data.err.kind = TfsFsCreateErrorInexistentParentDir,
@@ -149,7 +143,6 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsCreateResult){
 			.success = false,
 			.data.err.kind = TfsFsCreateErrorParentNotDir,
@@ -171,7 +164,6 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 		// Remove the inode we created
 		tfs_inode_table_remove_inode(&self->inode_table, idx);
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsCreateResult){
 			.success = false,
 			.data.err.kind = TfsFsCreateErrorAddEntry,
@@ -183,13 +175,10 @@ TfsFsCreateResult tfs_fs_create(TfsFs* const self, TfsPath path, TfsInodeType ty
 	for (size_t n = 0; n < locked_inodes_len; n++) {
 		tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 	}
-	tfs_rw_lock_unlock(&self->rw_lock);
 	return (TfsFsCreateResult){.success = true, .data.idx = idx};
 }
 
 TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
-	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessUnique);
-
 	// Split the path into a filename and it's parent directories.
 	TfsPath parent_path;
 	TfsPath entry_name = tfs_path_pop_last(path, &parent_path);
@@ -201,7 +190,6 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 	// Find the parent inode
 	TfsFsFindResult find_parent_result = tfs_fs_lock_all(self, parent_path, locked_inodes, TfsRwLockAccessUnique);
 	if (!find_parent_result.success) {
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsRemoveResult){
 			.success = false,
 			.data.err.kind = TfsFsRemoveErrorInexistentParentDir,
@@ -217,7 +205,6 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsRemoveResult){
 			.success = false,
 			.data.err.kind = TfsFsRemoveErrorParentNotDir,
@@ -233,7 +220,6 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsRemoveResult){
 			.success = false,
 			.data.err.kind = TfsFsRemoveErrorNameNotFound,
@@ -255,7 +241,6 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 		}
 		tfs_inode_table_unlock_inode(&self->inode_table, child.idx);
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsRemoveResult){
 			.success = false,
 			.data.err.kind = TfsFsRemoveErrorRemoveNonEmptyDir,
@@ -271,36 +256,27 @@ TfsFsRemoveResult tfs_fs_remove(TfsFs* self, TfsPath path) {
 	for (size_t n = 0; n < locked_inodes_len; n++) {
 		tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 	}
-	tfs_rw_lock_unlock(&self->rw_lock);
 	return (TfsFsRemoveResult){.success = true};
 }
 
 TfsFsFindResult tfs_fs_find(TfsFs* self, TfsPath path, TfsRwLockAccess access) {
-	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessShared);
-
 	// All locked inodes, for each component
 	const size_t locked_inodes_len = tfs_path_components_len(path) + 1;
 	TfsLockedInode locked_inodes[locked_inodes_len];
 
 	// Find the inode
 	TfsFsFindResult result = tfs_fs_lock_all(self, path, locked_inodes, access);
-	if (!result.success) {
-		tfs_rw_lock_unlock(&self->rw_lock);
-		return result;
-	}
+	if (!result.success) { return result; }
 
 	// Unlock all inodes except the last and return
 	for (size_t n = 0; n < locked_inodes_len - 1; n++) {
 		tfs_inode_table_unlock_inode(&self->inode_table, locked_inodes[n].idx);
 	}
 
-	tfs_rw_lock_unlock(&self->rw_lock);
 	return result;
 }
 
 TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, TfsRwLockAccess access) {
-	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessUnique);
-
 	// Get the common ancestor of both paths
 	TfsPath orig_path_rest;
 	TfsPath dest_path_rest;
@@ -315,14 +291,12 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 
 	// If the origin path is the destination path's parent, or backwards, return Err
 	if (tfs_path_eq(orig_path, dest_path_parent)) {
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorOriginDestinationParent,
 		};
 	}
 	if (tfs_path_eq(orig_path_parent, dest_path)) {
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorDestinationOriginParent,
@@ -339,7 +313,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		orig_path_parent.len == 0 || dest_path_parent.len == 0 ? TfsRwLockAccessUnique : TfsRwLockAccessShared //
 	);
 	if (!common_result.success) {
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorInexistentCommonAncestor,
@@ -355,7 +328,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		}
 
 		// Note: `len >= 1`, so this is always valid.
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = true,
 			.data.inode = locked_common_inodes[locked_common_inodes_len - 1],
@@ -368,7 +340,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 		for (size_t n = 0; n < locked_common_inodes_len; n++) {
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 		}
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorCommonAncestorNotDir,
@@ -385,7 +356,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			for (size_t n = 0; n < locked_common_inodes_len; n++) {
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 			}
-			tfs_rw_lock_unlock(&self->rw_lock);
 			return (TfsFsMoveResult){
 				.success = false,
 				.data.err.kind = TfsFsMoveErrorOriginNotFound,
@@ -404,7 +374,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 			}
 			tfs_inode_table_unlock_inode(&self->inode_table, child.idx);
-			tfs_rw_lock_unlock(&self->rw_lock);
 			return (TfsFsMoveResult){
 				.success = false,
 				.data.err.kind = TfsFsMoveErrorRenameEntry,
@@ -417,7 +386,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = true,
 			.data.inode = child,
@@ -443,7 +411,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				for (size_t n = 0; n < locked_common_inodes_len; n++) {
 					tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 				}
-				tfs_rw_lock_unlock(&self->rw_lock);
 				return (TfsFsMoveResult){
 					.success = false,
 					.data.err.kind = TfsFsMoveErrorInexistentOriginParentDir,
@@ -463,7 +430,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				for (size_t n = 0; n < locked_orig_inodes_len; n++) {
 					tfs_inode_table_unlock_inode(&self->inode_table, locked_orig_inodes[n].idx);
 				}
-				tfs_rw_lock_unlock(&self->rw_lock);
 				return (TfsFsMoveResult){
 					.success = false,
 					.data.err.kind = TfsFsMoveErrorInexistentDestinationParentDir,
@@ -481,7 +447,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				for (size_t n = 0; n < locked_common_inodes_len; n++) {
 					tfs_inode_table_unlock_inode(&self->inode_table, locked_common_inodes[n].idx);
 				}
-				tfs_rw_lock_unlock(&self->rw_lock);
 				return (TfsFsMoveResult){
 					.success = false,
 					.data.err.kind = TfsFsMoveErrorInexistentDestinationParentDir,
@@ -501,7 +466,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 				for (size_t n = 0; n < locked_dest_inodes_len; n++) {
 					tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
 				}
-				tfs_rw_lock_unlock(&self->rw_lock);
 				return (TfsFsMoveResult){
 					.success = false,
 					.data.err.kind = TfsFsMoveErrorInexistentOriginParentDir,
@@ -523,7 +487,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorOriginParentNotDir,
@@ -540,7 +503,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorDestinationParentNotDir,
@@ -561,7 +523,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorOriginNotFound,
@@ -585,7 +546,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 			tfs_inode_table_unlock_inode(&self->inode_table, locked_dest_inodes[n].idx);
 		}
 
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsMoveResult){
 			.success = false,
 			.data.err.kind = TfsFsMoveErrorAddEntry,
@@ -609,7 +569,6 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 
 	// Return the index
 	// Note: We return it locked.
-	tfs_rw_lock_unlock(&self->rw_lock);
 	return (TfsFsMoveResult){
 		.success = true,
 		.data.inode = orig,
@@ -617,26 +576,28 @@ TfsFsMoveResult tfs_fs_move(TfsFs* self, TfsPath orig_path, TfsPath dest_path, T
 }
 
 TfsFsPrintResult tfs_fs_print(TfsFs* self, const char* file_name) {
-	tfs_rw_lock_lock(&self->rw_lock, TfsRwLockAccessShared);
-
 	// Open the file for writing
 	FILE* out = fopen(file_name, "w");
 
 	if (out == NULL) {
-		tfs_rw_lock_unlock(&self->rw_lock);
 		return (TfsFsPrintResult){
 			.success = false,
 			.data.err.kind = TfsFsPrintErrorCreate,
 		};
 	}
 
+	// Lock the root for unique access
+	tfs_inode_table_lock(&self->inode_table, TFS_FS_ROOT_IDX, TfsRwLockAccessUnique);
+
 	// Print the root inode and all it's children
 	// Note: We start off with '' as the root, instead of '/'.
 	tfs_inode_table_print_tree(&self->inode_table, TFS_FS_ROOT_IDX, out, "");
 
+	// Lock the root for unique access
+	tfs_inode_table_unlock_inode(&self->inode_table, TFS_FS_ROOT_IDX);
+
 	// Close the file and unlock
 	assert(fclose(out) == 0);
-	tfs_rw_lock_unlock(&self->rw_lock);
 
 	return (TfsFsPrintResult){.success = true};
 }

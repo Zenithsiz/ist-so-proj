@@ -33,9 +33,6 @@ typedef struct TfsFs {
 	/// The first inode, with index #TFS_FS_ROOT_IDX , will always be
 	/// a directory. This inode is also called the root.
 	TfsInodeTable inode_table;
-
-	/// @brief Global read-write lock for print synchronization
-	TfsRwLock rw_lock;
 } TfsFs;
 
 /// @brief Error type for #tfs_fs_find

@@ -140,7 +140,7 @@ static TfsClientServerConnection global_client_connection;
 /// @brief If the global client is currently initialized
 static bool global_client_connection_initialized = false;
 
-int tfsCreate(const char* path, char type) {
+int tfsCreate(char* path, char type) {
 	TfsInodeType new_type;
 	switch (type) {
 		case 'f': {
@@ -170,7 +170,7 @@ int tfsCreate(const char* path, char type) {
 	return 0;
 }
 
-int tfsDelete(const char* path) {
+int tfsDelete(char* path) {
 	TfsPathOwned new_path = tfs_path_to_owned(tfs_path_from_cstr(path));
 
 	TfsCommand command = (TfsCommand){.kind = TfsCommandRemove, .data.remove.path = new_path};
@@ -184,7 +184,7 @@ int tfsDelete(const char* path) {
 	return 0;
 }
 
-int tfsLookup(const char* path) {
+int tfsLookup(char* path) {
 	TfsPathOwned new_path = tfs_path_to_owned(tfs_path_from_cstr(path));
 
 	TfsCommand command = (TfsCommand){.kind = TfsCommandSearch, .data.search.path = new_path};
@@ -198,7 +198,7 @@ int tfsLookup(const char* path) {
 	return 0;
 }
 
-int tfsMove(const char* from, const char* to) {
+int tfsMove(char* from, char* to) {
 	TfsPathOwned new_from = tfs_path_to_owned(tfs_path_from_cstr(from));
 	TfsPathOwned new_to = tfs_path_to_owned(tfs_path_from_cstr(to));
 
@@ -213,7 +213,7 @@ int tfsMove(const char* from, const char* to) {
 	return 0;
 }
 
-int tfsPrint(const char* path) {
+int tfsPrint(char* path) {
 	char* new_path = strdup(path);
 
 	TfsCommand command = (TfsCommand){.kind = TfsCommandPrint, .data.print.path = new_path};
@@ -227,7 +227,7 @@ int tfsPrint(const char* path) {
 	return 0;
 }
 
-int tfsMount(const char* server_path) {
+int tfsMount(char* server_path) {
 	if (global_client_connection_initialized) {
 		tfs_client_server_connection_destroy(&global_client_connection);
 		global_client_connection_initialized = false;

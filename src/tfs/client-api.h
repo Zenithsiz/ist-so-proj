@@ -117,33 +117,33 @@ TfsClientServerConnectionSendCommandResult tfs_client_server_connection_send_com
 /// @param path Path to create
 /// @param type Type of inode to create
 /// @return `0` on success
-int tfsCreate(const char* path, char type);
+int tfsCreate(char* path, char type);
 
 /// @brief Sends a remove command to the tfs server on the global client connection
 /// @param path Path to remove
 /// @return `0` on success
-int tfsDelete(const char* path);
+int tfsDelete(char* path);
 
 /// @brief Sends a search command to the tfs server on the global client connection
 /// @param path Path to search
 /// @return `0` on success
-int tfsLookup(const char* path);
+int tfsLookup(char* path);
 
 /// @brief Sends a move command to the tfs server on the global client connection
 /// @param source Source path to move
 /// @param dest Destination path to move
 /// @return `0` on success
-int tfsMove(const char* from, const char* to);
+int tfsMove(char* from, char* to);
 
 /// @brief Sends a print command to the tfs server on the global client connection
 /// @param source Output path to print to
 /// @return `0` on success
-int tfsPrint(const char* path);
+int tfsPrint(char* path);
 
 /// @brief Mounts the global client connection with a server on `server_path`
 /// @param server_path Path of the server to mount on.
 /// @return `0` on success
-int tfsMount(const char* server_path);
+int tfsMount(char* server_path);
 
 /// @brief Unmounts server on the global client connection
 /// @return `0` on success
